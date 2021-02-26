@@ -33,7 +33,8 @@
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
 #define NUM_THREADS 16 // Thread count above #cores may not improve performance
-#define ITERATOR 100000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
+#define ITERATOR 10000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
+//100000000000000ULL
 //18446744073709551616
 
 //#define SANITY_CHECK
@@ -42,8 +43,6 @@
 //#define MEASURE_RUNTIME
 #define PRINT_VAMPIRE_COUNT
 #define DISTRIBUTION_COMPENSATION
-
-#define DIGIT_ARRAY_SIZE 32
 
 /*---------------------------- PREPROCESSOR_STUFF ----------------------------*/
 #ifndef OEIS_OUTPUT
@@ -277,99 +276,73 @@ unsigned long long sqrtull(unsigned long long s)
 	}
 }
 
-/*--------------------------------- dgt_arr  ---------------------------------*/
+/*---------------------------------- llist ----------------------------------*/
 
-/*
- * Example:
- * 1234 ~> [4,3,2,1]
-*/
-
-typedef struct dgt_arr
+typedef struct llist	/* Linked list of unsigned short digits*/
 {
-	uint8_t array [DIGIT_ARRAY_SIZE];
-	uint8_t size;
-} dgt_arr;
+	unsigned long long number;
+	struct llist *next;
+} llist;
 
-dgt_arr *dgt_arr_init(unsigned long number)
+llist *llist_init(unsigned long long number , llist *next)
 {
-	dgt_arr *new = malloc(sizeof(dgt_arr));
+	llist *new = malloc(sizeof(llist));
 	assert(new != NULL);
 
-	for (new->size = 0; number != 0; number /= 10) {
-		new->array[new->size] = number % 10; 
-		new->size++;
-	}
-
-	if(new->size != 0){
-		new->size--;
-	}
-
+	new->number = number;
+	new->next = next;
 	return new;
 }
 
-void dgt_arr_iterate_9(dgt_arr *digit_array)
+int llist_free(llist *llist_ptr)
 {
-	uint8_t i = 0;
-	digit_array->array[0] += 9;
-	for (; digit_array->array[i] > 9; i++) {
-		digit_array->array[i+1] += 1;
-		digit_array->array[i] -= 10;	//we assume that number is single digit
+	llist *current = llist_ptr;
+	for (llist *temp = current; current != NULL ;) {
+		temp = current;
+		current = current->next;
+		free(temp);
 	}
-	if (i > digit_array->size)
-		digit_array->size = i;
+	return 0;
 }
 
-void dgt_arr_iterate_n(dgt_arr *digit_array, uint8_t number)
+unsigned long long llist_print(llist *llist_ptr, unsigned long long count)
 {
-	uint8_t i = 0;
-	digit_array->array[0] += number;
-	for (; digit_array->array[i] > 9; i++) {
-		digit_array->array[i+1] += 1;
-		digit_array->array[i] -= 10;	//we assume that number is single digit
+	for (llist *current = llist_ptr; current != NULL ; current = current->next) {
+#if defined(OEIS_OUTPUT)
+		printf("%llu %llu\n", count+1, current->number);
+#endif
+		count++;
 	}
-	if (i > digit_array->size)
-		digit_array->size = i;
+	return count;
 }
 
-void dgt_arr_iterate_n_old(dgt_arr *digit_array, uint8_t number)
+/*---------------------------------- LLHEAD ----------------------------------*/
+
+typedef struct llhead
 {
-	//check this later for errors / overflow:
-	digit_array->array[0] += number;
-	uint8_t i = 0;
-	for (; digit_array->array[i] > 9; i++) {
-		assert(i < DIGIT_ARRAY_SIZE -1);
-		digit_array->array[i+1] += digit_array->array[i] / 10;
-		digit_array->array[i] = digit_array->array[i]%10;
-	}
-	if (i > digit_array->size)
-		digit_array->size = i;
+	struct llist *first;
+	struct llist *last;
+} llhead;
+
+llhead *llhead_init(llist *first, llist *last)
+{
+	llhead *new = malloc(sizeof(llhead));
+	assert(new != NULL);
+	new->first = first;
+	if (last != NULL)
+		new->last = last;
+	else
+		new->last = new->first;
+	return (new);
 }
 
-bool dgt_arr_lte(dgt_arr *a, dgt_arr *b)	//if(a <= b)
+int llhead_free(llhead *llhead_ptr)
 {
-	if (a->size < b->size)
-		return true;
-	else if (a->size > b->size)
-		return false;
-	
-	for (uint8_t i = b->size; i > 0; i--) {
-		if (a->array[i] < b->array[i])
-			return true;
-		else if (a->array[i] > b->array[i])
-			return false;
+	if (llhead_ptr != NULL) {
+		llist_free(llhead_ptr->first);
 	}
-	if (a->array[0] <= b->array[0])
-		return true;
-	
-	return false;
-}
-
-void dgt_arr_print(dgt_arr *a)
-{
-	for (uint8_t i = a->size + 1; i > 0; i--) {
-		printf("%d", a->array[i-1]);
-	}
-	printf("\n");
+	free(llhead_ptr);
+	return 0;
 }
 
 /*--------------------------------- ULLBTREE ---------------------------------*/
@@ -379,7 +352,7 @@ typedef struct ullbtree
 	struct ullbtree *left;
 	struct ullbtree *right;
 	unsigned long long value;
-	unsigned long long height;
+	uint8_t height; //Should be less than 32
 } ullbtree;
 
 /*
@@ -421,6 +394,26 @@ unsigned long long ullbtree_results(ullbtree *tree, unsigned long long i)
 		printf("%llu %llu\n", i, tree->value);
 #endif
 		i = ullbtree_results(tree->right, i);
+	}
+	return i;
+}
+
+
+unsigned long long ullbtree_print(ullbtree *tree, unsigned long long i)
+{
+	if (tree !=NULL) {
+		i = ullbtree_print(tree->left, i);
+
+		i++;
+#if defined(OEIS_OUTPUT)
+		printf(".%llu %llu, %d", i, tree->value, tree->height);
+		if(tree->left != NULL)
+			printf("\t%llu", tree->left->value);
+		if(tree->right != NULL)
+			printf("\t%llu", tree->right->value);
+		printf("\n");
+#endif
+		i = ullbtree_print(tree->right, i);
 	}
 	return i;
 }
@@ -505,11 +498,11 @@ ullbtree *ullbtree_rotate_r(ullbtree *tree)
 /*
  * Binary tree left rotation:
  *
- *       A             B
+ *     A                 B
+ *    / \               / \
+ *  ...  B     -->     A  ...
  *      / \           / \
- *    ...  B   -->   A  ...
- *        / \       / \
- *       C  ...   ...  C
+ *     C  ...       ...  C
  *
  * The '...' are completely unaffected.
 */
@@ -574,6 +567,36 @@ ullbtree *ullbtree_add(ullbtree *tree, unsigned long long node, unsigned long lo
 	return tree;
 }
 
+ullbtree *ullbtree_cleanup(ullbtree *tree, unsigned long long number, llhead *ll)
+{
+	if (tree == NULL){
+		return NULL;
+	}
+	tree->right = ullbtree_cleanup(tree->right, number, ll);
+
+	if (tree->value >= number) {
+		//printf("%llu\n", tree->value);
+		ll->first = llist_init(tree->value, ll->first);
+		if (ll->first->next == NULL)
+			ll->last = ll->first;
+
+		ullbtree *temp = tree->left;
+		tree->left = NULL;
+		ullbtree_free(tree);
+
+		tree = temp;
+		tree = ullbtree_cleanup(tree, number, ll);
+	}
+
+	if (tree == NULL){
+		return NULL;
+	}
+	ullbtree_reset_height(tree);
+	tree = ullbtree_balance(tree);
+
+	return tree;
+}
+
 /*----------------------------------------------------------------------------*/
 
 typedef struct vargs	/* Vampire arguments */
@@ -583,6 +606,7 @@ typedef struct vargs	/* Vampire arguments */
 	unsigned long long count;
 	double	runtime;
 	ullbtree *result;
+	llhead *llresult;
 } vargs;
 
 vargs *vargs_init(unsigned long long min, unsigned long long max)
@@ -594,12 +618,14 @@ vargs *vargs_init(unsigned long long min, unsigned long long max)
 	new->count = 0;
 	new->runtime = 0.0;
 	new->result = NULL;
+	new->llresult = llhead_init(NULL, NULL);
 	return new;
 }
 
 int vargs_free(vargs *vargs_ptr)
 {
 	ullbtree_free(vargs_ptr->result);
+	llhead_free(vargs_ptr->llresult);
 	free (vargs_ptr);
 	return 0;
 }
@@ -657,8 +683,6 @@ void *vampire(void *void_args)
 	unsigned long long min = args->min;
 	unsigned long long max = args->max;
 
-	//uint8_t mod9array[] = {0,9,2,6,9,8,3,9,5,9};
-
 	//Min Max range for both factors
 	//unsigned long long factor_min = pow10ull((length(min) / 2) - 1);
 	unsigned long factor_max = pow10ull((length(max) / 2)) -1;
@@ -670,24 +694,27 @@ void *vampire(void *void_args)
 	unsigned long max_sqrt = max / sqrtull(max);
 
 	//Adjust range for Factors
-	unsigned long multiplier = min_sqrt;
+	unsigned long multiplier = factor_max;
 	unsigned long multiplicant_max;
-	unsigned long long product_iterator;
+	unsigned long product_iterator; // < 10^n 
 
 	unsigned long long product;
 	bool mult_zero;
 
 	//printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier);
-	for (unsigned long multiplicant; multiplier <= factor_max; multiplier++) {
+	for (unsigned long multiplicant; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1) {
 			continue;
 		}
+
 		multiplicant = min/multiplier + !!(min % multiplier); // fmin * fmax <= min - 10^n
 
 		if (multiplier >= max_sqrt) {
-			multiplicant_max = max/multiplier;
+			multiplicant_max = max/multiplier; //max can be less than (10^(n+1) -1)^2
+
 		} else {
-			multiplicant_max = multiplier; //multiplicant can be equal to multiplier, 5267275776 = 72576 * 72576.
+			multiplicant_max = multiplier; // multiplicant can be equal to multiplier, 5267275776 = 72576 * 72576.
+			args->result = ullbtree_cleanup(args->result, (multiplier+1) * (multiplier), args->llresult); //Move inactive data from binary tree to linked list to free up memory. Works best with low thread counts.
 		}
 
 		if (multiplicant <= multiplicant_max) {
@@ -711,24 +738,14 @@ void *vampire(void *void_args)
 			/*
 			 * Modulo 9 check, simplified a bit further:
 			*/
-
 			unsigned long A_1 = multiplier - 1;
 			unsigned long long AB_A_B = A_1 * (multiplicant - 1) - 1;
 			for(unsigned long long CA_1 = 0; (multiplicant <= multiplicant_max) && ((AB_A_B + CA_1) % 9 != 0); CA_1 += A_1){multiplicant++;}
 		
 			product_iterator = multiplier * 9;
-			product = multiplier*(multiplicant);
-			for (;multiplicant <= multiplicant_max; multiplicant += 9) {	
-				//printf("%lu\t",multiplicant);
-				//dgt_arr_print(multiplicant_da);
+			product = multiplier * (multiplicant);
 
-				//uint8_t multiplier_mod9 = multiplier % 9;
-				//uint8_t multiplicant_mod9 = multiplicant % 9;
-				//if (!((multiplier_mod9 == 0 && multiplicant_mod9 == 0) || (multiplier_mod9 == 2 && multiplicant_mod9 == 2) || (multiplier_mod9 == 3 && multiplicant_mod9 == 6) || (multiplier_mod9 == 6 && multiplicant_mod9 == 3) || (multiplier_mod9 == 5 && multiplicant_mod9 == 8) || (multiplier_mod9 == 8 && multiplicant_mod9 == 5))) {
-				//	printf("%lu, %lu, %lu\n", multiplier, multiplicant, multiplier * multiplicant);
-				//	continue;
-				//}
-
+			for (;multiplicant <= multiplicant_max; multiplicant += 9) {
 				uint16_t product_array[10] = {0};
 				for (unsigned long p = product; p != 0; p /= 10) {
 					product_array[p % 10] += 1;
@@ -748,48 +765,23 @@ void *vampire(void *void_args)
 						product_array[temp]--;
 					}
 				}
-/*
-				for (uint8_t i = 0; i <= multiplicant_da->size; i++) {
-					if (product_array[multiplicant_da->array[i]] < 1) {
-						goto vampire_exit;
-					} else {
-						product_array[multiplicant_da->array[i]]--;
-					}
-				}
-*/
-
 				for (uint8_t i = 0; i < 8; i++) {
 					if (product_array[i] != mult_array[i]) {
 						goto vampire_exit;
 					}
 				}
 				if ((mult_zero || notrailingzero(multiplicant))) {
-				//if ((mult_zero || multiplicant_da->array[0] != 0)) {
+					//assert(product > (multiplier + 1) * (min/multiplier) );
 					args->result = ullbtree_add(args->result, product, &(args->count));
+					//ullbtree_print(args->result, 1);
 				}
 vampire_exit:
 				product += product_iterator;
-/*
-				if (multiplicant + 9 <= multiplicant_max) {
-	//				dgt_arr_iterate_n(multiplicant_da, 9);
-
-					if (multiplicant_da->array[0] == 0) {
-						multiplicant_da->array[0] = 9;
-					}
-					else {
-						multiplicant_da->array[0]--;
-						uint8_t it = 1;
-						for (; multiplicant_da->array[it] == 9; it++) {
-							multiplicant_da->array[it] = 0;
-						}
-						multiplicant_da->array[it]++;
-					}
-				}
-*/
 			}
-			//free(multiplicant_da);
 		}
+		//args->result = ullbtree_cleanup(args->result, (multiplier) * (multiplier), args->llresult); //Move inactive data from binary tree to linked list to free up memory. Works best with low thread counts.
 	}
+	args->result = ullbtree_cleanup(args->result, 0, args->llresult); //Move inactive data from binary tree to linked list to free up memory. Works best with low thread counts.
 
 #ifdef SPD_TEST
 	clock_gettime(SPDT_CLK_MODE, &finish);
@@ -868,8 +860,12 @@ int main(int argc, char* argv[])
 			}
 			for (thread = 0; thread < active_threads; thread++) {
 				pthread_join(threads[thread], 0);
-				result = ullbtree_results(input[thread]->result, result);
+				//result = ullbtree_results(input[thread]->result, result);
+				//result += input[thread]->count;
+				result = llist_print(input[thread]->llresult->first, result);
 				ullbtree_free(input[thread]->result);
+				llist_free(input[thread]->llresult->first);
+				input[thread]->llresult->first = NULL;
 				input[thread]->result = NULL;
 			}
 		}
