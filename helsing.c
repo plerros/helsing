@@ -29,8 +29,8 @@
 // Compile with: gcc -O3 -Wall -Wextra -pthread -o helsing helsing.c
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
-#define NUM_THREADS 8 // Thread count above #cores may not improve performance
-#define ITERATOR 10000000ULL // How long until new work is assigned to threads 1000000000000000ULL
+#define NUM_THREADS 1 // Thread count above #cores may not improve performance
+#define ITERATOR 10000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
 
 //#define __SANITY_CHECK__
 //#define __OEIS_OUTPUT__
@@ -242,6 +242,60 @@ unsigned long long get_max (unsigned long long min, unsigned long long max){
 			max = min;
 	}
 	return max;
+}
+
+unsigned long long sqrtull ( unsigned long long s )
+{
+	unsigned long long x0 = s >> 1;				// Initial estimate
+
+	// Sanity check
+	if ( x0 )
+	{
+		unsigned long long x1 = ( x0 + s / x0 ) >> 1;	// Update
+		
+		while ( x1 < x0 )				// This also checks for cycle
+		{
+			x0 = x1;
+			x1 = ( x0 + s / x0 ) >> 1;
+		}
+		
+		return x0;
+	}
+	else
+	{
+		return s;
+	}
+}
+
+bool vampirism_check(unsigned long long product, unsigned long long multiplier, unsigned long long multiplicant)
+{
+	unsigned short product_array[10] = {0};
+	unsigned short digit;
+	while (product != 0){
+		product_array[product % 10] += 1;
+		product /= 10;
+	}
+	while (multiplier != 0){
+		digit = multiplier % 10;
+		if(product_array[digit] > 0)
+			product_array[digit] -= 1;
+		else
+			return 0;
+		multiplier /= 10;
+	}
+	while (multiplicant != 0){
+		digit = multiplicant % 10;
+		if(product_array[digit] > 0)
+			product_array[digit] -= 1;
+		else
+			return 0;
+		multiplicant /= 10;
+	}
+	for (int i = 0; i < 10; i++){
+		if(product_array[i] != 0)
+			return 0;
+	}
+	return 1;
 }
 /*---------------------------------- ULIST  ----------------------------------*/
 
@@ -573,34 +627,61 @@ int vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
 
 void *vampire(void *void_args)
 {
-
 #ifdef SPD_TEST
 	struct timespec start, finish;
 	double elapsed;
 	double fang_time;
 	clock_gettime(SPDT_CLK_MODE, &start);
 #endif
-
 	vargs *args = (vargs *)void_args;
-	int is_not_vampire;
-	int is_vampire;
+
+	//Min Max range for both factors
+	//unsigned long long factor_min = pow10ull((length(args->min) / 2) - 1);
+	unsigned long long factor_max = pow10ull((length(args->max) / 2)) -1;//(sqrtull(args->max));
+
+	//Adjust range for Multiplier
+	unsigned long long multiplier = sqrtull(args->min);
+
+	//Adjust range for Multiplicant
+	unsigned long long multiplicant_max = sqrtull(args->max);
+
+	unsigned long long number;
+	bool is_not_vampire;
 	unsigned long long j;
 
-	/* iterate all numbers */
-	for (unsigned long long number = args->min; number <= args->max; number += args->step) {
-		if (length_isodd(number)) {
-			continue;
-		}
-		if((number + 1) % 3 == 0) {	//See division criteria for 3
-			continue;
-		}
-		is_vampire = 0;
+	//printf("[%llu, %llu] [%llu, %llu]\n", args->min, args->max, multiplier, multiplicant_max);
 
+
+
+	for(unsigned long long multiplicant; multiplier <= factor_max; multiplier++){
+		multiplicant = args->min/multiplier + 1;
+		for(;multiplicant <= multiplicant_max; multiplicant++){
+			if(!(trailingzero(multiplier) && trailingzero(multiplicant))){
+				number = multiplier*multiplicant;
+				//if((number + 1) % 3 == 0)
+					//continue;
+				if(number <= args->max){
 #ifdef SPD_TEST
 	struct timespec fang_start, fang_finish;
 	clock_gettime(SPDT_CLK_MODE, &fang_start);
 #endif
-		llist *divisors = get_fangs(number);
+
+
+
+/*					ulist *digit = ulist_init(number);
+					ulist *divisor = ulist_init(multiplier);
+					ulist *quotient = ulist_init(multiplicant);
+					is_not_vampire = 0;
+					for (j = 0; !is_not_vampire && j <= divisor->last && digit->array != NULL; j++) {
+						if (!ulist_pop(digit,divisor->array[j]))
+							is_not_vampire = 1;
+					}
+					for (j = 0; !is_not_vampire && j <= quotient->last && digit->array != NULL; j++) {
+						if (!ulist_pop(digit,quotient->array[j]))
+							is_not_vampire = 1;
+					}
+*/
+					bool testresult = vampirism_check(number, multiplier, multiplicant);
 #ifdef SPD_TEST
 	clock_gettime(SPDT_CLK_MODE, &fang_finish);
 
@@ -608,47 +689,56 @@ void *vampire(void *void_args)
 	fang_time += (fang_finish.tv_nsec - fang_start.tv_nsec) / 1000000000.0;
 	args->algorithm_runtime += fang_time;
 #endif
+					//if (!is_not_vampire && digit->array == NULL) {
+					if (testresult) {
+						llist *temp = args->result->first;
+						llist *temp2 = NULL;
 
-		ulist *digits = ulist_init(number);
-		for (llist *i = divisors; i != NULL && is_vampire != 1; i = i->next) { /* iterate all divisors */
+						if (args->result->first == NULL) {
+							args->result->first = llist_init(number, NULL);
+							args->result->last = args->result->first;
 
-			ulist *digit = ulist_copy(digits);
-			ulist *divisor = ulist_init(i->number);
-			ulist *quotient = ulist_init(number / i->number);
-
-			is_not_vampire = 0;
-			/* iterate all divisor digits */
-			for (j = 0; !is_not_vampire && j <= divisor->last && digit->array != NULL; j++) {
-				if (!ulist_pop(digit,divisor->array[j]))
-					is_not_vampire = 1;
-			}
-			for (j = 0; !is_not_vampire && j <= quotient->last && digit->array != NULL; j++) {
-				if (!ulist_pop(digit,quotient->array[j]))
-					is_not_vampire = 1;
-			}
-			if (!is_not_vampire && digit->array == NULL) {
-#if defined(__OEIS_OUTPUT__)
-				if (args->result->first == NULL) {
-					args->result->first = llist_init(number, NULL);
-					args->result->last = args->result->first;
-				} else {
-					args->result->last->next = llist_init(number, NULL);
-					args->result->last = args->result->last->next;
+							args->count ++;
+							//if(!(number >= args->min))
+								//printf("%llu = %llu * %llu\n", number, multiplier, multiplicant);
+						} else {
+							if(number < args->result->first->number){
+								args->result->first = llist_init(number, temp);
+								args->count ++;
+								//if(!(number >= args->min))
+									//printf("%llu = %llu * %llu\n", number, multiplier, multiplicant);
+							} else if (number > args->result->last->number){
+								args->result->last->next = llist_init(number, NULL);
+								args->result->last = args->result->last->next;
+								args->count ++;
+								//if(!(number >= args->min))
+									//printf("%llu = %llu * %llu\n", number, multiplier, multiplicant);
+							} else {
+								for(;temp != NULL ; temp = temp->next){
+									if(number > temp->number){
+										if(temp->next != NULL){
+											if(number < temp->next->number){
+												temp2 = llist_init(number, temp->next);
+												temp->next = temp2;
+												args->count ++;
+												//if(!(number >= args->min))
+													//printf("%llu = %llu * %llu\n", number, multiplier, multiplicant);
+											}
+										}
+									} else if(number == temp->number){
+										break;
+									} 
+								}
+							}
+						}
+						//printf("%llu %llu\n", args->count, number);
+					}
+					//ulist_free(digit);
+					//ulist_free(divisor);
+					//ulist_free(quotient);
 				}
-#endif
-				args->count ++;
-				is_vampire = 1;
-				
-				//printf("%llu %llu\n", args->count, number);
-				//printf("%llu / %llu = %llu\n", number, i->number, number / i->number);
-				
 			}
-			ulist_free(digit);
-			ulist_free(divisor);
-			ulist_free(quotient);
 		}
-		llist_free(divisors);
-		ulist_free(digits);
 	}
 
 #ifdef SPD_TEST
@@ -660,6 +750,7 @@ void *vampire(void *void_args)
 	printf("%llu \t%llu \t%llu\tin %lf\n", args->min, args->max, counter, elapsed);
 	*/
 #endif
+
 	return 0;
 }
 
