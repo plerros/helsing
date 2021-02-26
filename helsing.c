@@ -30,6 +30,7 @@
 #include <ctype.h>
 
 // Compile with: gcc -O3 -Wall -Wextra -pthread -lm -o helsing helsing.c
+// Check memory with valgrind --tool=massif
 
 /*--------------------------- COMPILATION OPTIONS ---------------------------*/
 
@@ -37,16 +38,16 @@
  * THREADS:
  *
  * Default value: 1
- * Maximum value: 65535 (2^16 -1)
  *
  * Affects how many processing threads will spawn.
  * (note: thread count above #cores may not improve performance)
  */
 
-#define THREADS 1
+#define THREADS 16
+#define thread_t uint16_t
 
 /*
- * DISTRIBUTION_COMPENSATION:
+ * DIST_COMPENSATION:
  *
  * Based on results I produced a function that estimates the distribution
  * of vampire numbers. The integral of the inverse can help with load
@@ -54,8 +55,8 @@
  * and its overhead.
  */
 
-#define DISTRIBUTION_COMPENSATION true
-#define PRINT_DISTRIBUTION_MATRIX false
+#define DIST_COMPENSATION true
+#define PRINT_DIST_MATRIX false
 
 /*
  * ITERATOR:
@@ -75,7 +76,7 @@
  * and memory usage is max/100.
  */
 
-#define ITERATOR 10000000000000000000ULL
+#define ITERATOR 18446744073709551615ULL
 
 /*
  * JENS_K_A_OPTIMIZATION:
@@ -117,7 +118,6 @@
  */
 
 #define MEASURE_RUNTIME false
-
 #define PRINT_VAMPIRE_COUNT true
 
 /*
@@ -127,6 +127,20 @@
  */
 
 #define SANITY_CHECK false
+
+/*
+ * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size of
+ * fang_t and fang_max, vamp_max should be set accordingly.
+ *
+ * You should be able to change vamp_t up to 256-bit without any issues.
+ * If you want to go any higher check the uint8_t for overflow.
+*/
+
+typedef unsigned long long vamp_t;
+#define vamp_max ULLONG_MAX
+
+typedef unsigned long fang_t;
+#define fang_max ULONG_MAX
 
 /*--------------------------- PREPROCESSOR_STUFF  ---------------------------*/
 
@@ -152,7 +166,7 @@
 
 /*---------------------------- ULLONG FUNCTIONS  ----------------------------*/
 
-uint8_t length(unsigned long long number)
+uint8_t length(vamp_t number)
 {
 	uint8_t length = 0;
 	for (; number > 0; number /= 10)
@@ -160,34 +174,35 @@ uint8_t length(unsigned long long number)
 	return length;
 }
 
-bool length_isodd(unsigned long long number)
+bool length_isodd(vamp_t number)
 {
 	return (length(number) % 2);
 }
 
-unsigned long long pow10ull(uint8_t exponent)
+// pow10 for vampire type.
+vamp_t pow10v(uint8_t exponent)
 {
-	assert(exponent <= length(ULLONG_MAX) - 1);
-	unsigned long long number = 1;
+	assert(exponent <= length(vamp_max) - 1);
+	vamp_t number = 1;
 	for (; exponent > 0; exponent--)
 		number *= 10;
 	return number;
 }
 
-bool willoverflow(unsigned long long number, uint8_t digit)
+bool willoverflow(vamp_t number, uint8_t digit)
 {
 	assert(digit < 10);
-	if (number > ULLONG_MAX / 10)
+	if (number > vamp_max / 10)
 		return true;
-	if (number == ULLONG_MAX / 10 && digit > ULLONG_MAX % 10)
+	if (number == vamp_max / 10 && digit > vamp_max % 10)
 		return true;
 	return false;
 }
 
-// ASCII to unsigned long long
-unsigned long long atoull(const char *str, bool *error)
+// ASCII to vampire type
+vamp_t atoull(const char *str, bool *error)
 {
-	unsigned long long number = 0;
+	vamp_t number = 0;
 	for (uint8_t i = 0; isdigit(str[i]); i++){
 		if (willoverflow(number, str[i] - '0')) {
 			*error = true;
@@ -198,71 +213,73 @@ unsigned long long atoull(const char *str, bool *error)
 	return number;
 }
 
-bool notrailingzero(unsigned long number)
+bool notrailingzero(fang_t number)
 {
 	return ((number % 10) != 0);
 }
 
-unsigned long long get_min(unsigned long long min, unsigned long long max)
+vamp_t get_min(vamp_t min, vamp_t max)
 {
 	if (length_isodd(min)) {
 		uint8_t min_length = length(min);
 		if (min_length < length(max))
-			min = pow10ull(min_length);
+			min = pow10v(min_length);
 		else
 			min = max;
 	}
 	return min;
 }
 
-unsigned long long get_max(unsigned long long min, unsigned long long max)
+vamp_t get_max(vamp_t min, vamp_t max)
 {
 	if (length_isodd(max)) {
 		uint8_t max_length = length(max);
 		if (max_length > length(min))
-			max = pow10ull(max_length - 1) - 1;
+			max = pow10v(max_length - 1) - 1;
 		else
 			max = min;
 	}
 	return max;
 }
 
-unsigned long long get_lmax(unsigned long long lmin, unsigned long long max)
+vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
-	unsigned long long lmax;
-	if (length(lmin) < length(ULLONG_MAX)) {
-		lmax = pow10ull(length(lmin)) - 1;
+	vamp_t lmax;
+	if (length(lmin) < length(vamp_max)) {
+		lmax = pow10v(length(lmin)) - 1;
 		if (lmax < max)
 			return lmax;
 	}
 	return max;
 }
 
-unsigned long long sqrtull(unsigned long long number)
+// Vampire square root to fang.
+fang_t sqrtv(vamp_t number)
 {
-	unsigned long long root = number >> 1; // Initial estimate
+	vamp_t root = number >> 1; // Initial estimate
+	fang_t ret = number;
 	if (root) { // Sanity check
-		unsigned long long x1 = (root + number / root) >> 1; // Update
+		vamp_t x1 = (root + number / root) / 2; // Update
 		while (x1 < root) { // This also checks for cycle
 			root = x1;
-			x1 = (root + number / root) >> 1;
+			x1 = (root + number / root) / 2;
 		}
-		return root;
+		ret = root;
 	}
-	return number;
+	return ret;
 }
 
 /*---------------------------------- llist ----------------------------------*/
 
-typedef struct llist	/* Linked list of unsigned short digits*/
+struct llist	/* Linked list of unsigned short digits*/
 {
-	unsigned long long number;
+	vamp_t number;
 	struct llist *next;
-} llist;
+};
 
-llist *llist_init(unsigned long long number , llist *next)
+struct llist *llist_init(vamp_t number , struct llist *next)
 {
-	llist *new = malloc(sizeof(llist));
+	struct llist *new = malloc(sizeof(struct llist));
 	assert(new != NULL);
 
 	new->number = number;
@@ -270,10 +287,10 @@ llist *llist_init(unsigned long long number , llist *next)
 	return new;
 }
 
-int llist_free(llist *llist_ptr)
+int llist_free(struct llist *llist_ptr)
 {
-	llist *current = llist_ptr;
-	for (llist *temp = current; current != NULL ;) {
+	struct llist *current = llist_ptr;
+	for (struct llist *temp = current; current != NULL ;) {
 		temp = current;
 		current = current->next;
 		free(temp);
@@ -281,9 +298,9 @@ int llist_free(llist *llist_ptr)
 	return 0;
 }
 
-unsigned long long llist_print(llist *llist_ptr, unsigned long long count)
+unsigned long long llist_print(struct llist *llist_ptr, unsigned long long count)
 {
-	for (llist *i = llist_ptr; i != NULL ; i = i->next) {
+	for (struct llist *i = llist_ptr; i != NULL ; i = i->next) {
 		count++;
 #if OEIS_OUTPUT
 		printf("%llu %llu\n", count, i->number);
@@ -294,15 +311,15 @@ unsigned long long llist_print(llist *llist_ptr, unsigned long long count)
 
 /*--------------------------------- LLHEAD  ---------------------------------*/
 
-typedef struct llhead
+struct llhead
 {
 	struct llist *first;
 	struct llist *last;
-} llhead;
+};
 
-llhead *llhead_init(llist *first, llist *last)
+struct llhead *llhead_init(struct llist *first, struct llist *last)
 {
-	llhead *new = malloc(sizeof(llhead));
+	struct llhead *new = malloc(sizeof(struct llhead));
 	assert(new != NULL);
 	new->first = first;
 	if (last != NULL)
@@ -312,7 +329,7 @@ llhead *llhead_init(llist *first, llist *last)
 	return (new);
 }
 
-int llhead_free(llhead *llhead_ptr)
+int llhead_free(struct llhead *llhead_ptr)
 {
 	if (llhead_ptr != NULL)
 		llist_free(llhead_ptr->first);
@@ -322,17 +339,17 @@ int llhead_free(llhead *llhead_ptr)
 
 /*-------------------------------- ULLBTREE  --------------------------------*/
 
-typedef struct ullbtree
+struct ullbtree
 {
 	struct ullbtree *left;
 	struct ullbtree *right;
-	unsigned long long value;
+	vamp_t value;
 	uint8_t height; //Should probably be less than 32
-} ullbtree;
+};
 
-ullbtree *ullbtree_init(unsigned long long value)
+struct ullbtree *ullbtree_init(vamp_t value)
 {
-	ullbtree *new = malloc(sizeof(ullbtree));
+	struct ullbtree *new = malloc(sizeof(struct ullbtree));
 	assert(new != NULL);
 
 	new->left = NULL;
@@ -342,7 +359,7 @@ ullbtree *ullbtree_init(unsigned long long value)
 	return new;
 }
 
-int ullbtree_free(ullbtree *tree)
+int ullbtree_free(struct ullbtree *tree)
 {
 	if (tree != NULL) {
 		if (tree->left != NULL)
@@ -354,7 +371,7 @@ int ullbtree_free(ullbtree *tree)
 	return 0;
 }
 
-unsigned long long ullbtree_results(ullbtree *tree, unsigned long long i)
+unsigned long long ullbtree_results(struct ullbtree *tree, unsigned long long i)
 {
 	if (tree !=NULL) {
 		i = ullbtree_results(tree->left, i);
@@ -368,7 +385,7 @@ unsigned long long ullbtree_results(ullbtree *tree, unsigned long long i)
 	return i;
 }
 
-int is_balanced(ullbtree *tree)
+int is_balanced(struct ullbtree *tree)
 {
 	//assert (tree != NULL);
 	if (tree == NULL)
@@ -385,7 +402,7 @@ int is_balanced(ullbtree *tree)
 	return (lheight - rheight);
 }
 
-void ullbtree_reset_height(ullbtree *tree)
+void ullbtree_reset_height(struct ullbtree *tree)
 {
 	//assert(tree != NULL);
 	tree->height = 0;
@@ -407,12 +424,12 @@ void ullbtree_reset_height(ullbtree *tree)
  * The '...' are completely unaffected.
  */
 
-ullbtree *ullbtree_rotate_l(ullbtree *tree)
+struct ullbtree *ullbtree_rotate_l(struct ullbtree *tree)
 {
 	//assert(tree != NULL);
 	//assert(tree->right != NULL);
 	if(tree->right != NULL){
-		ullbtree *right = tree->right;
+		struct ullbtree *right = tree->right;
 		tree->right = right->left;
 		ullbtree_reset_height(tree);
 		right->left = tree;
@@ -434,12 +451,12 @@ ullbtree *ullbtree_rotate_l(ullbtree *tree)
  * The '...' are completely unaffected.
  */
 
-ullbtree *ullbtree_rotate_r(ullbtree *tree)
+struct ullbtree *ullbtree_rotate_r(struct ullbtree *tree)
 {
 	//assert(tree != NULL);
 	//assert(tree->left != NULL);
 	if(tree->left != NULL){
-		ullbtree *left = tree->left;
+		struct ullbtree *left = tree->left;
 		tree->left = left->right;
 		ullbtree_reset_height(tree);
 		left->right = tree;
@@ -449,7 +466,7 @@ ullbtree *ullbtree_rotate_r(ullbtree *tree)
 	return tree;
 }
 
-ullbtree *ullbtree_balance(ullbtree *tree)
+struct ullbtree *ullbtree_balance(struct ullbtree *tree)
 {
 	//assert(tree != NULL);
 	int isbalanced = is_balanced(tree);
@@ -471,9 +488,9 @@ ullbtree *ullbtree_balance(ullbtree *tree)
 	return tree;
 }
 
-ullbtree *ullbtree_add(
-	ullbtree *tree,
-	unsigned long long node,
+struct ullbtree *ullbtree_add(
+	struct ullbtree *tree,
+	vamp_t node,
 	unsigned long long *count)
 {
 	if (tree == NULL) {
@@ -493,9 +510,9 @@ ullbtree *ullbtree_add(
 	return tree;
 }
 /*
-ullbtree *ullbtree_add(
-	ullbtree *tree,
-	unsigned long long node,
+struct ullbtree *ullbtree_add(
+	struct ullbtree *tree,
+	vamp_t node,
 	unsigned long long *count)
 {
 	if(tree == NULL){
@@ -504,10 +521,10 @@ ullbtree *ullbtree_add(
 	}
 
 
-	ullbtree *arr[32] = {NULL};
+	struct ullbtree *arr[32] = {NULL};
 	bool arrb[32] = {0};
 	uint8_t i = 0;
-	ullbtree *current = tree;
+	struct ullbtree *current = tree;
 	for (; current != NULL; i++) {
 		arr[i]=current;
 		if (node < current->value) {
@@ -544,14 +561,13 @@ ullbtree *ullbtree_add(
 	return tree;
 }
 */
-ullbtree *ullbtree_cleanup(
-	ullbtree *tree,
-	unsigned long long number,
-	llhead *ll)
+struct ullbtree *ullbtree_cleanup(
+	struct ullbtree *tree,
+	vamp_t number,
+	struct llhead *ll)
 {
-	if (tree == NULL){
+	if (tree == NULL)
 		return NULL;
-	}
 	tree->right = ullbtree_cleanup(tree->right, number, ll);
 
 	if (tree->value >= number) {
@@ -560,7 +576,7 @@ ullbtree *ullbtree_cleanup(
 		if (ll->first->next == NULL)
 			ll->last = ll->first;
 
-		ullbtree *temp = tree->left;
+		struct ullbtree *temp = tree->left;
 		tree->left = NULL;
 		ullbtree_free(tree);
 
@@ -577,41 +593,26 @@ ullbtree *ullbtree_cleanup(
 	return tree;
 }
 
-ullbtree *heapsort(llhead *head)
-{
-	llist *node = head->first;
-	ullbtree *tree = NULL;
-	unsigned long long temp = 0;
-	for (llist *next;node != NULL; node = next){
-		next = node->next;
-		tree = ullbtree_add(tree, node->number, &temp);
-		free(node);
-	}
-	head->first = NULL;
-	head->last = NULL;
-	return tree;
-}
-
 /*---------------------------------------------------------------------------*/
 
 typedef struct vargs	/* Vampire arguments */
 {
-	unsigned long long min;
-	unsigned long long max;
+	vamp_t min;
+	vamp_t max;
 	unsigned long long count;
 	double	runtime;
 
 #if !defined DUMP_RESULTS
-	ullbtree *result;
-	llhead *llresult;
+	struct ullbtree *result;
+	struct llhead *llresult;
 #endif
 
 #if JENS_K_A_OPTIMIZATION
-	unsigned long long *dig;
+	vamp_t*dig;
 #endif
 } vargs;
 
-vargs *vargs_init(unsigned long long min, unsigned long long max)
+vargs *vargs_init(vamp_t min, vamp_t max)
 {
 	vargs *new = malloc(sizeof(vargs));
 	assert(new != NULL);
@@ -643,12 +644,12 @@ double distribution_inverted_integral(double area)
 	// This is a hand made approximation.
 }
 
-uint16_t vargs_split(
+thread_t vargs_split(
 	vargs *args[],
-	unsigned long long min,
-	unsigned long long max)
+	vamp_t min,
+	vamp_t max)
 {
-	uint16_t current = 0;
+	thread_t current = 0;
 	do {
 		args[current]->min = min;
 		args[current]->max = (max - min) / (THREADS - current) + min;
@@ -656,10 +657,10 @@ uint16_t vargs_split(
 	} while (args[current++]->max < max);
 	current--;
 
-#if DISTRIBUTION_COMPENSATION
+#if DIST_COMPENSATION
 	double area;
-	unsigned long long temp;
-	for (uint16_t i = 0; i < current; i++) {
+	vamp_t temp;
+	for (thread_t i = 0; i < current; i++) {
 		area = ((double)i+1)/((double)THREADS);
 		temp = (double)max * distribution_inverted_integral(area);
 
@@ -675,7 +676,7 @@ uint16_t vargs_split(
 }
 
 // Modulo 9 lack of congruence
-bool con9(unsigned long multiplier, unsigned long multiplicand)
+bool con9(fang_t multiplier, fang_t multiplicand)
 {
 	return ((multiplier + multiplicand) % 9
 		!= (multiplier * multiplicand) % 9);
@@ -683,8 +684,6 @@ bool con9(unsigned long multiplier, unsigned long multiplicand)
 
 /*---------------------------------------------------------------------------*/
 
-#if !(JENS_K_A_OPTIMIZATION)
-
 void *vampire(void *void_args)
 {
 #ifdef SPDT_CLK_MODE
@@ -695,169 +694,48 @@ void *vampire(void *void_args)
 
 	vargs *args = (vargs *)void_args;
 
-	unsigned long long min = args->min;
-	unsigned long long max = args->max;
+	vamp_t min = args->min;
+	vamp_t max = args->max;
 
 	//Min Max range for both factors
-	unsigned long factor_max = pow10ull((length(max) / 2)) -1;
+	fang_t factor_max = pow10v((length(max) / 2)) -1;
+	//fang_t factor_min = pow10v((length(min) / 2) - 1);
 
 	if (max > factor_max * factor_max && min <= factor_max * factor_max)
 		max = factor_max * factor_max;
 	// Max can be bigger than factor_max ^ 2: 9999 > 99 ^ 2.
 
-	unsigned long min_sqrt = min / sqrtull(min);
-	unsigned long max_sqrt = max / sqrtull(max);
+	fang_t min_sqrt = min / sqrtv(min);
+	fang_t max_sqrt = max / sqrtv(max);
 
-	// Adjust range for Factors
-	unsigned long multiplier = factor_max;
-	unsigned long multiplicand_max;
-	unsigned long long product_iterator; // <= 9 * 2^32
+	#if (JENS_K_A_OPTIMIZATION)
+		fang_t power10 = pow10v((length(min) / 2) - 2);
+		if (power10 < 900)
+			power10 = 1000;
 
-	unsigned long long product;
-	bool mult_zero;
+		vamp_t *dig = args->dig;
+		//vamp_t digd;
 
-	for (unsigned long multiplicand; multiplier >= min_sqrt; multiplier--) {
+		//fang_t step0;
+		//uint16_t step1; // 90 <= step1 < 900
+	
+		//fang_t de0,de1;
+		//uint16_t de2; // 10^3 <= de2 < 10^4
+
+		//fang_t e0;
+		//uint8_t e1;
+	#endif
+
+	for (fang_t multiplier = factor_max; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
 			continue;
 
-		multiplicand = min / multiplier + !!(min % multiplier);
+		fang_t multiplicand = min / multiplier + !!(min % multiplier);
 		// fmin * fmax <= min - 10^n
 
-		if (multiplier >= max_sqrt) {
-			multiplicand_max = max / multiplier;
-			// max can be less than (10^(n+1) -1)^2
-		} else {
-			multiplicand_max = multiplier; 
-			// multiplicand can be equal to multiplier:
-			// 5267275776 = 72576 * 72576.
+		bool mult_zero = notrailingzero(multiplier);
 
-#if !defined DUMP_RESULTS
-			//args->result = ullbtree_cleanup(args->result, (multiplier+1) * multiplier, args->llresult);
-			/*
-			 * Move inactive data from binary tree to linked list 
-			 * and free up memory. Works best with low thread counts.
-			 */
-#endif
-		}
-		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
-			multiplicand++;
-
-		if (multiplicand <= multiplicand_max) {
-			uint8_t mult_array[10] = {0};
-			for (unsigned long i = multiplier; i != 0; i /= 10)
-				mult_array[i % 10] += 1;
-
-			mult_zero = notrailingzero(multiplier);
-
-			product_iterator = multiplier * 9;
-			product = multiplier * multiplicand;
-
-			for (;multiplicand <= multiplicand_max; multiplicand += 9) {
-				uint16_t product_array[10] = {0};
-				for (unsigned long p = product; p != 0; p /= 10)
-					product_array[p % 10] += 1;
-
-				for (uint8_t i = 0; i < 10; i++)
-				// Yes, we want to check all 10, this runs faster than checking only 8.
-					if (product_array[i] < mult_array[i])
-						goto vampire_exit;
-
-				uint8_t temp;
-				for (unsigned long m = multiplicand; m != 0; m /= 10) {
-					temp = m % 10;
-					if (product_array[temp] < 1)
-						goto vampire_exit;
-					else
-						product_array[temp]--;
-				}
-				for (uint8_t i = 0; i < 8; i++)
-					if (product_array[i] != mult_array[i])
-						goto vampire_exit;
-
-				if ((mult_zero || notrailingzero(multiplicand))){
-#if !defined DUMP_RESULTS
-					args->result = ullbtree_add(args->result, product, &(args->count));
-#else
-					printf("%llu = %lu %lu\n", product, multiplier, multiplicand);
-#endif
-				}
-vampire_exit:
-				product += product_iterator;
-			}
-		}
-	}
-#ifdef SPDT_CLK_MODE
-	clock_gettime(SPDT_CLK_MODE, &finish);
-	elapsed = (finish.tv_sec - start.tv_sec);
-	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-	args->runtime += elapsed;
-#endif
-
-	return 0;
-}
-#endif
-
-#if JENS_K_A_OPTIMIZATION
-
-void *vampire(void *void_args)
-{
-#ifdef SPDT_CLK_MODE
-	struct timespec start, finish;
-	double elapsed;
-	clock_gettime(SPDT_CLK_MODE, &start);
-#endif
-
-	vargs *args = (vargs *)void_args;
-
-	unsigned long long min = args->min;
-	unsigned long long max = args->max;
-
-	//Min Max range for both factors
-	unsigned long factor_min = pow10ull((length(min) / 2) - 1);
-	unsigned long factor_max = pow10ull((length(max) / 2)) -1;
-
-
-	unsigned long long fmaxsquare = (unsigned long long)factor_max * factor_max;
-
-	if (max > fmaxsquare && min <= fmaxsquare)
-		max = fmaxsquare;
-	// Max can be bigger than factor_max ^ 2: 9999 > 99 ^ 2.
-
-	unsigned long min_sqrt = min / sqrtull(min);
-	unsigned long max_sqrt = max / sqrtull(max);
-
-	//Adjust range for Factors
-	unsigned long multiplier = factor_max;
-	unsigned long multiplicand;
-	unsigned long multiplicand_max;
-	unsigned long long product_iterator; // <= 9 * 2^32
-
-	unsigned long long product;
-	bool mult_zero;
-
-	unsigned long power10;
-	if (factor_min <= 10000)
-		power10 = factor_min * 10;
-	else 
-		power10 = factor_min / 10;
-
-	unsigned long long *dig = args->dig;
-	unsigned long step0;
-	unsigned long step1;
-	unsigned long de0,de1,de2;
-	unsigned long e0,e1;
-	unsigned long long digd;
-
-	for (; multiplier >= min_sqrt; multiplier--) {
-		if (multiplier % 3 == 1)
-			continue;
-
-		multiplicand = min / multiplier + !!(min % multiplier);
-		// fmin * fmax <= min - 10^n
-
-
-		mult_zero = notrailingzero(multiplier);
-
+		fang_t multiplicand_max;
 		if (multiplier >= max_sqrt) {
 			multiplicand_max = max / multiplier;
 			// max can be less than (10^(n+1) -1)^2
@@ -868,7 +746,7 @@ void *vampire(void *void_args)
 
 #if !defined DUMP_RESULTS
 			if (mult_zero)
-				args->result = ullbtree_cleanup(args->result, (unsigned long long)(multiplier+1) * multiplier, args->llresult);
+				args->result = ullbtree_cleanup(args->result, (multiplier+1) * multiplier, args->llresult);
 			/*
 			 * Move inactive data from binary tree to linked list 
 			 * and free up memory. Works best with low thread counts.
@@ -879,53 +757,103 @@ void *vampire(void *void_args)
 			multiplicand++;
 
 		if (multiplicand <= multiplicand_max) {
-			
-			product_iterator = multiplier * 9;
-			product = multiplier * (multiplicand);
+			//mult_zero = notrailingzero(multiplier);
 
-			step0 = product_iterator % power10;
-			step1 = product_iterator / power10;
+			vamp_t product_iterator = multiplier * 9; // <= 9 * 2^32
+			vamp_t product = multiplier * multiplicand;
 
-			e0 = multiplicand % power10;
-			e1 = multiplicand / power10;
-			digd = dig[multiplier];
+			#if (JENS_K_A_OPTIMIZATION)
+				fang_t step0 = product_iterator % power10;
+				uint16_t step1 = product_iterator / power10; // 90 <= step1 < 900
 
-			de0 = product % power10;
-			de1 = (product / power10) % power10;
-			de2 = (product / power10) / power10;
-	
+				fang_t e0 = multiplicand % power10;
+				uint8_t e1 = multiplicand / power10;
+
+				/*
+				 * digd = dig[multiplier];
+				 * Each digd is calculated and accessed only once, we don't need to store them in memory.
+				 * We can calculate digd on the spot and make the dig array 10 times smaller.
+				 */
+
+				vamp_t digd = 0;
+				fang_t d0 = multiplier;
+				uint8_t digitsmax = length(product);
+				for (uint8_t i = 0; i < digitsmax; i++) {
+					digd += ((vamp_t)1 << ((d0 % 10) * 4));
+					d0 /= 10;
+				}
+
+				fang_t de0 = product % power10;
+				fang_t de1 = (product / power10) % power10;
+				uint16_t de2 = (product / power10) / power10; // 10^3 <= de2 < 10^4
+			#else
+				uint8_t mult_array[10] = {0};
+				for (fang_t i = multiplier; i != 0; i /= 10)
+					mult_array[i % 10] += 1;
+			#endif
+
 			for (;multiplicand <= multiplicand_max; multiplicand += 9) {
-				if (digd + dig[e1] + dig[e0] == dig[de0] + dig[de1] + dig[de2])
-					if ((mult_zero || notrailingzero(multiplicand))){
-#if !defined DUMP_RESULTS
-						args->result = ullbtree_add(args->result, product, &(args->count));
-						//args->llresult->first = llist_init(product, args->llresult->first);
-#else
-						printf("%llu = %lu %lu\n", product, multiplier, multiplicand);
-#endif
-					}
 
+				#if (JENS_K_A_OPTIMIZATION)
+					if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
+				#else
+					uint16_t product_array[10] = {0};
+					for (vamp_t p = product; p != 0; p /= 10)
+						product_array[p % 10] += 1;
+
+					for (uint8_t i = 0; i < 10; i++)
+					// Yes, we want to check all 10, this runs faster than checking only 8.
+						if (product_array[i] < mult_array[i])
+							goto vampire_exit;
+
+					uint8_t temp;
+					for (fang_t m = multiplicand; m != 0; m /= 10) {
+						temp = m % 10;
+						if (product_array[temp] < 1)
+							goto vampire_exit;
+						else
+							product_array[temp]--;
+					}
+					for (uint8_t i = 0; i < 8; i++)
+						if (product_array[i] != mult_array[i])
+							goto vampire_exit;
+				#endif
+
+				if ((mult_zero || notrailingzero(multiplicand))){
+#if !defined DUMP_RESULTS
+					args->result = ullbtree_add(args->result, product, &(args->count));
+					//args->llresult->first = llist_init(product, args->llresult->first);
+#else
+					printf("%llu = %lu %lu\n", product, multiplier, multiplicand);
+#endif
+				}
+#if !(JENS_K_A_OPTIMIZATION)
+vampire_exit:
+#endif
 				product += product_iterator;
-				e0 += 9;
-				if (e0 >= power10) {
-					e0 -= power10;
-					e1 ++;
-				}
-				de0 += step0;
-				if (de0 >= power10){
-					de0 -= power10;
-					de1 += 1;
-				}
-				de1 += step1;
-				if (de1 >= power10){
-					de1 -= power10;
-					de2 += 1;
-				}
+
+				#if (JENS_K_A_OPTIMIZATION)
+					e0 += 9;
+					if (e0 >= power10) {
+						e0 -= power10;
+						e1 ++;
+					}
+					de0 += step0;
+					if (de0 >= power10){
+						de0 -= power10;
+						de1 += 1;
+					}
+					de1 += step1;
+					if (de1 >= power10){
+						de1 -= power10;
+						de2 += 1;
+					}
+				#endif	
 			}
 			//args->result = ullbtree_cleanup(args->result, multiplier * multiplier, args->llresult);
+
 		}
 	}
-	//args->result = heapsort(args->llresult);
 
 #ifdef SPDT_CLK_MODE
 	clock_gettime(SPDT_CLK_MODE, &finish);
@@ -936,7 +864,6 @@ void *vampire(void *void_args)
 
 	return 0;
 }
-#endif
 
 int main(int argc, char* argv[])
 {
@@ -946,15 +873,15 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	bool error = false;
-	unsigned long long min = atoull(argv[1], &error);
-	if (error) {
-		fprintf(stderr, "Input out of range: [0, %llu]\n", ULLONG_MAX);
+	bool err = false;
+	vamp_t min = atoull(argv[1], &err);
+	if (err) {
+		fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
 		return 1;
 	}
-	unsigned long long max = atoull(argv[2], &error);
-	if (error) {
-		fprintf(stderr, "Maximum value overflows the limit: %llu\n", ULLONG_MAX);
+	vamp_t max = atoull(argv[2], &err);
+	if (err) {
+		fprintf(stderr, "Maximum value overflows the limit: %llu\n", vamp_max);
 		return 1;
 	}
 
@@ -967,18 +894,18 @@ int main(int argc, char* argv[])
 	max = get_max(min, max);
 
 	// local min, max for use inside loop
-	unsigned long long lmin = min;
-	unsigned long long lmax = get_lmax(lmin, max);
+	vamp_t lmin = min;
+	vamp_t lmax = get_lmax(lmin, max);
 
 	vargs *input[THREADS];
-	uint16_t thread;
+	thread_t thread;
 
 	for (thread = 0; thread < THREADS; thread++)
 		input[thread] = vargs_init(0, 0);
 
 	pthread_t threads[THREADS];
 	unsigned long long iterator = ITERATOR;
-	uint16_t active_threads = THREADS;
+	thread_t active_threads = THREADS;
 #if !defined DUMP_RESULTS
 	unsigned long long result = 0;
 #endif
@@ -987,30 +914,31 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
 
 #if JENS_K_A_OPTIMIZATION
-		unsigned long digitsmax = length(lmin);
-		unsigned long factor_max = pow10ull((length(lmin) / 2)) - 1;
-		unsigned long long *dig = malloc(sizeof(unsigned long long) * (factor_max + 1));
+		uint8_t digsize = length(lmin) / 2 - 1;
+		if (digsize <= 2)
+			digsize = 3;
+
+		fang_t factor_max = pow10v(digsize);
+
+		vamp_t *dig = malloc(sizeof(vamp_t) * factor_max);
 		assert(dig != NULL);
 
-		unsigned long d,d0,digit;
-
-		for (d = 0; d <= factor_max; d++) {
+		for (fang_t d = 0; d < factor_max; d++) {
 			dig[d] = 0;
-			d0 = d;
-			for (unsigned long i = 0; i < digitsmax; i++) {
-				digit = d0 % 10;
-				dig[d] += ((unsigned long long)1 << (digit * 4));
+			fang_t d0 = d;
+			for (uint8_t i = 0; i < length(factor_max); i++) {
+				uint8_t digit = d0 % 10;
+				dig[d] += ((vamp_t)1 << (digit * 4));
 				d0 /= 10;
 			}
 		}
 
-		for (thread = 0; thread < active_threads; thread++) {
+		for (thread = 0; thread < active_threads; thread++)
 			input[thread]->dig = dig;
-		}
 #endif
 
 		iterator = ITERATOR;
-		for (unsigned long long i = lmin; i <= lmax; i += iterator + 1) {
+		for (vamp_t i = lmin; i <= lmax; i += iterator + 1) {
 			if (lmax - i < ITERATOR)
 				iterator = lmax - i;
 
@@ -1023,8 +951,6 @@ int main(int argc, char* argv[])
 				pthread_join(threads[thread], 0);
 #if !defined DUMP_RESULTS
 
-				//input[thread]->result = heapsort(input[thread]->llresult);
-
 				result = ullbtree_results(input[thread]->result, result);
 				result = llist_print(input[thread]->llresult->first, result);
 				ullbtree_free(input[thread]->result);
@@ -1035,7 +961,7 @@ int main(int argc, char* argv[])
 			}
 			if(i == lmax)
 				break;
-			if(i + iterator == ULLONG_MAX)
+			if(i + iterator == vamp_max)
 				break;
 		}
 //-------------------------------------
@@ -1047,7 +973,7 @@ int main(int argc, char* argv[])
 			break;
 
 		lmin = get_min (lmax + 1, max); 
-		// lmax + 1 <= ULLONG_MAX, because lmax <= max and lmax != max.
+		// lmax + 1 <= vamp_max, because lmax <= max and lmax != max.
 		lmax = get_lmax(lmin, max);
 	}
 
@@ -1065,7 +991,7 @@ int main(int argc, char* argv[])
 	fprintf(stderr, "Found: %llu vampire numbers.\n", result);
 #endif
 
-#if (PRINT_DISTRIBUTION_MATRIX) && (THREADS > 8)
+#if (PRINT_DIST_MATRIX) && (THREADS > 8)
 	double distrubution = 0.0;
 	for (thread = 0; thread < THREADS; thread++) {
 		distrubution += ((double)input[thread]->count) / ((double)(result));
