@@ -779,7 +779,6 @@ vampire_exit:
 				product += product_iterator;
 			}
 		}
-		//args->result = ullbtree_cleanup(args->result, (multiplier) * (multiplier), args->llresult); //Move inactive data from binary tree to linked list to free up memory. Works best with low thread counts.
 	}
 	args->result = ullbtree_cleanup(args->result, 0, args->llresult); //Move inactive data from binary tree to linked list to free up memory. Works best with low thread counts.
 
