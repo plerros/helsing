@@ -26,12 +26,15 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
-// Compile with: gcc -O3 -Wall -Wextra -pthread -o helsing helsing.c
+// Compile with: gcc -O3 -Wall -Wextra -pthread -o helsing helsing.c -lm
+//Record to break: The 208423682 14-digit vampires were computed to a 7 GB file in 19 hours on November 12-13 2002.
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
-#define NUM_THREADS 8 // Thread count above #cores may not improve performance 
-#define ITERATOR 100000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
+#define NUM_THREADS 9 // Thread count above #cores may not improve performance 
+#define ITERATOR 100000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
+//18446744073709551616
 
 //#define SANITY_CHECK
 //#define OEIS_OUTPUT
@@ -219,11 +222,13 @@ unsigned long long pow10ull (uint8_t exponent) // Returns 10 ^ exponent
 	}
 }
 
-inline bool trailingzero (unsigned long long number){
+inline bool trailingzero (unsigned long long number)
+{
 	return ((number % 10) != 0);
 }
 
-unsigned long long get_min (unsigned long long min, unsigned long long max){
+unsigned long long get_min ( unsigned long long min, unsigned long long max )
+{
 	if (length_isodd(min)) {
 		uint8_t min_length = length(min);
 		if (min_length < length(max))
@@ -234,13 +239,25 @@ unsigned long long get_min (unsigned long long min, unsigned long long max){
 	return min;
 }
 
-unsigned long long get_max (unsigned long long min, unsigned long long max){
+unsigned long long get_max ( unsigned long long min, unsigned long long max )
+{
 	if (length_isodd(max)){
 		uint8_t max_length = length(max);
 		if (max_length > length(min))
 			max = pow10ull(max_length -1) -1;
 		else
 			max = min;
+	}
+	return max;
+}
+
+unsigned long long get_lmax ( unsigned long long lmin, unsigned long long max )
+{
+	unsigned long long lmax;
+	if(length(lmin) < length(ULLONG_MAX)){
+		lmax = pow10ull(length(lmin)) - 1;
+		if( lmax < max )
+			return lmax;
 	}
 	return max;
 }
@@ -263,22 +280,18 @@ unsigned long long sqrtull ( unsigned long long s )
 
 bool vampirism_check(unsigned long long product, unsigned long long multiplicant, uint8_t mult_array[])
 {
-	uint8_t product_array[10] = {0};
+	int8_t product_array[10] = {0};
 
-	for (uint8_t digit; multiplicant != 0; multiplicant /= 10){
-		digit = multiplicant % 10;
-		product_array[digit] -= 1;
+	for (; multiplicant != 0; multiplicant /= 10){
+		product_array[multiplicant % 10] -= 1;		//Underflow is expected here.
 	}
-	while (product != 0){
+	for (; product != 0; product /= 10){
 		product_array[product % 10] += 1;
-		product /= 10;
 	}
-
-	for (uint8_t i = 0; i < 10; i++){ //maybe just 8?
+	for (uint8_t i = 0; i < 8; i++){ //maybe just 8?
 		if(product_array[i] != mult_array[i])
 			return false;
 	}
-
 	return true;
 }
 
@@ -504,6 +517,191 @@ int vargs_free(vargs *vargs_ptr)
 	return 0;
 }
 
+inline double benfords_law(double digit)
+{
+	return (log10(1.0+1.0/digit));
+}
+
+inline double inverse_benfords_law(double var)
+{
+	return (1.0/(pow(10.0, var) - 1.0));
+}
+
+double benfords_law_sum(uint8_t n){
+	double result = 0;
+	if(n > 0){
+		for(uint8_t i = 1; i <= n; i++){
+			result += benfords_law(i);
+		}
+	}
+	return result;
+}
+
+double inverse_benfords_law_sum(uint8_t n){
+	double result = 0;
+	if(n > 0){
+		for(uint8_t i = 1; i <= n; i++){
+			result += inverse_benfords_law(i);
+		}
+	}
+	return result;
+}
+
+unsigned long long bl_transform (unsigned long long number)
+{
+	unsigned long long min = pow10ull(length(number)-1);
+	unsigned long long max = pow10ull(length(number))-1;
+	uint8_t n = 0;
+
+	if(number >= min && number < 2 * min){
+		n = 1;
+	}
+	else if(number >= 2 * min && number < 3 * min){
+		n = 2;
+	}
+	else if(number >= 3 * min && number < 4 * min){
+		n = 3;
+	}
+	else if(number >= 4 * min && number < 5 * min){
+		n = 4;
+	}
+	else if(number >= 5 * min && number < 6 * min){
+		n = 5;
+	}
+	else if(number >= 6 * min && number < 7 * min){
+		n = 6;
+	}
+	else if(number >= 7 * min && number < 8 * min){
+		n = 7;
+	}
+	else if(number >= 8 * min && number < 9 * min){
+		n = 8;
+	}
+	else{
+		n = 9;
+	}
+/*
+	unsigned long long result = 
+		max * (
+			(benfords_law(n)-benfords_law(n+1))
+			*((double)n- (double)number/(double)min)
+			+benfords_law_sum(n)
+		);
+*/
+	//printf("num %llu, ratio %lf, bl %lf, %d\n", number, (double)number / (double)min - (double)(n-1), benfords_law(n), n);
+	//printf("%lf\n", benfords_law(n)*((double)number / (double)min ) +benfords_law_sum(n-1));
+
+	unsigned long long result;
+
+	if(n == 1){
+		result = 
+			max * (
+				/*
+				((benfords_law(n) - 0.1)/0.9)
+				*(
+					(double)number / (double)max - 0.1
+				)
+				+0.1
+				*/
+				(
+					(benfords_law(n) - 0.1) / 0.1
+				)*(
+					(double)number/(double)max
+				) + 0.2 - benfords_law(n)
+			);
+	} else {
+		result =
+			max * (
+				benfords_law(n)
+				*(
+					(
+						(double)number/(double)max
+					)*10.0 - (double)n
+				)
+				+ benfords_law_sum(n-1)
+			);
+	}
+
+
+	return result;
+}
+
+unsigned long long bl_invert (unsigned long long number)
+{
+	//unsigned long long min = pow10ull(length(number)-1);
+	unsigned long long max = pow10ull(length(number))-1;
+	//printf("%llu, %llu\n", min, max);
+	uint8_t n = 0;
+
+	if(number < max * benfords_law_sum(1)){
+		n = 1;
+	}
+	else if(number >= max * benfords_law_sum(1) && number < max * benfords_law_sum(2)){
+		n = 2;
+	}
+	else if(number >= max * benfords_law_sum(2) && number < max * benfords_law_sum(3)){
+		n = 3;
+	}
+	else if(number >= max * benfords_law_sum(3) && number < max * benfords_law_sum(4)){
+		n = 4;
+	}
+	else if(number >= max * benfords_law_sum(4) && number < max * benfords_law_sum(5)){
+		n = 5;
+	}
+	else if(number >= max * benfords_law_sum(5) && number < max * benfords_law_sum(6)){
+		n = 6;
+	}
+	else if(number >= max * benfords_law_sum(6) && number < max * benfords_law_sum(7)){
+		n = 7;
+	}
+	else if(number >= max * benfords_law_sum(7) && number < max * benfords_law_sum(8)){
+		n = 8;
+	}
+	else {
+		n = 9;
+	}
+	//for(int i = 1; i < 10; i++)
+		//printf("%llu\n",(unsigned long long)(max*benfords_law_sum(i)));
+
+	//printf("num %llu, ratio %lf, sum %lf, bl %lf, %d\n", number, ((double)number/(double)max) - benfords_law_sum(n-1), benfords_law_sum(n-1), benfords_law(n), n);
+	//printf("%lf\n", ((double)number/(double)max -0.2 + benfords_law(n))*0.1 +0.1     );
+	unsigned long long result;
+	if(n == 1){
+		result = 
+			max * (
+				/*
+				((double)number/(double)max - 0.1)
+				/(
+					(benfords_law(n) - 0.1)/ 0.9
+				)
+				+0.1
+				*/
+				(
+					(
+						(double)number/(double)max 
+						-0.2
+						+benfords_law(n)
+					)
+					/(benfords_law(n)-0.1)
+				)*0.1 
+			);
+	} else {
+		result =
+			max * (
+				(
+					(
+						((double)number/(double)max - benfords_law_sum(n-1))
+						/benfords_law(n)
+					)
+					+(double)n
+				)
+				/10.0
+			);
+	}
+	//printf("result %lld\n", result);
+	return result;
+}
+
 uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
 {
 	uint16_t current = 0;
@@ -514,9 +712,24 @@ uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long 
 		min = input[current]->max + 1;
 		current ++;
 		input[current]->min = min;
+
 		input[current]->max = (max-min)/(NUM_THREADS - current) + min;
 	}
+/*
+	unsigned long long temp;
+	for(uint16_t i = 0; i < current; i++){
+		temp = bl_invert(input[i]->max);
+		//printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
 
+		if(temp > input[i]->min && temp < input[i]->max){
+			printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
+			input[i]->max = temp;
+			input[i+1]->min = temp + 1;
+		}
+	}
+
+*/
+	input[current]->max = max;
 	return (current);
 }
 
@@ -558,7 +771,7 @@ void *vampire(void *void_args)
 	unsigned long long max = args->max;
 
 	//Min Max range for both factors
-	unsigned long long factor_min = pow10ull((length(min) / 2) - 1);
+	//unsigned long long factor_min = pow10ull((length(min) / 2) - 1);
 	unsigned long long factor_max = pow10ull((length(max) / 2)) -1;
 
 	if(max >= factor_max * factor_max)
@@ -568,76 +781,46 @@ void *vampire(void *void_args)
 	unsigned long long max_sqrt = max / sqrtull(max);
 
 	//Adjust range for Factors
+	unsigned long long multiplier = min_sqrt;
+	unsigned long long multiplicant_max;
+	unsigned long long product_iterator;
 
 	unsigned long long product;
 	bool mult_zero;
-	const bool asdf = true;//(max_sqrt - factor_min < factor_max - min_sqrt);
 
-	if(asdf){
-		unsigned long long multiplier = min_sqrt;
-		unsigned long long multiplicant_max;
-		//printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier);
-		for(unsigned long long multiplicant; multiplier <= factor_max; multiplier++){
-			if(multiplier % 3 == 1){
-				continue;
-			}
-			multiplicant = min/multiplier + !(!(min % multiplier));
-			if(multiplier >= max_sqrt){
-				multiplicant_max = max/multiplier;
-			} else {
-				multiplicant_max = multiplier; //multiplicant can be equal to mutiplicant, 5267275776 = 72576 * 72576.
-			}
-			uint8_t mult_array[10] = {0};
-			for(unsigned long long i = multiplier; i != 0; i /= 10){
-				mult_array[i % 10] += 1;
-			}
-	
-			mult_zero = trailingzero(multiplier);
-
-			for(;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++){}
-
-			for(;multiplicant <= multiplicant_max; multiplicant += 9){
-				product = multiplier*multiplicant;
-				if ((mult_zero || trailingzero(multiplicant)) && vampirism_check(product, multiplicant, mult_array)){
-					if (args->result == NULL) {
-						args->result = ullbtree_init(product);
-						args->count += 1;
-					} else {
-						args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
-					}
-				}
-			}
+	//printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier);
+	for(unsigned long long multiplicant; multiplier <= factor_max; multiplier++){
+		if(multiplier % 3 == 1){
+			continue;
 		}
-	} else {
-		unsigned long long multiplier = factor_min;
-		for(unsigned long long multiplicant; multiplier <= max_sqrt; multiplier++){
-			if(multiplier % 3 == 1){
-				continue;
-			}
-			if(multiplier < min_sqrt){
-				multiplicant = min/multiplier + !(!(min % multiplier));
-			} else {
-				multiplicant = multiplier;
-			}
-			uint8_t mult_array[10] = {0};
-			for(unsigned long long i = multiplier; i != 0; i /= 10){
-				mult_array[i % 10] += 1;
-			}
-			mult_zero = trailingzero(multiplier);
+		multiplicant = min/multiplier + !(!(min % multiplier)); // fmin * fmax <= min - 10^n
+		if(multiplier >= max_sqrt){
+			multiplicant_max = max/multiplier;
+		} else {
+			multiplicant_max = multiplier; //multiplicant can be equal to mutiplicant, 5267275776 = 72576 * 72576.
+		}
+		uint8_t mult_array[10] = {0};
+		for(unsigned long long i = multiplier; i != 0; i /= 10){
+			mult_array[i % 10] += 1;
+		}
 
-			for(; (multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9; multiplicant ++){}
+		mult_zero = trailingzero(multiplier);
+		for(;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++){}
 
-			for(unsigned long long multiplicant_max = max/multiplier; multiplicant <= multiplicant_max; multiplicant += 9){
-				product = multiplier*multiplicant;
-				if ((mult_zero || trailingzero(multiplicant)) && vampirism_check(product, multiplicant, mult_array)){
-					if (args->result == NULL) {
-						args->result = ullbtree_init(product);
-						args->count += 1;
-					} else {
-						args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
-					}
+		if(multiplicant <= multiplicant_max){
+			product_iterator = multiplier * 9;
+			product = multiplier*(multiplicant);
+		}
+		for(;multiplicant <= multiplicant_max; multiplicant += 9){
+			if ((mult_zero || trailingzero(multiplicant)) && vampirism_check(product, multiplicant, mult_array)){
+				if (args->result == NULL) {
+					args->result = ullbtree_init(product);
+					args->count += 1;
+				} else {
+					args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
 				}
 			}
+			product += product_iterator;
 		}
 	}
 
@@ -663,6 +846,7 @@ void *vampire(void *void_args)
 int main(int argc, char* argv[])
 {
 	if (argc != 3) {
+		printf("A posix compatible vampire number generator\n");
 		printf("Usage: vampire [min] [max]\n");
 		return 0;
 	}
@@ -671,18 +855,24 @@ int main(int argc, char* argv[])
 	unsigned long long max = atoull(argv[2]);
 
 	if (min > max) {
-		printf("Usage: vampire [min] [max],\nwhere 0 <= min <= max and min <= max < %llu", ULLONG_MAX);
+		printf("Invalid arguments min <= max\n");
 		return 0;
 	}
 
 	min = get_min(min, max);
 	max = get_max(min, max);
 
-	unsigned long long lmin = min;
-	unsigned long long l_roof = pow10ull(length(lmin)) - 1;
-	unsigned long long lmax = max;
+	unsigned long long lmin = min;	// local min for use in loop
+	unsigned long long lmax = max;	// local max for use in loop
+	unsigned long long l_roof;
+
+
+/*
+	l_roof = pow10ull(length(lmin)) - 1;
 	if( max > l_roof)
 		lmax = l_roof;
+*/
+	lmax = get_lmax(lmin, max);
 
 	vargs *input[NUM_THREADS];
 	uint16_t thread;
@@ -728,15 +918,17 @@ int main(int argc, char* argv[])
 		}
 		if(lmax < max){
 			lmin = get_min (lmax + 1, max);
+/*
 			lmax = get_max (lmin, max);
 			l_roof = pow10ull(length(lmin)) - 1;
 			if(max > l_roof)
 				lmax = l_roof;
-
-			if (lmax-lmin > ITERATOR)
+*/
+			lmax = get_lmax(lmin, max);
+			if (lmax - lmin > ITERATOR)
 				iterator = ITERATOR;
 			else
-				iterator = lmin -lmax;
+				iterator = lmin - lmax;
 		} else {
 			break;
 		}
@@ -745,17 +937,24 @@ int main(int argc, char* argv[])
 
 #ifdef SPD_TEST
 	double algorithm_time = 0.0;
-	printf("Thread  Count   Rutime\n");
+	printf("Thread  Count   Runtime\n");
 #endif
 
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 #ifdef SPD_TEST
 		printf("%u\t%llu\t%lf\t[%llu\t%llu]\n", thread, input[thread]->count, input[thread]->runtime, input[thread]->min, input[thread]->max);
-		algorithm_time += input[thread]->algorithm_runtime,
+
+		algorithm_time += input[thread]->algorithm_runtime;
 #endif
 		result += input[thread]->count;
 		vargs_free(input[thread]);
 	}
+	for (thread = 0; thread < NUM_THREADS; thread++) {
+#if (defined SPD_TEST) && (NUM_THREADS > 8)
+		printf("(1+%u/%u,%llu/%llu),", thread, NUM_THREADS/9,input[thread]->count, result/(NUM_THREADS/9));
+#endif
+	}
+	printf("\n");
 
 #ifdef SPD_TEST
 	printf("Fang search took: %lf, average: %lf\n", algorithm_time, algorithm_time / NUM_THREADS);
