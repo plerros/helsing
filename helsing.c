@@ -32,7 +32,7 @@
 // Record to break: The 208423682 14-digit vampires were computed to a 7 GB file in 19 hours on November 12-13 2002.
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
-#define NUM_THREADS 16 // Thread count above #cores may not improve performance 
+#define NUM_THREADS 16 // Thread count above #cores may not improve performance
 #define ITERATOR 100000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
 //18446744073709551616
 
@@ -42,6 +42,8 @@
 //#define MEASURE_RUNTIME
 #define PRINT_VAMPIRE_COUNT
 #define DISTRIBUTION_COMPENSATION
+
+#define DIGIT_ARRAY_SIZE 32
 
 /*---------------------------- PREPROCESSOR_STUFF ----------------------------*/
 #ifndef OEIS_OUTPUT
@@ -219,7 +221,7 @@ unsigned long long atoull(const char *str, bool *error)	// ASCII to unsigned lon
 	return number;
 }
 
-bool notrailingzero(unsigned long long number)
+bool notrailingzero(unsigned long number)
 {
 	return ((number % 10) != 0);
 }
@@ -273,6 +275,101 @@ unsigned long long sqrtull(unsigned long long s)
 	} else {
 		return s;
 	}
+}
+
+/*--------------------------------- dgt_arr  ---------------------------------*/
+
+/*
+ * Example:
+ * 1234 ~> [4,3,2,1]
+*/
+
+typedef struct dgt_arr
+{
+	uint8_t array [DIGIT_ARRAY_SIZE];
+	uint8_t size;
+} dgt_arr;
+
+dgt_arr *dgt_arr_init(unsigned long number)
+{
+	dgt_arr *new = malloc(sizeof(dgt_arr));
+	assert(new != NULL);
+
+	for (new->size = 0; number != 0; number /= 10) {
+		new->array[new->size] = number % 10; 
+		new->size++;
+	}
+
+	if(new->size != 0){
+		new->size--;
+	}
+
+	return new;
+}
+
+void dgt_arr_iterate_9(dgt_arr *digit_array)
+{
+	uint8_t i = 0;
+	digit_array->array[0] += 9;
+	for (; digit_array->array[i] > 9; i++) {
+		digit_array->array[i+1] += 1;
+		digit_array->array[i] -= 10;	//we assume that number is single digit
+	}
+	if (i > digit_array->size)
+		digit_array->size = i;
+}
+
+void dgt_arr_iterate_n(dgt_arr *digit_array, uint8_t number)
+{
+	uint8_t i = 0;
+	digit_array->array[0] += number;
+	for (; digit_array->array[i] > 9; i++) {
+		digit_array->array[i+1] += 1;
+		digit_array->array[i] -= 10;	//we assume that number is single digit
+	}
+	if (i > digit_array->size)
+		digit_array->size = i;
+}
+
+void dgt_arr_iterate_n_old(dgt_arr *digit_array, uint8_t number)
+{
+	//check this later for errors / overflow:
+	digit_array->array[0] += number;
+	uint8_t i = 0;
+	for (; digit_array->array[i] > 9; i++) {
+		assert(i < DIGIT_ARRAY_SIZE -1);
+		digit_array->array[i+1] += digit_array->array[i] / 10;
+		digit_array->array[i] = digit_array->array[i]%10;
+	}
+	if (i > digit_array->size)
+		digit_array->size = i;
+}
+
+bool dgt_arr_lte(dgt_arr *a, dgt_arr *b)	//if(a <= b)
+{
+	if (a->size < b->size)
+		return true;
+	else if (a->size > b->size)
+		return false;
+	
+	for (uint8_t i = b->size; i > 0; i--) {
+		if (a->array[i] < b->array[i])
+			return true;
+		else if (a->array[i] > b->array[i])
+			return false;
+	}
+	if (a->array[0] <= b->array[0])
+		return true;
+	
+	return false;
+}
+
+void dgt_arr_print(dgt_arr *a)
+{
+	for (uint8_t i = a->size + 1; i > 0; i--) {
+		printf("%d", a->array[i-1]);
+	}
+	printf("\n");
 }
 
 /*--------------------------------- ULLBTREE ---------------------------------*/
@@ -380,13 +477,13 @@ void ullbtree_reset_height(ullbtree *tree)
 
 /*
  * Binary tree right rotation:
- * 
+ *
  *       A             B
  *      / \           / \
  *     B  ...  -->  ...  A
  *    / \               / \
  *  ...  C             C  ...
- * 
+ *
  * The '...' are completely unaffected.
 */
 
@@ -407,13 +504,13 @@ ullbtree *ullbtree_rotate_r(ullbtree *tree)
 
 /*
  * Binary tree left rotation:
- * 
+ *
  *       A             B
  *      / \           / \
  *    ...  B   -->   A  ...
  *        / \       / \
  *       C  ...   ...  C
- * 
+ *
  * The '...' are completely unaffected.
 */
 
@@ -560,26 +657,28 @@ void *vampire(void *void_args)
 	unsigned long long min = args->min;
 	unsigned long long max = args->max;
 
+	//uint8_t mod9array[] = {0,9,2,6,9,8,3,9,5,9};
+
 	//Min Max range for both factors
 	//unsigned long long factor_min = pow10ull((length(min) / 2) - 1);
-	unsigned long long factor_max = pow10ull((length(max) / 2)) -1;
+	unsigned long factor_max = pow10ull((length(max) / 2)) -1;
 
 	if (max >= factor_max * factor_max)
 		max = factor_max * factor_max;
-	
-	unsigned long long min_sqrt = min / sqrtull(min);
-	unsigned long long max_sqrt = max / sqrtull(max);
+
+	unsigned long min_sqrt = min / sqrtull(min);
+	unsigned long max_sqrt = max / sqrtull(max);
 
 	//Adjust range for Factors
-	unsigned long long multiplier = min_sqrt;
-	unsigned long long multiplicant_max;
+	unsigned long multiplier = min_sqrt;
+	unsigned long multiplicant_max;
 	unsigned long long product_iterator;
 
 	unsigned long long product;
 	bool mult_zero;
 
 	//printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier);
-	for (unsigned long long multiplicant; multiplier <= factor_max; multiplier++) {
+	for (unsigned long multiplicant; multiplier <= factor_max; multiplier++) {
 		if (multiplier % 3 == 1) {
 			continue;
 		}
@@ -593,7 +692,7 @@ void *vampire(void *void_args)
 
 		if (multiplicant <= multiplicant_max) {
 			uint8_t mult_array[10] = {0};
-			for (unsigned long long i = multiplier; i != 0; i /= 10) {
+			for (unsigned long i = multiplier; i != 0; i /= 10) {
 				mult_array[i % 10] += 1;
 			}
 
@@ -612,17 +711,26 @@ void *vampire(void *void_args)
 			/*
 			 * Modulo 9 check, simplified a bit further:
 			*/
-			unsigned long long A_1 = multiplier - 1;
+
+			unsigned long A_1 = multiplier - 1;
 			unsigned long long AB_A_B = A_1 * (multiplicant - 1) - 1;
 			for(unsigned long long CA_1 = 0; (multiplicant <= multiplicant_max) && ((AB_A_B + CA_1) % 9 != 0); CA_1 += A_1){multiplicant++;}
-
-
+		
 			product_iterator = multiplier * 9;
 			product = multiplier*(multiplicant);
+			for (;multiplicant <= multiplicant_max; multiplicant += 9) {	
+				//printf("%lu\t",multiplicant);
+				//dgt_arr_print(multiplicant_da);
 
-			for (;multiplicant <= multiplicant_max; multiplicant += 9) {
+				//uint8_t multiplier_mod9 = multiplier % 9;
+				//uint8_t multiplicant_mod9 = multiplicant % 9;
+				//if (!((multiplier_mod9 == 0 && multiplicant_mod9 == 0) || (multiplier_mod9 == 2 && multiplicant_mod9 == 2) || (multiplier_mod9 == 3 && multiplicant_mod9 == 6) || (multiplier_mod9 == 6 && multiplicant_mod9 == 3) || (multiplier_mod9 == 5 && multiplicant_mod9 == 8) || (multiplier_mod9 == 8 && multiplicant_mod9 == 5))) {
+				//	printf("%lu, %lu, %lu\n", multiplier, multiplicant, multiplier * multiplicant);
+				//	continue;
+				//}
+
 				uint16_t product_array[10] = {0};
-				for (unsigned long long p = product; p != 0; p /= 10) {
+				for (unsigned long p = product; p != 0; p /= 10) {
 					product_array[p % 10] += 1;
 				}
 				for (uint8_t i = 0; i < 10; i++) { //Yes, we want to check all 10, this is faster than only checking 8.
@@ -630,8 +738,9 @@ void *vampire(void *void_args)
 						goto vampire_exit;
 					}
 				}
+
 				uint8_t temp;
-				for (unsigned long long m = multiplicant; m != 0; m /= 10) {
+				for (unsigned long m = multiplicant; m != 0; m /= 10) {
 					temp = m % 10;
 					if (product_array[temp] < 1) {
 						goto vampire_exit;
@@ -639,19 +748,46 @@ void *vampire(void *void_args)
 						product_array[temp]--;
 					}
 				}
+/*
+				for (uint8_t i = 0; i <= multiplicant_da->size; i++) {
+					if (product_array[multiplicant_da->array[i]] < 1) {
+						goto vampire_exit;
+					} else {
+						product_array[multiplicant_da->array[i]]--;
+					}
+				}
+*/
 
 				for (uint8_t i = 0; i < 8; i++) {
 					if (product_array[i] != mult_array[i]) {
 						goto vampire_exit;
 					}
 				}
-	
 				if ((mult_zero || notrailingzero(multiplicant))) {
+				//if ((mult_zero || multiplicant_da->array[0] != 0)) {
 					args->result = ullbtree_add(args->result, product, &(args->count));
 				}
 vampire_exit:
 				product += product_iterator;
+/*
+				if (multiplicant + 9 <= multiplicant_max) {
+	//				dgt_arr_iterate_n(multiplicant_da, 9);
+
+					if (multiplicant_da->array[0] == 0) {
+						multiplicant_da->array[0] = 9;
+					}
+					else {
+						multiplicant_da->array[0]--;
+						uint8_t it = 1;
+						for (; multiplicant_da->array[it] == 9; it++) {
+							multiplicant_da->array[it] = 0;
+						}
+						multiplicant_da->array[it]++;
+					}
+				}
+*/
 			}
+			//free(multiplicant_da);
 		}
 	}
 
@@ -694,7 +830,7 @@ int main(int argc, char* argv[])
 	max = get_max(min, max);
 
 	// local min, max for use inside loop
-	unsigned long long lmin = min;	
+	unsigned long long lmin = min;
 	unsigned long long lmax = get_lmax(lmin, max);
 
 	vargs *input[NUM_THREADS];
@@ -769,7 +905,6 @@ int main(int argc, char* argv[])
 			printf("\n");
 	}
 #endif
-	//printf("\n");
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 		vargs_free(input[thread]);
 	}
