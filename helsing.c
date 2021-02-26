@@ -30,7 +30,7 @@
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
 #define NUM_THREADS 1 // Thread count above #cores may not improve performance
-#define ITERATOR 10000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
+#define ITERATOR 1000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
 
 //#define SANITY_CHECK
 //#define OEIS_OUTPUT
@@ -562,11 +562,15 @@ int llhead_pop(llhead *llhead_ptr, unsigned long long number)
 typedef struct ullbtree
 {
 	struct ullbtree *left;
-	unsigned long long lsize;
 	struct ullbtree *right;
-	unsigned long long rsize;
 	unsigned long long value;
+	unsigned long long height;
 } ullbtree;
+
+/*
+ * Unlike other binary trees, if right and left are not present, their height isn't set to -1.
+ * Instead, their memory location is NULL. This minimizes memory usage.
+*/
 
 ullbtree *ullbtree_init(unsigned long long value)
 {
@@ -574,58 +578,176 @@ ullbtree *ullbtree_init(unsigned long long value)
 	assert(new != NULL);
 
 	new->left = NULL;
-	new->lsize = 0;
 	new->right = NULL;
-	new->rsize = 0;
+	new->height = 0;
 	new->value = value;
 	return new;
 }
 
 int ullbtree_free(ullbtree *tree)
 {
-	if (tree->left != NULL)
-		ullbtree_free(tree->left);
-	if (tree->right != NULL)
-		ullbtree_free(tree->right);
+	if(tree != NULL){
+		if (tree->left != NULL)
+			ullbtree_free(tree->left);
+		if (tree->right != NULL)
+			ullbtree_free(tree->right);
+	}
 	free(tree);
 	return 0;
 }
 
-int ullbtree_add(ullbtree *tree, ullbtree *node)
+int print_tree(ullbtree *tree, unsigned long long i)
 {
-	if(tree->value == node->value)
-		return 0;
-	else if(node->value < tree->value){
-		if(tree->left == NULL){
-			tree->left = node;
-			tree->lsize = node->lsize + node->rsize;
-		} else {
-			ullbtree_add(tree->left, node);
-			tree->lsize = tree->left->lsize + tree->left->rsize;
+	if(tree !=NULL){
+		i = print_tree(tree->left, i);
+		printf("%llu %llu\n", i, tree->value);
+		i++;
+		i = print_tree(tree->right, i);
+	}
+	return i;
+}
+
+/*
+ * If the tree is within the balance limit it returns 0
+ * If the left is bigger, it returns 1
+ * If the right is bigger, it returns -1;
+*/
+
+int is_balanced(ullbtree *tree)
+{
+	//assert(tree != NULL);
+	if(tree != NULL){
+		if(tree->left != NULL && tree->right != NULL){
+			if(tree->left->height > tree->right->height){	//We do this to avoid overflow
+				if(tree->left->height > tree->right->height + 1)
+					return 1;
+				else
+					return 2;
+			}
+			else if(tree->right->height > tree->left->height){	//We do this to avoid overflow
+				if(tree->right->height > tree->left->height + 1)
+					return -1;
+				else
+					return -2;
+			}
 		}
-	} else {
-		if(tree->right == NULL){
-			tree->right = node;
-			tree->rsize = node->lsize + node->rsize;
-		} else {
-			ullbtree_add(tree->right, node);
-			tree->rsize = tree->right->lsize + tree->right->rsize;
+		else if(tree->left != NULL){
+			if(tree->left->height > 0)
+				return 1;
+			else
+				return 2;
+		}
+		else if(tree->right != NULL){
+			if(tree->right->height > 0)
+				return -1;
+			else
+				return -2;
 		}
 	}
 	return 0;
 }
 
-unsigned long long ullbtree_get(ullbtree *tree, unsigned long long n)
+int ullbtree_reset_height(ullbtree *tree)
 {
-	if(n == tree->lsize + 1){
-		return (tree->value);
-	} else if (n < tree->lsize + 1){
-		return (ullbtree_get(tree->left, n));
-	} else {
-		return (ullbtree_get(tree->right, n - (tree->lsize + 1)));
-	}
+	//assert(tree != NULL);
+	tree->height = 0;
+		if(tree->left != NULL && tree->left->height >= tree->height)
+			tree->height = tree->left->height + 1;
+		if(tree->right != NULL && tree->right->height >= tree->height)
+			tree->height = tree->right->height + 1;
+		return 0;
 }
 
+ullbtree *ullbtree_rotate_r(ullbtree *tree)
+{
+	//assert(tree != NULL);
+	//assert(tree->left != NULL);
+	if(tree->left != NULL){
+		ullbtree *left = tree->left;
+		//printf("Rotating right: %llu / %llu\n", left->value, tree->value);
+		tree->left = left->right;
+		ullbtree_reset_height(tree);
+		left->right = tree;
+		ullbtree_reset_height(left);
+		//printf("Rotated right: %llu \\ %llu\n", left->value, tree->value);
+		return left;
+	}
+	return tree;
+}
+
+ullbtree *ullbtree_rotate_l(ullbtree *tree)
+{
+	//assert(tree != NULL);
+	//assert(tree->right != NULL);
+	if(tree->right != NULL){
+		ullbtree *right = tree->right;
+		//printf("Rotating left: %llu \\ %llu\n", tree->value, right->value);
+		tree->right = right->left;
+		ullbtree_reset_height(tree);
+		right->left = tree;
+		ullbtree_reset_height(right);
+		//printf("Rotated left: %llu / %llu\n", tree->value, right->value);
+		return right;
+	}
+	return tree;
+}
+
+ullbtree *ullbtree_balance(ullbtree *tree)
+{
+	//assert(tree != NULL);
+	switch(is_balanced(tree)){
+		case 1:
+			if(is_balanced(tree->left) < 0){
+				tree->left = ullbtree_rotate_l(tree->left);
+				ullbtree_reset_height(tree); //maybe optional?
+			}
+			tree = ullbtree_rotate_r(tree);
+			break;
+
+		case -1:
+			if(is_balanced(tree->right) > 0){
+				tree->right = ullbtree_rotate_r(tree->right);
+				ullbtree_reset_height(tree); //maybe optional?
+			}
+			tree = ullbtree_rotate_l(tree);
+			break;
+
+		default:
+			return tree;
+	}
+	return tree;
+}
+
+ullbtree *ullbtree_add(ullbtree *tree, ullbtree *node, unsigned long long *count)
+{
+	assert(tree != NULL);
+	if(node->value == tree->value){
+		ullbtree_free(node);
+		return tree;
+	}
+	else if(node->value < tree->value){
+		if(tree->left == NULL){
+			tree->left = node;
+			if(count != NULL){
+				*count += 1;
+			}
+		} else {
+			tree->left = ullbtree_add(tree->left, node, count);
+		}
+	} else {
+		if(tree->right == NULL){
+			tree->right = node;
+			if(count != NULL){
+				*count += 1;
+			}
+		} else {
+			tree->right = ullbtree_add(tree->right, node, count);
+		}
+	}
+	ullbtree_reset_height(tree);
+	tree = ullbtree_balance(tree);
+	return tree;
+}
 
 /*----------------------------------------------------------------------------*/
 
@@ -637,7 +759,7 @@ typedef struct vargs	/* Vampire arguments */
 	unsigned long long count;
 	double	runtime;
 	double 	algorithm_runtime;
-	llhead *result;
+	ullbtree *result;
 } vargs;
 
 vargs *vargs_init(unsigned long long min, unsigned long long max, unsigned long long step)
@@ -650,13 +772,13 @@ vargs *vargs_init(unsigned long long min, unsigned long long max, unsigned long 
 	new->count = 0;
 	new->runtime = 0.0;
 	new->algorithm_runtime = 0.0;
-	new->result = llhead_init(NULL, NULL);
+	new->result = NULL;
 	return new;
 }
 
 int vargs_free(vargs *vargs_ptr)
 {
-	llhead_free(vargs_ptr->result);
+	ullbtree_free(vargs_ptr->result);
 	free (vargs_ptr);
 	return 0;
 }
@@ -713,7 +835,7 @@ void *vampire(void *void_args)
 	vargs *args = (vargs *)void_args;
 
 	//Min Max range for both factors
-	//unsigned long long factor_min = pow10ull((length(args->min) / 2) - 1);
+	unsigned long long factor_min = pow10ull((length(args->min) / 2) - 1);
 	unsigned long long factor_max = pow10ull((length(args->max) / 2)) -1;//(sqrtull(args->max));
 
 	//Adjust range for Multiplier
@@ -721,13 +843,23 @@ void *vampire(void *void_args)
 
 	//Adjust range for Multiplicant
 	unsigned long long multiplicant_max = sqrtull(args->max);
+	unsigned long long asd = args->min/factor_min;
 
 	unsigned long long product;
 
-	printf("[%llu, %llu] [%llu, %llu]\n", args->min, args->max, multiplier, multiplicant_max);
+	printf("min max [%llu, %llu], fmin fmax [%llu, %llu], [%llu, %llu], %llu\n", args->min, args->max, factor_min, factor_max,multiplier, factor_max, multiplicant_max);
 
 	for(unsigned long long multiplicant; multiplier <= factor_max; multiplier++){
-		multiplicant = args->min/multiplier + 1;
+		if(multiplier % 3 == 1){
+			continue;
+		}
+		if(multiplier >= asd){
+			multiplicant = factor_min;
+		}
+		else{
+			multiplicant = args->min/multiplier + !(!(args->min % multiplier));
+		}
+		multiplicant_max = args->max/multiplier;
 		for(;multiplicant <= multiplicant_max && multiplicant <= multiplier; multiplicant++){
 			product = multiplier*multiplicant;
 			if((multiplier + multiplicant) % 9 != product % 9){
@@ -743,48 +875,12 @@ void *vampire(void *void_args)
 				if (product <= args->max){
 					bool testresult = vampirism_check(product, multiplier, multiplicant);
 					if (testresult) {
-
-						llist *temp = args->result->first;
-						llist *temp2 = NULL;
-
-						if (args->result->first == NULL) {
-							args->result->first = llist_init(product, NULL);
-							args->result->last = args->result->first;
-
-							args->count ++;
-							//if(!(product >= args->min))
-								//printf("%llu = %llu * %llu\n", product, multiplier, multiplicant);
+						if (args->result == NULL) {
+							args->result = ullbtree_init(product);
+							args->count += 1;
 						} else {
-							if(product < args->result->first->number){
-								args->result->first = llist_init(product, temp);
-								args->count ++;
-								//if(!(product >= args->min))
-									//printf("%llu = %llu * %llu\n", product, multiplier, multiplicant);
-							} else if (product > args->result->last->number){
-								args->result->last->next = llist_init(product, NULL);
-								args->result->last = args->result->last->next;
-								args->count ++;
-								//if(!(product >= args->min))
-									//printf("%llu = %llu * %llu\n", product, multiplier, multiplicant);
-							} else {
-								for(;temp != NULL ; temp = temp->next){
-									if(product > temp->number){
-										if(temp->next != NULL){
-											if(product < temp->next->number){
-												temp2 = llist_init(product, temp->next);
-												temp->next = temp2;
-												args->count ++;
-												//if(!(product >= args->min))
-													//printf("%llu = %llu * %llu\n", product, multiplier, multiplicant);
-											}
-										}
-									} else if(product == temp->number){
-										break;
-									} 
-								}
-							}
+							args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
 						}
-						//printf("%llu %llu\n", args->count, product);
 					}
 				}
 			}
@@ -842,7 +938,7 @@ int main(int argc, char* argv[])
 	for (i = 0; i < NUM_THREADS; i++) {
 		input[i] = vargs_init(0, 0, 1);
 	}
-	llhead *result_list = llhead_init(NULL, NULL);
+	ullbtree *result_tree = NULL;
 	unsigned long long iterator = ITERATOR;
 	unsigned long long active_threads = NUM_THREADS;
 
@@ -865,17 +961,14 @@ int main(int argc, char* argv[])
 			for (thread = 0; thread < active_threads; thread++) {
 				pthread_join(threads[thread], 0);
 #if defined(OEIS_OUTPUT)
-				if (input[thread]->result->first != NULL) {
-					if (result_list->first == NULL) {
-						result_list->first = input[thread]->result->first;
-						result_list->last = input[thread]->result->last;
+				if (input[thread]->result != NULL){
+					if(result_tree != NULL){
+						result_tree = ullbtree_add(result_tree, input[thread]->result);
 					} else {
-						result_list->last->next = input[thread]->result->first;
-						result_list->last = input[thread]->result->last;
+						result_tree = input[thread]->result;
 					}
 				}
-				input[thread]->result->first = NULL;
-				input[thread]->result->last = NULL;
+				input[thread]->result = NULL;
 #endif
 			}
 		}
@@ -913,18 +1006,13 @@ int main(int argc, char* argv[])
 	printf("Fang search took: %lf, average: %lf\n", algorithm_time, algorithm_time / NUM_THREADS);
 #endif
 #if defined(OEIS_OUTPUT)
-	unsigned long long k = 1;
-	llist *temp;
-	for (temp = result_list->first; temp != NULL; temp = temp->next) {
-		printf("%llu %llu\n", k, temp->number);
-		k++;
-	}
+	print_tree(result_tree, 1);
 #endif
 
 #if defined(RESULTS)
 	printf("Found: %llu vampire numbers.\n", result);
 #endif
-	llhead_free(result_list);
+	ullbtree_free(result_tree);
 
 	pthread_exit(NULL);
 	return 0;
