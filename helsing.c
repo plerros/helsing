@@ -17,7 +17,6 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -249,8 +248,7 @@ unsigned long long sqrtull ( unsigned long long s )
 	unsigned long long x0 = s >> 1;				// Initial estimate
 
 	// Sanity check
-	if ( x0 )
-	{
+	if (x0){
 		unsigned long long x1 = ( x0 + s / x0 ) >> 1;	// Update
 		
 		while ( x1 < x0 )				// This also checks for cycle
@@ -258,11 +256,8 @@ unsigned long long sqrtull ( unsigned long long s )
 			x0 = x1;
 			x1 = ( x0 + s / x0 ) >> 1;
 		}
-		
 		return x0;
-	}
-	else
-	{
+	} else {
 		return s;
 	}
 }
@@ -297,253 +292,144 @@ bool vampirism_check(unsigned long long product, unsigned long long multiplier, 
 	}
 	return 1;
 }
-/*---------------------------------- ULIST  ----------------------------------*/
 
-typedef struct ulist	// List of unsigned long long
-{
-	unsigned long long *array;	// Set to NULL when the array is empty. Check if NULL before traversing the array!
-	unsigned short last;      	// Code should traverse the array up to [last]. May be smaller or equal than the actual size of the array.
-} ulist;
+/*---------------------------------- dllist ----------------------------------*/
 
-ulist *ulist_init(unsigned long long number)
+/*
+ *         |<------------- n <= 2^16 - 1 ------------->|
+ *         [ digit 1 ]   [ digit 2 ]   ...   [ digit n ]
+ * NULL <--[prev next]<->[prev next]<->...<->[prev next]--> NULL
+*/
+
+typedef struct dllist	/* Linked list of unsigned short digits*/
 {
-	ulist *new = malloc(sizeof(ulist));
+	unsigned short digit :4;
+	struct dllist *prev;
+	struct dllist *next;
+} dllist;
+
+dllist *dllist_init(unsigned short digit, dllist *prev, dllist *next)
+{
+	dllist *new = malloc(sizeof(dllist));
 	assert(new != NULL);
 
-	new->last = length(number) - 1;
+	new->digit = digit;
+	new->prev = prev;
+	new->next = next;
 
-	new->array = malloc(sizeof(unsigned long long) * (new->last + 1));
-	assert(new->array != NULL);
-
-	for (unsigned long long i = new->last; i > 0; i--) {
-		new->array[i] = number % 10;
-		number = number/10;
-	}
-	new->array[0] = number % 10;
-	return (new);
+	return new;
 }
 
-int ulist_free(ulist* ulist_ptr)
+
+dllist *dllist_ull_init(unsigned long long number)	// N to 1 conversion
 {
-#ifdef SANITY_CHECK
-	assert(ulist_ptr != NULL);
-#endif
-	if (ulist_ptr->array != NULL) {
-		free(ulist_ptr->array);
-		ulist_ptr->array = NULL;
+	dllist *new = NULL;
+	dllist *temp = NULL;
+
+	for(unsigned short i = length(number); i > 0; i--){
+		new = dllist_init(number % 10, NULL, temp);
+		if(temp != NULL)
+			temp->prev = new;
+		temp = new;
+		number /= 10;
 	}
-	free(ulist_ptr);
-	return 0;
+	return new;
 }
 
-ulist *ulist_copy(ulist *original)
+dllist *dllist_char_p_init(const char *str)	// 1 to N conversion
 {
-#ifdef SANITY_CHECK
-	assert(original != NULL);
-#endif
-
-	ulist *copy = malloc(sizeof(ulist));
-	assert(copy != NULL);
-
-	copy->last = original->last;
-
-	if (original->array != NULL) {
-		copy->array = malloc(sizeof(unsigned long long)*(copy->last + 1));
-		assert(copy->array != NULL);
-
-		for (unsigned long long i = 0; i<=copy->last; i++) {
-			copy->array[i] = original->array[i];
+	dllist *new = NULL;
+	dllist *current = NULL;
+	dllist *temp = NULL;
+	for (unsigned short i = 0; str[i] >= '0' && str[i] <= '9'; i++) {
+		current = dllist_init((str[i] - '0'), temp, NULL);
+		if(new == NULL){
+			new = current;
+		} else {
+			temp->next = current;
 		}
-	} else
-		copy->array = NULL;
+		temp = current;
+	}
+	return new;
+}
 
+dllist *dllist_copy(dllist *original)	// 1 to N conversion
+{
+	dllist *copy = NULL;
+	if (original != NULL) {
+		dllist *current = NULL;
+		dllist *temp = NULL;
+		for(dllist *i = original; i != NULL; i = i->next){
+			current = dllist_init(i->digit, temp, NULL);
+			if(copy == NULL){
+				copy = current;
+			} else {
+				temp->next = current;
+			}
+			temp = current;
+		}	
+	}
 	return (copy);
 }
 
-int ulist_remove(ulist* ulist_ptr, unsigned long long element)
+int dllist_free(dllist *dllist_ptr)
 {
-#ifdef SANITY_CHECK
-	assert(ulist_ptr != NULL);
-	assert(element <= ulist_ptr->last);
-#endif
-
-	if (ulist_ptr->array != NULL) {
-		if (ulist_ptr->last == 0) {
-			free(ulist_ptr->array);
-			ulist_ptr->array = NULL;
-		} else {
-			for (; element < ulist_ptr->last; element++) {
-				ulist_ptr->array[element] = ulist_ptr->array[element + 1];
-			}
-			ulist_ptr->last = ulist_ptr->last - 1;
-		}
-	}
-	return 0;
-}
-
-int ulist_pop(ulist* ulist_ptr, unsigned long long number)
-{
-#ifdef SANITY_CHECK
-	assert(ulist_ptr != NULL);
-#endif
-
-	if (ulist_ptr->array != NULL) {
-		for (unsigned long long i = 0; i <= ulist_ptr->last; i++) {
-			if (ulist_ptr->array[i] == number) {
-				if (ulist_ptr->last == 0) {
-					free(ulist_ptr->array);
-					ulist_ptr->array = NULL;
-				} else {
-					for (; i < ulist_ptr->last; i++) {
-						ulist_ptr->array[i] = ulist_ptr->array[i+1];
-					}
-					ulist_ptr->last = ulist_ptr->last - 1;
-				}
-				return 1;
-			}
-		}
-	}
-	return 0;
-}
-
-unsigned long long ulist_combine_digits(ulist *digits)
-{
-#ifdef SANITY_CHECK
-	assert(digits != NULL);
-#endif
-
-	unsigned long long number = 0;
-	if (digits->array != NULL) {
-		for (unsigned long long i = 0; i <= digits->last; i++) {
-			number = (number * 10)+ digits->array[i];
-		}
-	}
-	return (number);
-}
-
-bool ulist_lastnotzero(ulist *ulist_ptr)
-{
-#ifdef SANITY_CHECK
-	assert(ulist_ptr != NULL);
-#endif
-
-	if (ulist_ptr->array != NULL) {
-		return (ulist_ptr->array[ulist_ptr->last] != 0);
-	}
-	return 0;
-}
-
-/*---------------------------------- LLIST  ----------------------------------*/
-
-typedef struct llist	/* Linked list of unsigned long longegers */
-{
-	unsigned long long number;
-	struct llist *next;
-} llist;
-
-llist *llist_init(unsigned long long number, llist* next)
-{
-	llist *new = malloc(sizeof(llist));
-	assert(new != NULL);
-	new->number = number;
-	new->next = next;
-	return (new);
-}
-
-int llist_free(llist *llist_ptr)
-{
-	for (llist *temp = NULL; llist_ptr != NULL ;) {
-		temp = llist_ptr;
-		llist_ptr = llist_ptr->next;
+	dllist *current = dllist_ptr;
+	for (dllist *temp = current; current != NULL ;) {
+		temp = current;
+		current = current->next;
 		free(temp);
 	}
 	return 0;
 }
 
-llist *get_fangs(unsigned long long dividend)
+/*--------------------------------- dllhead  ---------------------------------*/
+
+typedef struct dllhead
 {
-	llist *divisors = NULL;
-	unsigned short dividend_length = length(dividend);
-	unsigned short fang_length = dividend_length / 2;
-	unsigned long long divisor = pow10ull(fang_length - 1);
-	for (; length(dividend/divisor) > fang_length; divisor++) {}
+	struct dllist *first;
+	struct dllist *last;
+} dllhead;
 
-	for (llist *current = NULL; divisor * divisor <= dividend; divisor++) {
-		if (dividend % divisor == 0 && !( trailingzero(divisor) && trailingzero(dividend/divisor))) {
-			if (current == NULL) {
-				divisors = llist_init(divisor, NULL);
-				current = divisors;
-			} else {
-				current->next = llist_init(divisor, current->next);
-				current = current->next;
-			}
-		}
-	}
-	return (divisors);
-}
-
-llist *llist_copy(llist *original)
+dllhead *dllhead_init(dllist *first, dllist *last)
 {
-	llist *copy = NULL;
-	if (original != NULL) {
-		copy = llist_init(original->number, NULL);
-		llist *current = copy;
-		for (llist *i = original->next; i != NULL; i = i->next) {
-			llist *llist_ptr = llist_init(i->number, NULL);
-			current->next = llist_ptr;
-			current = current->next;
-		}
-	}
-	return (copy);
-}
-
-/*---------------------------------- LLHEAD ----------------------------------*/
-
-typedef struct llhead
-{
-	struct llist *first;
-	struct llist *last;
-} llhead;
-
-llhead *llhead_init(llist *first, llist *last)
-{
-	llhead *new = malloc(sizeof(llhead));
+	dllhead *new = malloc(sizeof(dllhead));
 	assert(new != NULL);
 	new->first = first;
-	if (last != NULL)
-		new->last = last;
-	else
-		new->last = new->first;
-	return (new);
+
+	for(new->last = first; new->last->next != NULL; new->last = new->last->next){}
+
+	return new;
 }
 
-int llhead_free(llhead *llhead_ptr)
+int dllhead_free(dllhead *dllhead_ptr)
 {
-	if (llhead_ptr != NULL) {
-		llist_free(llhead_ptr->first);
+	if (dllhead_ptr != NULL) {
+		dllist_free(dllhead_ptr->first);
 	}
-	free(llhead_ptr);
+	free(dllhead_ptr);
 	return 0;
 }
 
-llhead *llhead_copy(llhead *original) {
-	llist *first = NULL;
-	first = llist_copy(original->first);
-	llist *last = NULL;	/* this works but technically it shouldn't be just NULL. */
-	llhead *copy = llhead_init(first,last);
+dllhead *dllhead_copy(dllhead *original) {
+	dllist *first = NULL;
+	dllist *last = NULL;
+	first = dllist_copy(original->first);
+	for(last = first; last->next != NULL; last = last->next){}
+	dllhead *copy = dllhead_init(first,last);
 	return (copy);
 }
 
-int llhead_pop(llhead *llhead_ptr, unsigned long long number)
+int dllhead_pop(dllhead *dllhead_ptr, unsigned short digit)
 {
-	llist *prev = NULL;
-	for (llist *i = llhead_ptr->first; i != NULL; i = i->next) {
-		if (i->number == number) {
-			if (i == llhead_ptr->first) {
-				llhead_ptr->first = i->next;
+	dllist *prev = NULL;
+	for (dllist *i = dllhead_ptr->first; i != NULL; i = i->next) {
+		if (i->digit == digit) {
+			if (i == dllhead_ptr->first) {
+				dllhead_ptr->first = i->next;
 			}
-			if (i == llhead_ptr->last) {
-				llhead_ptr->last = prev;
+			if (i == dllhead_ptr->last) {
+				dllhead_ptr->last = prev;
 			}
 			if (prev != NULL) {
 				prev->next = i->next;
@@ -554,6 +440,68 @@ int llhead_pop(llhead *llhead_ptr, unsigned long long number)
 		else
 			prev = i;
 	}
+	return 0;
+}
+
+int dllhead_increment(dllhead *dllhead_ptr)
+{
+	dllist *temp = dllhead_ptr->last;
+	if(temp->digit == 9){
+		for(;temp->digit == 9; temp = temp->prev){
+			if(temp->prev == NULL){
+				temp->prev = dllist_init(1, NULL, temp);
+				dllhead_ptr->first = temp->prev;
+			} else {
+				temp->digit = 0;
+			}
+		}
+	} else {
+		temp->digit += 1;
+	}
+	return 0;
+}
+
+bool dllhead_vampirism_check(dllhead *product, dllhead *mutiplier, dllhead *multiplicant)
+{
+	unsigned short count[10] = {0};
+	for(dllist *i = product->first; i != NULL; i = i->next){
+		//printf("%d", i->digit);
+		count[i->digit] += 1;
+	}
+	//printf("\n-");
+	for(dllist *i = mutiplier->first; i != NULL; i = i->next){
+		if(i->digit != 0 && count[i->digit] == 0){
+			return false;
+		}
+		count[i->digit] -= 1;
+		//printf("%d", i->digit);
+	}
+	//printf("\n-");
+	for(dllist *i = multiplicant->first; i != NULL; i = i->next){
+		if(count[i->digit] == 0){
+			return false;
+		}
+		count[i->digit] -= 1;
+		//printf("%d", i->digit);
+	}
+	//printf("\n");
+
+	for(int i = 0; i < 10; i++){
+		if(count[i] != 0){
+			return false;
+		}
+	}
+	return true;
+}
+
+int dllhead_print(dllhead *dllhead_ptr)
+{
+
+	printf("dllhead print:\t");
+	for(dllist*i = dllhead_ptr->first; i != NULL; i = i->next){
+		printf("%d", i->digit);
+	}
+	printf("\n");
 	return 0;
 }
 
@@ -858,9 +806,12 @@ void *vampire(void *void_args)
 
 	//Adjust range for Multiplicant
 	unsigned long long multiplicant_max;
-	unsigned long long fgh = max / max_sqrt;
 
 	unsigned long long product;
+
+	dllhead *dllhead_product = NULL;
+	dllhead *dllhead_multiplier = NULL;
+	dllhead *dllhead_multiplicant = NULL;
 
 	printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier_min);
 
@@ -869,21 +820,32 @@ void *vampire(void *void_args)
 			continue;
 		}
 		multiplicant = min/multiplier + !(!(min % multiplier));
-		if(multiplier >= fgh){
+		if(multiplier >= max_sqrt){
 			multiplicant_max = max/multiplier;
 		} else {
-			multiplicant_max = multiplier;
+			multiplicant_max = multiplier -1; 
+			//multiplier cannot be equal to mutiplicant, because a square number can end only with digits 0, 1, 4, 5, 6 or 9.
 		}
 		//if(multiplicant <= multiplicant_max && multiplicant <= multiplier_max){
 			//printf("%llu, %llu, %llu = %llu\n", multiplier, multiplicant, multiplicant_max, multiplier * multiplicant);
 		//}
-	
+		dllhead_multiplier = dllhead_init(dllist_ull_init(multiplier), NULL);
+		dllhead_multiplicant = dllhead_init(dllist_ull_init(multiplicant-1), NULL);
 		for(;multiplicant <= multiplicant_max; multiplicant++){
+			//dllhead_print(dllhead_multiplicant);
+			dllhead_increment(dllhead_multiplicant);
+			//dllhead_print(dllhead_multiplicant);
 			product = multiplier*multiplicant;
 			//if(multiplicant > multiplier){
 			//	printf("%llu, %llu, %llu = %llu\n", multiplier, multiplicant, multiplicant_max, multiplier * multiplicant);
 			//}
+
+
 			if((multiplier + multiplicant) % 9 != product % 9){
+				//if((multiplier * (multiplicant + 9) == product + (multiplicant * 9))){
+				//	printf("%llu = %llu * %llu\n", product, multiplier, multiplicant);
+				//	assert(0);
+				//}
 				continue;
 			}
 			//if ((multiplicant + 2) % 3 == 0){
@@ -893,8 +855,11 @@ void *vampire(void *void_args)
 				//if ((product + 1) % 3 == 0){
 				//	continue;
 				//}
-				if (product <= max){
-					bool testresult = vampirism_check(product, multiplier, multiplicant);
+				//if (product <= max){
+				
+				dllhead_product = dllhead_init(dllist_ull_init(product), NULL);
+					//bool testresult = vampirism_check(product, multiplier, multiplicant);
+					bool testresult = dllhead_vampirism_check(dllhead_product, dllhead_multiplier,dllhead_multiplicant);
 					if (testresult) {
 						if (args->result == NULL) {
 							args->result = ullbtree_init(product);
@@ -903,9 +868,12 @@ void *vampire(void *void_args)
 							args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
 						}
 					}
-				}
+				
+				dllhead_free(dllhead_product);
 			}
 		}
+		dllhead_free(dllhead_multiplier);
+		dllhead_free(dllhead_multiplicant);
 	}
 
 #ifdef SPD_TEST
@@ -984,7 +952,7 @@ int main(int argc, char* argv[])
 #if defined(OEIS_OUTPUT)
 				if (input[thread]->result != NULL){
 					if(result_tree != NULL){
-						result_tree = ullbtree_add(result_tree, input[thread]->result, NULL);
+						result_tree = ullbtree_add(result_tree, input[thread]->result);
 					} else {
 						result_tree = input[thread]->result;
 					}
