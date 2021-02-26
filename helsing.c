@@ -43,7 +43,7 @@
  * (note: thread count above #cores may not improve performance)
  */
 
-#define THREADS 1
+#define THREADS 16
 #define thread_t uint16_t
 
 /*
@@ -75,7 +75,7 @@
  * loss and memory usage is max/100.
  */
 
-#define ITERATOR 18446744073709551615ULL
+#define ITERATOR 100000000000000ULL
 
 /*
  * JENS_K_A_OPTIMIZATION:
@@ -91,18 +91,31 @@
  * 	Each element has a position, an array key; for example in the array
  * "array[]" the element "array[1]" has the array key 1.
  *
- * 	The value of each element is a concatenation of n/10-bit long
- * unsigned integers that hold the total count of each digit of its array key.
+ * 	The value of each element is a concatenation of (n/8)-bit unsigned 
+ * integers that hold the total count of each digit (except 0s & 1s) of its
+ * array key. For example a 32-bit sized element gets split into 8 * 4-bit
+ * segments and a 64-bit sized element gets split into 8 * 8-bit segments:
+ *                                     [77776666|55554444|33332222|99998888]
+ * [77777777|66666666|55555555|44444444|33333333|22222222|99999999|88888888]
+ * 64       56       48       40       32       24       16       8        0
+ *
+ * 	We can choose any digit and ignore it, I chose not to store the 0s.
+ * I think I can get away with not storing 1s too; Only a fang with more than
+ * 8 * 1s could fool the modulo 9 congruence and such numbers are pretty rare.
+ * The 9s & 8s are positioned before the rest, because modulo 8 is faster than
+ * subtraction.
  *
  * 	This way the code doesn't perform expensive operations such as modulo,
- * multiplication, division , for values that are already stored in the array.
+ * multiplication, division, for values that are already stored in the array.
  *
  * 	If the array gets too big, the memory latency penalty to access it
  * might hinder performance. Also the dig[] array will experience overflow
- * above 10 ^ (2 ^ n/10)) - 1.
+ * above (10 ^ (2 ^ n/8) - 1) - 1. To check numbers above 10^15 - 1 set
+ * DIG_ELEMENT_BITS to 64.
  */
 
 #define JENS_K_A_OPTIMIZATION true
+#define DIG_ELEMENT_BITS 32
 
 /*
  * OEIS_OUTPUT:
@@ -145,6 +158,13 @@ typedef unsigned long fang_t;
 #define fang_max ULONG_MAX
 
 /*--------------------------- PREPROCESSOR_STUFF  ---------------------------*/
+#if DIG_ELEMENT_BITS == 64
+	typedef uint64_t dig_t;
+#elif DIG_ELEMENT_BITS == 32
+	typedef uint32_t dig_t;
+#endif
+
+#define DIGMULT (DIG_ELEMENT_BITS/8)
 
 #if MEASURE_RUNTIME
 	#if defined(CLOCK_MONOTONIC)
@@ -610,7 +630,7 @@ struct vargs	/* Vampire arguments */
 #endif
 
 #if JENS_K_A_OPTIMIZATION
-	vamp_t *dig;
+	dig_t *dig;
 	fang_t digsize;
 #endif
 };
@@ -657,7 +677,7 @@ double distribution_inverted_integral(double area)
 	* user	209m37.086s
 	* sys	0m14.265s
 	*/
-	//return (1.0 - 0.9 * pow(1.0-area, 1.0/(3.0 -(0.3 * area * area) -(0.7 * area) + 0.3)));
+	return (1.0 - 0.9 * pow(1.0-area, 1.0/(3.0 -(0.3 * area * area) -(0.7 * area) + 0.3)));
 
 	/*
 	* new new:
@@ -681,7 +701,7 @@ double distribution_inverted_integral(double area)
 	* user	210m42.727s
 	* sys	0m13.952s
 	*/
-	//double exponent = 1.0/(3.0 -0.27 * pow(area, 3.0) + 0.64 * pow(area, 2.0) -1.7 * area + 0.59);
+	//double exponent = 1.0/(3.0 -0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) -1.7 * area + 0.59);
 	//return (1.0 - 0.899 * pow(1.0-area, exponent));
 	// This is a hand made approximation.
 }
@@ -762,7 +782,7 @@ void *vampire(void *void_args)
 		if (power10 < 900)
 			power10 = 1000;
 
-		vamp_t *dig = args->dig;
+		dig_t *dig = args->dig;
 	#endif
 
 	for (fang_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
@@ -814,22 +834,20 @@ void *vampire(void *void_args)
 				 * We can calculate digd on the spot and make the dig array 10 times smaller.
 				 */
 
-				vamp_t digd = 0;
+				dig_t digd;
 
-/*
-				if (multiplier > args->digsize) {
-					fang_t d = multiplier;
-					for (uint8_t i = 0; i < length(product); i++) {
-						digd += ((vamp_t)1 << ((d % 10) * 6));
-						d /= 10;
+				if(min_sqrt >= args->digsize) {
+					digd = 0;
+					for (fang_t i = multiplier; i > 0; i /= 10) {
+						uint8_t digit = i % 10;
+						if(digit > 1)
+							digd += ((vamp_t)1 << ((digit % 8) * DIGMULT)); 
 					}
-//					for (fang_t d = multiplier; d > 0; d /= 10)
-//						digd += ((vamp_t)1 << ((d % 10) * 4));
-				} else {
+				}
+				else {
 					digd = dig[multiplier];
 				}
-*/
-				digd = dig[multiplier];
+
 				fang_t de0 = product % power10;
 				fang_t de1 = (product / power10) % power10;
 				uint16_t de2 = (product / power10) / power10; // 10^3 <= de2 < 10^4
@@ -897,6 +915,7 @@ vampire_exit:
 
 		}
 	}
+	bthandle_cleanup(args->thandle, 0, args->lhandle);
 
 #ifdef SPDT_CLK_MODE
 	clock_gettime(SPDT_CLK_MODE, &finish);
@@ -957,20 +976,16 @@ int main(int argc, char* argv[])
 	fang_t digsize = pow10v(length(max) / 2 - 1);
 	if (digsize < 1000)
 		digsize = 1000;
-	digsize *= 10;
-	vamp_t *dig = malloc(sizeof(vamp_t) * digsize);
+	dig_t *dig = malloc(sizeof(dig_t) * digsize);
 	assert(dig != NULL);
 
 	for (fang_t d = 0; d < digsize; d++) {
 		dig[d] = 0;
-
-		fang_t d0 = d;
-		for (uint8_t i = 0; i < length(max) ; i++) {
-			dig[d] += ((vamp_t)1 << ((d0 % 10) * 6));
-			d0 /= 10;
+		for (fang_t i = d; i > 0; i /= 10) {
+			uint8_t digit = i % 10;
+			if(digit > 1)
+				dig[d] += ((dig_t)1 << ((digit % 8) * DIGMULT));
 		}
-//			for (fang_t d0 = d; d0 > 0; d0 /= 10)
-//				dig[d] += ((vamp_t)1 << ((d0 % 10) * 4));
 	}
 
 	for (thread_t thread = 0; thread < THREADS; thread++){
