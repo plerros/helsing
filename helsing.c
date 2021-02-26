@@ -28,21 +28,20 @@
 #include <stdint.h>
 #include <math.h>
 
-// Compile with: gcc -O3 -Wall -Wextra -pthread -o helsing helsing.c -lm
+// Compile with: gcc -O3 -Wall -Wextra -pthread -lm -o helsing helsing.c
 //Record to break: The 208423682 14-digit vampires were computed to a 7 GB file in 19 hours on November 12-13 2002.
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
-#define NUM_THREADS 90 // Thread count above #cores may not improve performance 
+#define NUM_THREADS 8 // Thread count above #cores may not improve performance 
 #define ITERATOR 100000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
 //18446744073709551616
 
 //#define SANITY_CHECK
 //#define OEIS_OUTPUT
 
-#define MEASURE_RUNTIME
+//#define MEASURE_RUNTIME
 #define PRINT_VAMPIRE_COUNT
-//#define COMPENSATE_BENFORDS_LAW
-//#define ADJUST_BENFORDS_LAW
+#define DISTRIBUTION_COMPENSATION
 
 /*---------------------------- PREPROCESSOR_STUFF ----------------------------*/
 #ifndef OEIS_OUTPUT
@@ -224,7 +223,7 @@ unsigned long long pow10ull (uint8_t exponent) // Returns 10 ^ exponent
 	}
 }
 
-inline bool trailingzero (unsigned long long number)
+bool trailingzero (unsigned long long number)
 {
 	return ((number % 10) != 0);
 }
@@ -282,8 +281,8 @@ unsigned long long sqrtull ( unsigned long long s )
 
 bool vampirism_check(unsigned long long product, unsigned long long multiplicant, uint8_t mult_array[])
 {
+/*
 	int8_t product_array[10] = {0};
-
 	for (; multiplicant != 0; multiplicant /= 10){
 		product_array[multiplicant % 10] -= 1;		//Underflow is expected here.
 	}
@@ -294,7 +293,30 @@ bool vampirism_check(unsigned long long product, unsigned long long multiplicant
 		if(product_array[i] != mult_array[i])
 			return false;
 	}
+	
 	return true;
+*/
+	int16_t product_array[10] = {0};
+	int8_t temp = 0;
+	for (; product != 0; product /= 10){
+		product_array[product % 10] += 1;
+	}
+	for (uint8_t i = 0; i < 8; i++){
+		if(product_array[i] < mult_array[i])
+			return false;
+	}
+	for (; multiplicant != 0; multiplicant /= 10){
+		temp = multiplicant % 10;
+		product_array[temp] -= 1;
+		if(product_array[temp] < 0)
+			return false;
+	}
+	for (uint8_t i = 0; i < 8; i++){ //maybe just 8?
+		if(product_array[i] != mult_array[i])
+			return false;
+	}
+	return true;
+	
 }
 
 /*--------------------------------- ULLBTREE ---------------------------------*/
@@ -459,29 +481,18 @@ ullbtree *ullbtree_balance(ullbtree *tree)
 
 ullbtree *ullbtree_add(ullbtree *tree, ullbtree *node, unsigned long long *count)
 {
-	assert(tree != NULL);
+	if(tree == NULL){
+		*count += 1;
+		return node;
+	}
 	if(node->value == tree->value){
 		ullbtree_free(node);
 		return tree;
 	}
 	else if(node->value < tree->value){
-		if(tree->left == NULL){
-			tree->left = node;
-			if(count != NULL){
-				*count += 1;
-			}
-		} else {
-			tree->left = ullbtree_add(tree->left, node, count);
-		}
+		tree->left = ullbtree_add(tree->left, node, count);
 	} else {
-		if(tree->right == NULL){
-			tree->right = node;
-			if(count != NULL){
-				*count += 1;
-			}
-		} else {
-			tree->right = ullbtree_add(tree->right, node, count);
-		}
+		tree->right = ullbtree_add(tree->right, node, count);
 	}
 	ullbtree_reset_height(tree);
 	tree = ullbtree_balance(tree);
@@ -522,203 +533,10 @@ int vargs_free(vargs *vargs_ptr)
 	return 0;
 }
 
-double benfords_law(double digit)
+double distribution_inverted_integral(double area)
 {
-#ifdef ADJUST_BENFORDS_LAW
-//	digit = tan( (acos(-1)/20.0) * (digit - 0.5) ) * 4; // This function is based on trial and error, there is no solid math foundation backing this up.
-//	digit = tan( (acos(-1)/20.0) * (digit - 0.51) ) * 7.7; // This function is based on trial and error, there is no solid math foundation backing this up.
-#endif
-/*
-	int i = digit;
-	switch(i){
-		case(1):
-			return 0.34;
-		case(2):
-			return 0.19;
-		case(3):
-			return 0.15;
-		case(4):
-			return 0.11;
-		case(5):
-			return 0.0826;
-		case(6):
-			return 0.06;
-		case(7):
-			return 0.04;
-		case(8):
-			return 0.02;
-		case(9):
-			return 0.007;
-	}
-*/
-	return (log10(1.0+1.0/digit));
-}
-
-double benfords_law_sum(uint8_t n){
-	double result = 0;
-	if(n > 0){
-		for(uint8_t i = 1; i <= n; i++){
-			result += benfords_law(i);
-		}
-	}
-	return result;
-}
-
-unsigned long long bl_transform (unsigned long long number)
-{
-	unsigned long long min = pow10ull(length(number)-1);
-	unsigned long long max = pow10ull(length(number))-1;
-	uint8_t n = 0;
-
-	if(number >= min && number < 2 * min){
-		n = 1;
-	}
-	else if(number >= 2 * min && number < 3 * min){
-		n = 2;
-	}
-	else if(number >= 3 * min && number < 4 * min){
-		n = 3;
-	}
-	else if(number >= 4 * min && number < 5 * min){
-		n = 4;
-	}
-	else if(number >= 5 * min && number < 6 * min){
-		n = 5;
-	}
-	else if(number >= 6 * min && number < 7 * min){
-		n = 6;
-	}
-	else if(number >= 7 * min && number < 8 * min){
-		n = 7;
-	}
-	else if(number >= 8 * min && number < 9 * min){
-		n = 8;
-	}
-	else{
-		n = 9;
-	}
-	assert(n != 0);
-/*
-	unsigned long long result = 
-		max * (
-			(benfords_law(n)-benfords_law(n+1))
-			*((double)n- (double)number/(double)min)
-			+benfords_law_sum(n)
-		);
-*/
-	//printf("num %llu, ratio %lf, bl %lf, %d\n", number, (double)number / (double)min - (double)(n-1), benfords_law(n), n);
-	//printf("%lf\n", benfords_law(n)*((double)number / (double)min ) +benfords_law_sum(n-1));
-
-	unsigned long long result;
-
-	if(n == 1){
-		result = 
-			max * (
-				/*
-				((benfords_law(n) - 0.1)/0.9)
-				*(
-					(double)number / (double)max - 0.1
-				)
-				+0.1
-				*/
-				(
-					(benfords_law(n) - 0.1) / 0.1
-				)*(
-					(double)number/(double)max
-				) + 0.2 - benfords_law(n)
-			);
-	} else {
-		result =
-			max * (
-				benfords_law(n)
-				*(
-					(
-						(double)number/(double)max
-					)*10.0 - (double)n
-				)
-				+ benfords_law_sum(n-1)
-			);
-	}
-
-
-	return result;
-}
-
-unsigned long long bl_invert (unsigned long long number)
-{
-	//unsigned long long min = pow10ull(length(number)-1);
-	unsigned long long max = pow10ull(length(number))-1;
-	//printf("%llu, %llu\n", min, max);
-	uint8_t n = 0;
-
-	if(number < max * benfords_law_sum(1)){
-		n = 1;
-	}
-	else if(number >= max * benfords_law_sum(1) && number < max * benfords_law_sum(2)){
-		n = 2;
-	}
-	else if(number >= max * benfords_law_sum(2) && number < max * benfords_law_sum(3)){
-		n = 3;
-	}
-	else if(number >= max * benfords_law_sum(3) && number < max * benfords_law_sum(4)){
-		n = 4;
-	}
-	else if(number >= max * benfords_law_sum(4) && number < max * benfords_law_sum(5)){
-		n = 5;
-	}
-	else if(number >= max * benfords_law_sum(5) && number < max * benfords_law_sum(6)){
-		n = 6;
-	}
-	else if(number >= max * benfords_law_sum(6) && number < max * benfords_law_sum(7)){
-		n = 7;
-	}
-	else if(number >= max * benfords_law_sum(7) && number < max * benfords_law_sum(8)){
-		n = 8;
-	}
-	else {
-		n = 9;
-	}
-	assert(n != 0);
-	//for(int i = 1; i < 10; i++)
-		//printf("%llu\n",(unsigned long long)(max*benfords_law_sum(i)));
-
-	//printf("num %llu, ratio %lf, sum %lf, bl %lf, %d\n", number, ((double)number/(double)max) - benfords_law_sum(n-1), benfords_law_sum(n-1), benfords_law(n), n);
-	//printf("%lf\n", ((double)number/(double)max -0.2 + benfords_law(n))*0.1 +0.1     );
-	unsigned long long result;
-	if(n == 1){
-		result = 
-			max * (
-				/*
-				((double)number/(double)max - 0.1)
-				/(
-					(benfords_law(n) - 0.1)/ 0.9
-				)
-				+0.1
-				*/
-				(
-					(
-						(double)number/(double)max 
-						-0.2
-						+benfords_law(n)
-					)
-					/(benfords_law(n)-0.1)
-				)*0.1 
-			);
-	} else {
-		result =
-			max * (
-				(
-					(
-						((double)number/(double)max - benfords_law_sum(n-1))
-						/benfords_law(n)
-					)
-					+(double)n
-				)
-				/10.0
-			);
-	}
-	//printf("result %lld\n", result);
-	return result;
+	//printf("%lf\n",  1.0 - 0.9 * pow(1.0-area, 1.0/3.0));
+	return (1.0 - 0.9 * pow(1.0-area, 1.0/(3.0-(0.7*area))));//This is a hand made approximation.
 }
 
 uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
@@ -735,11 +553,12 @@ uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long 
 		input[current]->max = (max-min)/(NUM_THREADS - current) + min;
 	}
 
-#ifdef COMPENSATE_BENFORDS_LAW
+#ifdef DISTRIBUTION_COMPENSATION
+	//unsigned long long factor_min = pow10ull((length(min)) - 1);
+	unsigned long long factor_max = pow10ull((length(max))) -1;
 	unsigned long long temp;
 	for(uint16_t i = 0; i < current; i++){
-		temp = bl_invert(input[i]->max);
-		//printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
+		temp = (double)factor_max * distribution_inverted_integral(((double)i+1)/((double)NUM_THREADS));
 
 		if(temp > input[i]->min && temp < input[i]->max){
 			//printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
@@ -752,22 +571,6 @@ uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long 
 	input[current]->max = max;
 	return (current);
 }
-
-/*
-int vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
-{
-	int current = 0;
-
-	input[current]->min = min;
-	input[current]->max = max;
-
-	for (; current < NUM_THREADS && min + current < max; current++){
-		input[current]->min = min + current;
-		input[current]->max = max;
-	}
-	return (current-1);
-}
-*/
 
 /*----------------------------------------------------------------------------*/
 
@@ -813,34 +616,34 @@ void *vampire(void *void_args)
 		if(multiplier % 3 == 1){
 			continue;
 		}
-		multiplicant = min/multiplier + !(!(min % multiplier)); // fmin * fmax <= min - 10^n
+		multiplicant = min/multiplier + !!(min % multiplier); // fmin * fmax <= min - 10^n
 		if(multiplier >= max_sqrt){
 			multiplicant_max = max/multiplier;
 		} else {
-			multiplicant_max = multiplier; //multiplicant can be equal to mutiplicant, 5267275776 = 72576 * 72576.
+			multiplicant_max = multiplier; //multiplicant can be equal to multiplier, 5267275776 = 72576 * 72576.
 		}
-		uint8_t mult_array[10] = {0};
-		for(unsigned long long i = multiplier; i != 0; i /= 10){
-			mult_array[i % 10] += 1;
-		}
-
-		mult_zero = trailingzero(multiplier);
-		for(;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++){}
 
 		if(multiplicant <= multiplicant_max){
+			uint8_t mult_array[10] = {0};
+			for(unsigned long long i = multiplier; i != 0; i /= 10){
+				mult_array[i % 10] += 1;
+			}
+
+			mult_zero = trailingzero(multiplier);
+
+			for(;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++){}
+
 			product_iterator = multiplier * 9;
 			product = multiplier*(multiplicant);
-		}
-		for(;multiplicant <= multiplicant_max; multiplicant += 9){
-			if ((mult_zero || trailingzero(multiplicant)) && vampirism_check(product, multiplicant, mult_array)){
-				if (args->result == NULL) {
-					args->result = ullbtree_init(product);
-					args->count += 1;
-				} else {
-					args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
+
+			for(;multiplicant <= multiplicant_max; multiplicant += 9){
+				if (vampirism_check(product, multiplicant, mult_array)){
+					if((mult_zero || trailingzero(multiplicant))){
+						args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
+					}
 				}
+				product += product_iterator;
 			}
-			product += product_iterator;
 		}
 	}
 
@@ -947,16 +750,17 @@ int main(int argc, char* argv[])
 #ifdef RESULTS
 	printf("Found: %llu vampire numbers.\n", result);
 #endif
+
+#if (defined SPD_TEST) && (NUM_THREADS > 8)
 	double distrubution = 0.0;
 	for (thread = 0; thread < NUM_THREADS; thread++) {
-#if (defined SPD_TEST) && (NUM_THREADS > 8)
 		distrubution += ((double)input[thread]->count) / ((double)(result));
 		printf("(1+%u/%u,%lf),", thread+1, NUM_THREADS/9, distrubution);
 		//printf("(1+%u/%u,%llu/%llu),", thread, NUM_THREADS/9,input[thread]->count, result/(NUM_THREADS/9));
 		if((thread+1) % 10 == 0)
 			printf("\n");
-#endif
 	}
+#endif
 	printf("\n");
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 		vargs_free(input[thread]);
