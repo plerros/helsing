@@ -97,19 +97,18 @@
  * 	Each element has a position, an array key; for example in the array
  * "array[]" the element "array[1]" has the array key 1.
  *
- * 	The value of each element is a concatenation of (n/8)-bit unsigned
- * integers that hold the total count of each digit (except 0s & 1s) of its
- * array key. For example a 32-bit sized element gets split into 8 * 4-bit
- * segments and a 64-bit sized element gets split into 8 * 8-bit segments:
+ * 	The value of each element is a concatenation of (n/DIGSTORED)-bit
+ * unsigned integers that hold the total count of each digit (except 0s & 1s)
+ * of its array key.
+ * 	For example a 32-bit sized element gets split into 8 * 4-bit segments
+ * and a 64-bit sized element gets split into 9 * 7-bit segments:
  *                                     [99998888|77776666|55554444|33332222]
- * [99999999|88888888|77777777|66666666|55555555|44444444|33333333|22222222]
+ * [X9999999|88888887|77777766|66666555|55554444|44433333|33222222|21111111]
  * 64       56       48       40       32       24       16       8        0
  *
  * 	We can choose any digit and ignore it, I chose not to store the 0s.
  * I think I can get away with not storing 1s too; Only a fang with more than
  * 8 * 1s could fool the modulo 9 congruence and such numbers are pretty rare.
- * The 9s & 8s are positioned before the rest, because modulo 8 is faster than
- * subtraction.
  *
  * 	This way the code doesn't perform expensive operations such as modulo,
  * multiplication, division, for values that are already stored in the array.
@@ -120,8 +119,8 @@
  * DIG_ELEMENT_BITS to 64.
  */
 
-#define JENS_K_A_OPTIMIZATION false
-#define DIG_ELEMENT_BITS 32
+#define JENS_K_A_OPTIMIZATION true
+#define DIG_ELEMENT_BITS 64
 
 /*
  * VERBOSE_LEVEL:
@@ -181,11 +180,14 @@ typedef uint8_t length_t;
 /*--------------------------- PREPROCESSOR_STUFF  ---------------------------*/
 #if DIG_ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
+	#define DIGSTORED 8
 #elif DIG_ELEMENT_BITS == 64
 	typedef uint64_t digits_t;
+	#define DIGSTORED 9
 #endif
 
-#define DIGMULT (DIG_ELEMENT_BITS/8)
+//#define DIGMULT (DIG_ELEMENT_BITS/8)
+#define DIGMULT (DIG_ELEMENT_BITS/DIGSTORED)
 
 #if MEASURE_RUNTIME
 	#if defined(CLOCK_MONOTONIC)
@@ -1066,7 +1068,7 @@ void *vampire(struct vargs *args)
 				for (fang_t i = multiplier; i > 0; i /= 10) {
 					digit_t digit = i % 10;
 					if(digit > 1)
-						digd += (digits_t)1 << ((digit - 2) * DIGMULT); 
+						digd += (digits_t)1 << ((digit - (10 - DIGSTORED)) * DIGMULT); 
 				}
 			} else {
 				digd = dig[multiplier];
@@ -1253,7 +1255,7 @@ int main(int argc, char* argv[])
 		for (fang_t i = d; i > 0; i /= 10) {
 			digit_t digit = i % 10;
 			if(digit > 1)
-				dig[d] += (digits_t)1 << ((digit - 2) * DIGMULT);
+				dig[d] += (digits_t)1 << ((digit - (10 - DIGSTORED)) * DIGMULT);
 		}
 	}
 #endif
