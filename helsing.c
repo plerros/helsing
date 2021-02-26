@@ -23,29 +23,31 @@
 #include <time.h>
 #include <pthread.h>
 
-#define NUM_THREADS 1
-
+#define NUM_THREADS 8
 //#define __SANITY_CHECK__
+//#define __OEIS_OUTPUT__
+#define __SPEED_TEST__
 
 /*
 Compile with:
-gcc helsing.c -o helsing -O3
+gcc -O3 helsing.c -o helsing
 */
 
 unsigned int uint_length (unsigned int number){
 	int i = 1;
 	for(; number > 9; i++){
-		number = number / 10;	//Using division to avoid overflow for numbers around 2^32 -1
+		number = number / 10;	// Using division to avoid overflow for numbers around 2^32 -1
 	}
 	return (i);
 }
 
 //---------------------------------- ULIST  ----------------------------------//
 
-typedef struct ulist
+
+typedef struct ulist	// List of unsigned integes
 {
-	unsigned int length;
-	unsigned int *array;
+	unsigned int *array;	// Set to NULL when the array is empty. Check if NULL before traversing the array!
+	unsigned int last_element;	// Code should traverse the array up to [last_element]. May be smaller or equal to the actual size of the array.
 } ulist;
 
 ulist *ulist_init(unsigned int number)
@@ -53,12 +55,12 @@ ulist *ulist_init(unsigned int number)
 	ulist *new = malloc(sizeof(ulist));
 	assert(new != NULL);
 
-	new->length = uint_length(number) - 1;
+	new->last_element = uint_length(number) - 1;
 
-	new->array = malloc(sizeof(unsigned int)*(new->length + 1));
+	new->array = malloc(sizeof(unsigned int)*(new->last_element + 1));
 	assert(new->array != NULL);
 
-	for(unsigned int i=new->length; i>0; i--){
+	for(unsigned int i=new->last_element; i>0; i--){
 		new->array[i] = number % 10;
 		number = number/10;
 	}
@@ -83,12 +85,12 @@ ulist *ulist_copy(ulist *old)
 	ulist *new = malloc(sizeof(ulist));
 	assert(new != NULL);
 
-	new->length = old->length;
+	new->last_element = old->last_element;
 
-	new->array = malloc(sizeof(unsigned int)*(new->length + 1));
+	new->array = malloc(sizeof(unsigned int)*(new->last_element + 1));
 	assert(new->array != NULL);
 
-	for(unsigned int i=0; i<=new->length; i++){
+	for(unsigned int i=0; i<=new->last_element; i++){
 		new->array[i] = old->array[i];
 	}
 	return (new);
@@ -98,18 +100,18 @@ int ulist_remove(ulist* ulist_ptr, unsigned int j)
 {
 #ifdef __SANITY_CHECK__
 	assert(ulist_ptr != NULL);
-	assert(j <= ulist_ptr->length);
+	assert(j <= ulist_ptr->last_element);
 #endif
 
-	if(ulist_ptr->length == 0){
+	if(ulist_ptr->last_element == 0){
 		free(ulist_ptr->array);
 		ulist_ptr->array == NULL;
 	}
 	else{
-		for(unsigned int i=j; i<ulist_ptr->length; i++){
+		for(unsigned int i=j; i<ulist_ptr->last_element; i++){
 			ulist_ptr->array[i] = ulist_ptr->array[i+1];
 		}
-		ulist_ptr->length = ulist_ptr->length - 1;
+		ulist_ptr->last_element = ulist_ptr->last_element - 1;
 	}
 
 	return(0);
@@ -121,17 +123,17 @@ int ulist_pop(ulist* ulist_ptr, unsigned int number)
 	assert(ulist_ptr != NULL);
 #endif
 
-	for(unsigned int i=0; i<=ulist_ptr->length; i++){
+	for(unsigned int i=0; i<=ulist_ptr->last_element; i++){
 		if(ulist_ptr->array[i] == number){
-			if(ulist_ptr->length == 0){
+			if(ulist_ptr->last_element == 0){
 				free(ulist_ptr->array);
 				ulist_ptr->array == NULL;
 			}
 			else{
-				for(; i < ulist_ptr->length; i++){
+				for(; i < ulist_ptr->last_element; i++){
 					ulist_ptr->array[i] = ulist_ptr->array[i+1];
 				}
-				ulist_ptr->length = ulist_ptr->length - 1;
+				ulist_ptr->last_element = ulist_ptr->last_element - 1;
 			}
 			return (1);
 		}
@@ -146,7 +148,7 @@ unsigned int ulist_combine_digits(ulist *digits)
 #endif
 
 	unsigned int result = 0;
-	for(unsigned int i=0; i<=digits->length; i++){
+	for(unsigned int i=0; i<=digits->last_element; i++){
 		result = (result * 10)+ digits->array[i];
 	}
 	return (result);
@@ -154,7 +156,7 @@ unsigned int ulist_combine_digits(ulist *digits)
 
 //---------------------------------- LLIST  ----------------------------------//
 
-typedef struct llist
+typedef struct llist	// Linked list of unsigned integers
 {
 	unsigned int number;
 	struct llist *next;
@@ -180,41 +182,32 @@ int llist_free(llist *llist_ptr)
 	return (0);
 }
 
-//----------------------------------------------------------------------------//
-
 llist *get_divisors(unsigned int dividend)
 {
 	llist *divisors = NULL;
 	llist *current = NULL;
-	llist *llist_ptr, *llist_ptr2, *llist_temp;
+	llist *llist_temp;
 	unsigned int quotient;
 	unsigned int number_length = uint_length(dividend);
 
-	for(unsigned int i = 2; i * i <= dividend; i++){
-		if(dividend % i == 0){
-			quotient = dividend/i;
-			if(number_length == uint_length(i) + uint_length(quotient)){
-				llist_temp = NULL;
-				if(current != NULL)
-					llist_temp = current->next;
-
-				//if((number_length > 2) && (number_length >= uint_length(quotient) + 2)){
-				//	printf("%d/%d=%d\n", dividend, i, quotient);
-				//	llist_ptr2 = llist_temp;
-				//}
-				//else{
-					llist_ptr2 = llist_init(quotient , llist_temp);
-				//	printf(" %d/%d=%d\n", dividend, i, quotient);
-				//}
-				llist_ptr = llist_init(i, llist_ptr2);
-
-				if(divisors == NULL){
-					divisors = llist_ptr;
-				}
-				else{
-					current->next = llist_ptr;
-				}
-				current = llist_ptr;
+	unsigned int divisor = 2;
+	for(; divisor * divisor <= dividend && current == NULL; divisor++){
+		if(dividend % divisor == 0){
+			quotient = dividend/divisor;
+			if(number_length == uint_length(divisor) + uint_length(quotient)){
+				llist_temp = llist_init(quotient , NULL);
+				divisors = llist_init(divisor, llist_temp);
+				current = divisors;
+			}
+		}
+	}
+	for(; divisor * divisor <= dividend; divisor++){
+		if(dividend % divisor == 0){
+			quotient = dividend/divisor;
+			if(number_length == uint_length(divisor) + uint_length(quotient)){
+				llist_temp = llist_init(quotient , current->next);
+				current->next = llist_init(divisor, llist_temp);
+				current = current->next;
 			}
 		}
 	}
@@ -223,16 +216,16 @@ llist *get_divisors(unsigned int dividend)
 
 //----------------------------------------------------------------------------//
 
-typedef struct voperators
+typedef struct vargs	// Vampire arguments
 {
 	unsigned int min;
 	unsigned int max;
 	unsigned int step;
-} voperators;
+} vargs;
 
-voperators *voperators_init(unsigned int min, unsigned int max, unsigned int step)
+vargs *vargs_init(unsigned int min, unsigned int max, unsigned int step)
 {
-	voperators *new = malloc(sizeof(voperators));
+	vargs *new = malloc(sizeof(vargs));
 	assert(new != NULL);
 	new->min = min;
 	new->max = max;
@@ -240,24 +233,44 @@ voperators *voperators_init(unsigned int min, unsigned int max, unsigned int ste
 	return new;
 }
 
-unsigned int vamparker(voperators *input){
+int vargs_free(vargs * vargs_ptr){
+	free (vargs_ptr);
+	return (0);
+}
+
+//----------------------------------------------------------------------------//
+
+void *vampire(void *args)
+{
+	struct timespec start, finish;
+	double elapsed;
+
+#if defined(__SPEED_TEST__) && defined(CLOCK_MONOTONIC)
+	clock_gettime(CLOCK_MONOTONIC, &start);
+#elif defined(__SPEED_TEST__) && defined(CLOCK_REALTIME)
+	clock_gettime(CLOCK_REALTIME, &start);
+#endif
+
+	vargs *input = (vargs *)args;
 	unsigned int counter= 0;
 	unsigned int exit;
+	unsigned int exit_2;
 
 	//iterate all numbers
-	for(unsigned int number = input->min ;number <= input->max; number += input->step){
+	for(unsigned int number = input->min ; number <= input->max; number += input->step){
 
+		exit_2 = 0;
 		llist *divisors = get_divisors(number);
 		ulist *digits = ulist_init(number);
 
 		//iterate all divisors
-		for(llist *i=divisors; i!=NULL; i=i->next){
+		for(llist *i=divisors; i!=NULL && !exit_2; i=i->next){
 			ulist *digit = ulist_copy(digits);
 			ulist* divisor = ulist_init(i->number);
 
 			exit = 0;
 			//iterate all divisor digits
-			for(int j = 0; j<=divisor->length && !exit ;j++){
+			for(int j = 0; j<=divisor->last_element && !exit ;j++){
 				if(!ulist_pop(digit,divisor->array[j]))
 					exit = 1;
 			}
@@ -267,6 +280,12 @@ unsigned int vamparker(voperators *input){
 
 			if(!exit && number / i->number == result ){
 				counter ++;
+				exit_2 = 1;
+
+#ifdef __OEIS_OUTPUT__
+				//printf("%u %u\n", counter, number);
+#endif
+				//printf("%u / %u = %u\n", number, i->number, result);
 				//assert((uint_length(number) > 2) && (uint_length(number) >= uint_length(result) + 2));
 			}			
 
@@ -276,7 +295,22 @@ unsigned int vamparker(voperators *input){
 		llist_free(divisors);
 		ulist_free(digits);
 	}
-	return (counter);
+
+
+#if defined(__SPEED_TEST__) && defined(CLOCK_MONOTONIC)
+	clock_gettime(CLOCK_MONOTONIC, &finish);
+#elif defined(__SPEED_TEST__) && defined(CLOCK_REALTIME)
+	clock_gettime(CLOCK_REALTIME, &finish);
+#endif
+
+#if defined(__SPEED_TEST__) && (defined(CLOCK_MONOTONIC) || defined(CLOCK_REALTIME))
+	elapsed = (finish.tv_sec - start.tv_sec);
+	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+	printf("%u \t%u \t%u\tin %lf\n", input->min, input->max, counter, elapsed);
+#endif	
+
+	//return (counter);
+	return(0);
 }
 
 void *therad_test(void *threadid){
@@ -296,41 +330,31 @@ int main(int argc, char* argv[])
 	unsigned int min = atoi(argv[1]);
 	unsigned int max = atoi(argv[2]);
 
-	clock_t time = clock();
 
-	voperators input;
-	input.min = min;
-	input.max = max;
-	input.step = 1;
+//	vargs *input = vargs_init(min, max, NUM_THREADS);
 
-	unsigned int counter = vamparker(&input);
+//	vampire(input);
 
-	time = clock() - time;
-	double runtime = (double)(time) / CLOCKS_PER_SEC;
 
-	printf("%u \t%u \t%u\tin %lf\n", min, max, counter, runtime);
-/*
-	pthread_t threads[NUM_THREADS];
+	vargs *input[NUM_THREADS];
+	for(int i = 0; i<NUM_THREADS; i++){
+		input[i] = vargs_init(i, max, NUM_THREADS);
+	}
+
 	int rc;
-	int i;
-	for( i = 0; i < NUM_THREADS; i++ ) {
-		rc = pthread_create(&threads[i], NULL, therad_test, (void *)&i);
+	pthread_t threads[NUM_THREADS];
+	for(int i = 0; i < NUM_THREADS; i++) {
+		rc = pthread_create(&threads[i], NULL, vampire, (void *)input[i]);
 		if (rc) {
 			printf("Error:unable to create thread, %d\n", rc);
 			exit(-1);
 		}
 	}
-   pthread_exit(NULL);
-*/
+	pthread_exit(NULL);
+
+	for(int i = 0; i<NUM_THREADS; i++){
+		vargs_free(input[i]);
+	}
+
 	return (0);
 }
-
-
-//----------------------------------------------------------------
-//		clock_t begin, end;
-//		double runtime = 0.0;
-//		begin = clock();
-
-//		end = clock();
-//		runtime += (double)(end-begin) / CLOCKS_PER_SEC;
-//----------------------------------------------------------------
