@@ -43,7 +43,7 @@
  * (note: thread count above #cores may not improve performance)
  */
 
-#define THREADS 8
+#define THREADS 1
 #define thread_t uint16_t
 
 /*
@@ -86,8 +86,6 @@
 #define AUTO_TILE_SIZE true
 #define TILE_SIZE 18446744073709551615ULL
 
-// 2 25 5.137s
-// 1 50 5.163s
 /*
  * JENS_K_A_OPTIMIZATION:
  *
