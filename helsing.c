@@ -834,34 +834,55 @@ void *vampire(void *void_args)
 
 	vargs *args = (vargs *)void_args;
 
+	unsigned long long min = args->min;
+	unsigned long long max = args->max;
+
 	//Min Max range for both factors
-	unsigned long long factor_min = pow10ull((length(args->min) / 2) - 1);
-	unsigned long long factor_max = pow10ull((length(args->max) / 2)) -1;//(sqrtull(args->max));
+	unsigned long long factor_min = pow10ull((length(min) / 2) - 1);
+	unsigned long long factor_max = pow10ull((length(max) / 2)) -1;
+
+	unsigned long long product_max = factor_max * factor_max;
+
+	unsigned long long max_sqrt;
+
+	if(max >= product_max){
+		max = product_max;
+		max_sqrt = factor_max;
+	} else {
+		max_sqrt = max / sqrtull(max);
+	}
 
 	//Adjust range for Multiplier
-	unsigned long long multiplier = sqrtull(args->min);
+	unsigned long long multiplier = factor_max;
+	unsigned long long multiplier_min = min / sqrtull(min);
 
 	//Adjust range for Multiplicant
-	unsigned long long multiplicant_max = sqrtull(args->max);
-	unsigned long long asd = args->min/factor_min;
+	unsigned long long multiplicant_max;
+	unsigned long long fgh = max / max_sqrt;
 
 	unsigned long long product;
 
-	printf("min max [%llu, %llu], fmin fmax [%llu, %llu], [%llu, %llu], %llu\n", args->min, args->max, factor_min, factor_max,multiplier, factor_max, multiplicant_max);
+	printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier_min);
 
-	for(unsigned long long multiplicant; multiplier <= factor_max; multiplier++){
+	for(unsigned long long multiplicant; multiplier >= multiplier_min; multiplier--){
 		if(multiplier % 3 == 1){
 			continue;
 		}
-		if(multiplier >= asd){
-			multiplicant = factor_min;
+		multiplicant = min/multiplier + !(!(min % multiplier));
+		if(multiplier >= fgh){
+			multiplicant_max = max/multiplier;
+		} else {
+			multiplicant_max = multiplier;
 		}
-		else{
-			multiplicant = args->min/multiplier + !(!(args->min % multiplier));
-		}
-		multiplicant_max = args->max/multiplier;
-		for(;multiplicant <= multiplicant_max && multiplicant <= multiplier; multiplicant++){
+		//if(multiplicant <= multiplicant_max && multiplicant <= multiplier_max){
+			//printf("%llu, %llu, %llu = %llu\n", multiplier, multiplicant, multiplicant_max, multiplier * multiplicant);
+		//}
+	
+		for(;multiplicant <= multiplicant_max; multiplicant++){
 			product = multiplier*multiplicant;
+			//if(multiplicant > multiplier){
+			//	printf("%llu, %llu, %llu = %llu\n", multiplier, multiplicant, multiplicant_max, multiplier * multiplicant);
+			//}
 			if((multiplier + multiplicant) % 9 != product % 9){
 				continue;
 			}
@@ -872,7 +893,7 @@ void *vampire(void *void_args)
 				//if ((product + 1) % 3 == 0){
 				//	continue;
 				//}
-				if (product <= args->max){
+				if (product <= max){
 					bool testresult = vampirism_check(product, multiplier, multiplicant);
 					if (testresult) {
 						if (args->result == NULL) {
@@ -900,7 +921,7 @@ void *vampire(void *void_args)
 	elapsed = (finish.tv_sec - start.tv_sec);
 	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
 	args->runtime += elapsed;
-	//printf("%llu \t%llu \t%llu\tin %lf\n", args->min, args->max, counter, elapsed);
+	//printf("%llu \t%llu \t%llu\tin %lf\n", min, max, counter, elapsed);
 #endif
 
 	return 0;
@@ -963,7 +984,7 @@ int main(int argc, char* argv[])
 #if defined(OEIS_OUTPUT)
 				if (input[thread]->result != NULL){
 					if(result_tree != NULL){
-						result_tree = ullbtree_add(result_tree, input[thread]->result);
+						result_tree = ullbtree_add(result_tree, input[thread]->result, NULL);
 					} else {
 						result_tree = input[thread]->result;
 					}
