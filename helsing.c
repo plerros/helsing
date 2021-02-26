@@ -16,7 +16,9 @@
  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/#include <stdio.h>
+*/
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
@@ -34,6 +36,7 @@ gcc -pthread -O3 -Wall -Wextra -ansi -o helsing helsing.c
 #define __SANITY_CHECK__
 #define __OEIS_OUTPUT__
 */
+
 #define __SPEED_TEST__
 #define __RESULT__
 
@@ -61,42 +64,96 @@ gcc -pthread -O3 -Wall -Wextra -ansi -o helsing helsing.c
 
 /*----------------------------------------------------------------------------*/
 
-unsigned int u_length (unsigned int number) {
-	unsigned int length = 1;
+unsigned long long atoull (const char * str)
+{
+	unsigned long long i;
+	unsigned long long number = 0;
+	for(i = 0; str[i] >= '0' && str[i] <= '9'; i++){
+		number = 10 * number + (str[i] - '0');
+	}
+
+	return (number);
+}
+
+unsigned long long u_length (unsigned long long number)
+{
+	unsigned long long length = 1;
 	for (; number > 9; length++) {
-		number = number / 10;	/* Using division to avoid overflow for numbers around 2^32 -1 */
+		number = number / 10;	/* Using division to avoid overflow for numbers around 2^64 -1 */
 	}
 	return (length);
 }
 
-unsigned int u_length_isodd (unsigned int number) {
-	unsigned int result = 1;
-	while(number > 9) {
-		number = number / 10;	/* Using division to avoid overflow for numbers around 2^32 -1 */
+unsigned long long u_length_isodd (unsigned long long number)
+{
+	unsigned long long result = 1;
+	while (number > 9) {
+		number = number / 10;	/* Using division to avoid overflow for numbers around 2^64 -1 */
 		result = !result;
 	}
 	return (result);
 }
 
+unsigned long long ten_pow (unsigned long long exponent)
+{
+	unsigned long long result = 1;
+	for(; exponent > 0; exponent --){
+		result *= 10;
+	}
+	return (result);
+}
+
+unsigned long long u_sqrt(unsigned long long number)
+{
+	unsigned long long square_root = 1;
+	while(square_root * square_root < number){
+		square_root ++;
+	}
+	return (square_root);
+}
+
+unsigned long long u_sqrt_binary(unsigned long long number)
+{
+	unsigned long long square_root = number / 2;
+	if(square_root > 4294967295)
+		square_root = 4294967295;
+	unsigned long long lim_min = 0;
+	unsigned long long lim_max = number / 2;
+	while(1){
+		if((square_root * square_root <= number) && ((square_root + 1) * (square_root + 1) > number))
+			return (square_root);
+		
+		if(square_root * square_root > number){
+			lim_max = square_root;
+			square_root = ((square_root - lim_min) / 2) + lim_min;
+		}
+		else{
+			lim_min = square_root;
+			square_root = ((lim_max - square_root) / 2) + square_root;
+		}
+	}
+	return (0);
+}
+
 /*---------------------------------- ULIST  ----------------------------------*/
 
-typedef struct ulist	/* List of unsigned integes */
+typedef struct ulist	/* List of unsigned long longeges */
 {
-	unsigned int *array;	/* Set to NULL when the array is empty. Check if NULL before traversing the array! */
-	unsigned int last;	/* Code should traverse the array up to [last]. May be smaller or equal than the actual size of the array. */
+	unsigned long long *array;	/* Set to NULL when the array is empty. Check if NULL before traversing the array! */
+	unsigned long long last;	/* Code should traverse the array up to [last]. May be smaller or equal than the actual size of the array. */
 } ulist;
 
-ulist *ulist_init(unsigned int number)
+ulist *ulist_init(unsigned long long number)
 {
 	ulist *new = malloc(sizeof(ulist));
 	assert(new != NULL);
 
 	new->last = u_length(number) - 1;
 
-	new->array = malloc(sizeof(unsigned int)*(new->last + 1));
+	new->array = malloc(sizeof(unsigned long long)*(new->last + 1));
 	assert(new->array != NULL);
 
-	unsigned int i;
+	unsigned long long i;
 	for (i = new->last; i > 0; i--) {
 		new->array[i] = number % 10;
 		number = number/10;
@@ -131,10 +188,10 @@ ulist *ulist_copy(ulist *original)
 	copy->last = original->last;
 
 	if (original->array != NULL) {
-		copy->array = malloc(sizeof(unsigned int)*(copy->last + 1));
+		copy->array = malloc(sizeof(unsigned long long)*(copy->last + 1));
 		assert(copy->array != NULL);
 
-		unsigned int i;
+		unsigned long long i;
 		for (i=0; i<=copy->last; i++) {
 			copy->array[i] = original->array[i];
 		}
@@ -144,7 +201,7 @@ ulist *ulist_copy(ulist *original)
 	return (copy);
 }
 
-int ulist_remove(ulist* ulist_ptr, unsigned int element)
+int ulist_remove(ulist* ulist_ptr, unsigned long long element)
 {
 #ifdef __SANITY_CHECK__
 	assert(ulist_ptr != NULL);
@@ -156,7 +213,7 @@ int ulist_remove(ulist* ulist_ptr, unsigned int element)
 			free(ulist_ptr->array);
 			ulist_ptr->array = NULL;
 		} else {
-			unsigned int i;
+			unsigned long long i;
 			for (i = element; i < ulist_ptr->last; i++) {
 				ulist_ptr->array[i] = ulist_ptr->array[i+1];
 			}
@@ -166,14 +223,14 @@ int ulist_remove(ulist* ulist_ptr, unsigned int element)
 	return(0);
 }
 
-int ulist_pop(ulist* ulist_ptr, unsigned int number)
+int ulist_pop(ulist* ulist_ptr, unsigned long long number)
 {
 #ifdef __SANITY_CHECK__
 	assert(ulist_ptr != NULL);
 #endif
 
 	if (ulist_ptr->array != NULL) {
-		unsigned int i;
+		unsigned long long i;
 		for (i = 0; i <= ulist_ptr->last; i++) {
 			if (ulist_ptr->array[i] == number) {
 				if (ulist_ptr->last == 0) {
@@ -193,15 +250,15 @@ int ulist_pop(ulist* ulist_ptr, unsigned int number)
 	return(0);
 }
 
-unsigned int ulist_combine_digits(ulist *digits)
+unsigned long long ulist_combine_digits(ulist *digits)
 {
 #ifdef __SANITY_CHECK__
 	assert(digits != NULL);
 #endif
 
-	unsigned int number = 0;
+	unsigned long long number = 0;
 	if (digits->array != NULL) {
-		unsigned int i;
+		unsigned long long i;
 		for (i = 0; i <= digits->last; i++) {
 			number = (number * 10)+ digits->array[i];
 		}
@@ -209,7 +266,7 @@ unsigned int ulist_combine_digits(ulist *digits)
 	return (number);
 }
 
-unsigned int ulist_islastzero(ulist *ulist_ptr)
+unsigned long long ulist_islastzero(ulist *ulist_ptr)
 {
 #ifdef __SANITY_CHECK__
 	assert(ulist_ptr != NULL);
@@ -223,13 +280,13 @@ unsigned int ulist_islastzero(ulist *ulist_ptr)
 
 /*---------------------------------- LLIST  ----------------------------------*/
 
-typedef struct llist	/* Linked list of unsigned integers */
+typedef struct llist	/* Linked list of unsigned long longegers */
 {
-	unsigned int number;
+	unsigned long long number;
 	struct llist *next;
 } llist;
 
-llist *llist_init(unsigned int number, llist* next)
+llist *llist_init(unsigned long long number, llist* next)
 {
 	llist *new = malloc(sizeof(llist));
 	assert(new != NULL);
@@ -249,16 +306,15 @@ int llist_free(llist *llist_ptr)
 	return (0);
 }
 
-llist *get_fangs(unsigned int dividend)
+llist *get_fangs(unsigned long long dividend)
 {
 	llist *divisors = NULL;
 	llist *current = NULL;
-	llist *llist_temp;
-	unsigned int dividend_length = u_length(dividend);
-	unsigned int divisor = 2;
-	unsigned int divisor_length;
-	unsigned int quotient;
-	unsigned int quotient_length;
+	unsigned long long dividend_length = u_length(dividend);
+	unsigned long long divisor = ten_pow((dividend_length / 2) - 1);
+	unsigned long long divisor_length;
+	unsigned long long quotient;
+	unsigned long long quotient_length;
 
 	for (; divisor * divisor <= dividend; divisor++) {
 		if (dividend % divisor == 0) {
@@ -267,23 +323,11 @@ llist *get_fangs(unsigned int dividend)
 			quotient_length = u_length(quotient);
 			if ((dividend_length == divisor_length + quotient_length) && (divisor_length == quotient_length)) {
 				if (current == NULL) {
-					if (quotient != divisor) {
-						llist_temp = llist_init(quotient , NULL);
-						divisors = llist_init(divisor, llist_temp);
-					}
-					else{
-						divisors = llist_init(divisor, NULL);
-					}
+					divisors = llist_init(divisor, NULL);
 					current = divisors;
 				}
 				else{
-					if (quotient != divisor) {
-						llist_temp = llist_init(quotient , current->next);
-						current->next = llist_init(divisor, llist_temp);
-					}
-					else{
-						current->next = llist_init(divisor, current->next);
-					}
+					current->next = llist_init(divisor, current->next);
 					current = current->next;
 				}
 			}
@@ -345,7 +389,7 @@ llhead *llhead_copy(llhead *original) {
 	return (copy);
 }
 
-int llhead_pop(llhead *llhead_ptr, unsigned int number)
+int llhead_pop(llhead *llhead_ptr, unsigned long long number)
 {
 	llist *prev = NULL;
 	llist *i;
@@ -373,15 +417,16 @@ int llhead_pop(llhead *llhead_ptr, unsigned int number)
 
 typedef struct vargs	/* Vampire arguments */
 {
-	unsigned int min;
-	unsigned int max;
-	unsigned int step;
-	unsigned int count;
+	unsigned long long min;
+	unsigned long long max;
+	unsigned long long step;
+	unsigned long long count;
 	double	runtime;
+	double 	algorithm_runtime;
 	llhead *result;
 } vargs;
 
-vargs *vargs_init(unsigned int min, unsigned int max, unsigned int step)
+vargs *vargs_init(unsigned long long min, unsigned long long max, unsigned long long step)
 {
 	vargs *new = malloc(sizeof(vargs));
 	assert(new != NULL);
@@ -390,6 +435,7 @@ vargs *vargs_init(unsigned int min, unsigned int max, unsigned int step)
 	new->step = step;
 	new->count = 0;
 	new->runtime = 0.0;
+	new->algorithm_runtime = 0.0;
 	new->result = llhead_init(NULL, NULL);
 	return new;
 }
@@ -401,9 +447,9 @@ int vargs_free(vargs *vargs_ptr)
 	return (0);
 }
 
-int vargs_split(vargs *input[], unsigned int min, unsigned int max)
+int vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
 {
-	unsigned int current = 0;
+	unsigned long long current = 0;
 
 	input[current]->min = min;
 	input[current]->max = (max-min)/(NUM_THREADS - current) + min;
@@ -422,25 +468,38 @@ int vargs_split(vargs *input[], unsigned int min, unsigned int max)
 
 void *vampire(void *void_args)
 {
-	struct timespec start, finish;
-	double elapsed;
 
 #ifdef __SPEED_TEST___
+	struct timespec start, finish;
+	double elapsed;
 	clock_gettime(__CLOCK_MODE__, &start);
 #endif
 
 	vargs *args = (vargs *)void_args;
-	unsigned int is_not_vampire;
-	unsigned int is_vampire;
+	unsigned long long is_not_vampire;
+	unsigned long long is_vampire;
 
 	/* iterate all numbers */
-	unsigned int number;
+	unsigned long long number;
 	for (number = args->min; number <= args->max; number += args->step) {
 		if (u_length_isodd(number)) {
 			continue;
 		}
 		is_vampire = 0;
+#ifdef __SPEED_TEST___
+	struct timespec al_start, al_finish;
+	double al_elapsed;
+	clock_gettime(__CLOCK_MODE__, &al_start);
+#endif
 		llist *divisors = get_fangs(number);
+#ifdef __SPEED_TEST___
+	clock_gettime(__CLOCK_MODE__, &al_finish);
+
+	al_elapsed = (al_finish.tv_sec - al_start.tv_sec);
+	al_elapsed += (al_finish.tv_nsec - al_start.tv_nsec) / 1000000000.0;
+	args->algorithm_runtime += al_elapsed;
+
+#endif
 		ulist *digits = ulist_init(number);
 
 		llist *i;
@@ -452,7 +511,7 @@ void *vampire(void *void_args)
 
 			is_not_vampire = 0;
 			/* iterate all divisor digits */
-			unsigned int j;
+			unsigned long long j;
 			for (j = 0; !is_not_vampire && j <= divisor->last && !is_not_vampire && digit->array != NULL; j++) {
 				if (!ulist_pop(digit,divisor->array[j]))
 					is_not_vampire = 1;
@@ -475,8 +534,8 @@ void *vampire(void *void_args)
 				args->count ++;
 				is_vampire = 1;
 				/*
-				printf("%u %u\n", args->count, number);
-				printf("%u / %u = %u\n", number, i->number, number / i->number);
+				printf("%llu %llu\n", args->count, number);
+				printf("%llu / %llu = %llu\n", number, i->number, number / i->number);
 				*/
 			}
 
@@ -497,7 +556,7 @@ void *vampire(void *void_args)
 	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
 	args->runtime += elapsed;
 	/*
-	printf("%u \t%u \t%u\tin %lf\n", args->min, args->max, counter, elapsed);
+	printf("%llu \t%llu \t%llu\tin %lf\n", args->min, args->max, counter, elapsed);
 	*/
 #endif
 
@@ -510,12 +569,12 @@ int main(int argc, char* argv[])
 		printf("Usage: vampire [min] [max]\n");
 		return (0);
 	}
-	unsigned int i;
-	unsigned int min = atoi(argv[1]);
-	unsigned int max = atoi(argv[2]);
+	unsigned long long i;
+	unsigned long long min = atoull(argv[1]);
+	unsigned long long max = atoull(argv[2]);
 
-	unsigned int new_min = 1;
-	unsigned int min_length = u_length(min);
+	unsigned long long new_min = 1;
+	unsigned long long min_length = u_length(min);
 	for (i = 0; i < min_length; i++) {
 		new_min = (new_min * 10);
 	}
@@ -524,10 +583,10 @@ int main(int argc, char* argv[])
 			min = new_min;
 		}
 	}
-	unsigned int lmax = max;
+	unsigned long long lmax = max;
 	if (u_length_isodd(max)) {
-		unsigned int new_max = 0;
-		unsigned int max_length = u_length(max);
+		unsigned long long new_max = 0;
+		unsigned long long max_length = u_length(max);
 	
 		for (i = 0; i < max_length - 1; i++) {
 			new_max = (new_max * 10) + 9;
@@ -536,7 +595,7 @@ int main(int argc, char* argv[])
 			max = new_max;
 		}
 	}
-	unsigned int lmin = min;
+	unsigned long long lmin = min;
 	if (lmax > 10 * new_min -1) {
 		lmax = 10 * new_min -1;
 	}
@@ -544,13 +603,13 @@ int main(int argc, char* argv[])
 	int rc;
 	pthread_t threads[NUM_THREADS];
 	vargs *input[NUM_THREADS];
-	unsigned int thread;
+	unsigned long long thread;
 	for (i = 0; i < NUM_THREADS; i++) {
 		input[i] = vargs_init(0, 0, 1);
 	}
 	llhead *result_list = llhead_init(NULL, NULL);
-	unsigned int iterator = ITERATOR;
-	unsigned int active_threads = NUM_THREADS;
+	unsigned long long iterator = ITERATOR;
+	unsigned long long active_threads = NUM_THREADS;
 
 	for (; lmax <= max;) {
 		for (i = lmin; i <= lmax; i += iterator + 1) {
@@ -602,28 +661,32 @@ int main(int argc, char* argv[])
 			iterator = lmin -lmax;
 
 	}
-	unsigned int result = 0;
-
+	unsigned long long result = 0;
+	double algorithm_time = 0.0;
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 		result += input[thread]->count;
 
 #ifdef __SPEED_TEST___
-		printf("%u \t%u \t%u\tin %lf\n", input[thread]->min, input[thread]->max, input[thread]->count, input[thread]->runtime);
+		printf("%llu \t%llu \t%llu\tin %lf\n", input[thread]->min, input[thread]->max, input[thread]->count, input[thread]->runtime);
+		algorithm_time += input[thread]->algorithm_runtime,
+
 #endif
 		vargs_free(input[thread]);
 	}
-
+#ifdef __SPEED_TEST___
+	printf("algorithm took: %lf\n", algorithm_time);
+#endif
 #if defined(__OEIS_OUTPUT__)
-	int k = 1;
+	unsigned long long k = 1;
 	llist *temp;
 	for (temp = result_list->first; temp != NULL; temp = temp->next) {
-		printf("%u %u\n", k, temp->number);
+		printf("%llu %llu\n", k, temp->number);
 		k++;
 	}
 #endif
 
 #if defined(__RESULT___)
-	printf("found: %d\n", result);
+	printf("found: %llu\n", result);
 #endif
 	llhead_free(result_list);
 
