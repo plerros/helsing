@@ -25,9 +25,11 @@
 
 #define NUM_THREADS 1
 
+//#define __SANITY_CHECK__
+
 /*
 Compile with:
-gcc -O3 helsing.c -o helsing
+gcc helsing.c -o helsing -O3
 */
 
 unsigned int uint_length (unsigned int number){
@@ -36,6 +38,118 @@ unsigned int uint_length (unsigned int number){
 		number = number / 10;	//Using division to avoid overflow for numbers around 2^32 -1
 	}
 	return (i);
+}
+
+//---------------------------------- ULIST  ----------------------------------//
+
+typedef struct ulist
+{
+	unsigned int length;
+	unsigned int *array;
+} ulist;
+
+ulist *ulist_init(unsigned int number)
+{
+	ulist *new = malloc(sizeof(ulist));
+	assert(new != NULL);
+
+	new->length = uint_length(number) - 1;
+
+	new->array = malloc(sizeof(unsigned int)*(new->length + 1));
+	assert(new->array != NULL);
+
+	for(unsigned int i=new->length; i>0; i--){
+		new->array[i] = number % 10;
+		number = number/10;
+	}
+	new->array[0] = number % 10;
+	
+	return (new);
+}
+
+int ulist_free(ulist* ulist_ptr)
+{
+	free(ulist_ptr->array);
+	free(ulist_ptr);
+	return (0);
+}
+
+ulist *ulist_copy(ulist *old)
+{
+#ifdef __SANITY_CHECK__
+	assert(old != NULL);
+#endif
+
+	ulist *new = malloc(sizeof(ulist));
+	assert(new != NULL);
+
+	new->length = old->length;
+
+	new->array = malloc(sizeof(unsigned int)*(new->length + 1));
+	assert(new->array != NULL);
+
+	for(unsigned int i=0; i<=new->length; i++){
+		new->array[i] = old->array[i];
+	}
+	return (new);
+}
+
+int ulist_remove(ulist* ulist_ptr, unsigned int j)
+{
+#ifdef __SANITY_CHECK__
+	assert(ulist_ptr != NULL);
+	assert(j <= ulist_ptr->length);
+#endif
+
+	if(ulist_ptr->length == 0){
+		free(ulist_ptr->array);
+		ulist_ptr->array == NULL;
+	}
+	else{
+		for(unsigned int i=j; i<ulist_ptr->length; i++){
+			ulist_ptr->array[i] = ulist_ptr->array[i+1];
+		}
+		ulist_ptr->length = ulist_ptr->length - 1;
+	}
+
+	return(0);
+}
+
+int ulist_pop(ulist* ulist_ptr, unsigned int number)
+{
+#ifdef __SANITY_CHECK__
+	assert(ulist_ptr != NULL);
+#endif
+
+	for(unsigned int i=0; i<=ulist_ptr->length; i++){
+		if(ulist_ptr->array[i] == number){
+			if(ulist_ptr->length == 0){
+				free(ulist_ptr->array);
+				ulist_ptr->array == NULL;
+			}
+			else{
+				for(; i < ulist_ptr->length; i++){
+					ulist_ptr->array[i] = ulist_ptr->array[i+1];
+				}
+				ulist_ptr->length = ulist_ptr->length - 1;
+			}
+			return (1);
+		}
+	}
+	return(0);
+}
+
+unsigned int ulist_combine_digits(ulist *digits)
+{
+#ifdef __SANITY_CHECK__
+	assert(digits != NULL);
+#endif
+
+	unsigned int result = 0;
+	for(unsigned int i=0; i<=digits->length; i++){
+		result = (result * 10)+ digits->array[i];
+	}
+	return (result);
 }
 
 //---------------------------------- LLIST  ----------------------------------//
@@ -62,81 +176,6 @@ int llist_free(llist *llist_ptr)
 		temp = llist_ptr;
 		llist_ptr = llist_ptr->next;
 		free(temp);
-	}
-	return (0);
-}
-
-llist *llist_copy(llist *old)
-{
-	llist *new = NULL;
-	if(old != NULL){
-		new = llist_init(old->number, NULL);
-		llist *current = new;
-		for(llist *i = old->next; i != NULL; i = i->next){
-			llist *llist_ptr = llist_init(i->number, NULL);
-			current->next = llist_ptr;
-			current = current->next;
-		}
-	}
-	return (new);
-}
-
-//---------------------------------- LLHEAD ----------------------------------//
-
-typedef struct llhead
-{
-	struct llist *first;
-	struct llist *last;
-} llhead;
-
-llhead *llhead_init(llist *first, llist *last)
-{
-	llhead *new = malloc(sizeof(llhead));
-	assert(new != NULL);
-	new->first = first;
-	if(last != NULL)
-		new->last = last;
-	else
-		new->last = new->first;
-	return (new);
-}
-
-int llhead_free(llhead *llhead_ptr)
-{
-	if(llhead_ptr != NULL){
-		llist_free(llhead_ptr->first);
-	}
-	free(llhead_ptr);
-	return (0);
-}
-
-llhead *llhead_copy(llhead *old){
-	llist *first = NULL;
-	first = llist_copy(old->first);
-	llist *last = NULL;	//this works but technically it shouldn't be just NULL.
-	llhead *new = llhead_init(first,last);
-	return (new);
-}
-
-int llhead_pop(llhead *llhead_ptr, unsigned int number)
-{
-	llist *prev = NULL;
-	for(llist *i = llhead_ptr->first; i != NULL; i = i->next){
-		if(i->number == number){
-			if(i == llhead_ptr->first){
-				llhead_ptr->first = i->next;
-			}
-			if(i == llhead_ptr->last){
-				llhead_ptr->last = prev;
-			}
-			if(prev != NULL){
-				prev->next = i->next;
-			}
-			free(i);
-			return (1);
-		}
-		else
-			prev = i;
 	}
 	return (0);
 }
@@ -182,31 +221,8 @@ llist *get_divisors(unsigned int dividend)
 	return (divisors);
 }
 
-llhead *separate_digits(unsigned int number)
-{
-	unsigned int digit = number % 10;
-	llist *llist_ptr = llist_init(digit, NULL);
-	llhead *digits = NULL;
-	if(number > 9){
-		digits = separate_digits(number / 10);
-		digits->last->next = llist_ptr;
-		digits->last = llist_ptr;
-	}
-	else{
-		digits = llhead_init(llist_ptr, NULL);
-	}
-	return digits;
-}
-
-unsigned int combine_digits(llist *digits)
-{
-	unsigned int result = 0;
-	for(;digits != NULL; digits = digits->next){
-		result = (result * 10)+ digits->number;
-	}
-	return (result);
-}
 //----------------------------------------------------------------------------//
+
 typedef struct voperators
 {
 	unsigned int min;
@@ -231,37 +247,34 @@ unsigned int vamparker(voperators *input){
 	//iterate all numbers
 	for(unsigned int number = input->min ;number <= input->max; number += input->step){
 
-		llist *divisor_llist = get_divisors(number);
-		llhead *digits = separate_digits(number);
+		llist *divisors = get_divisors(number);
+		ulist *digits = ulist_init(number);
 
 		//iterate all divisors
-		for(llist *i=divisor_llist; i!=NULL; i=i->next){
-			llhead *temp = llhead_copy(digits);
-			llhead *divisor_digits = separate_digits(i->number);
-
-			llist *j=divisor_digits->first;
-
+		for(llist *i=divisors; i!=NULL; i=i->next){
+			ulist *digit = ulist_copy(digits);
+			ulist* divisor = ulist_init(i->number);
 
 			exit = 0;
 			//iterate all divisor digits
-			for(; j != NULL && !exit; j = j->next){
-				if(!llhead_pop(temp,j->number))
+			for(int j = 0; j<=divisor->length && !exit ;j++){
+				if(!ulist_pop(digit,divisor->array[j]))
 					exit = 1;
 			}
 
 			//check result
-			unsigned int result = combine_digits(temp->first);
+			unsigned int result = ulist_combine_digits(digit);
 
 			if(!exit && number / i->number == result ){
 				counter ++;
-				assert((uint_length(number) > 2) && (uint_length(number) >= uint_length(result) + 2));
+				//assert((uint_length(number) > 2) && (uint_length(number) >= uint_length(result) + 2));
 			}			
 
-			llhead_free(temp);
-			llhead_free(divisor_digits);
+			ulist_free(digit);
+			ulist_free(divisor);
 		}
-		llist_free(divisor_llist);
-		llhead_free(digits);
+		llist_free(divisors);
+		ulist_free(digits);
 	}
 	return (counter);
 }
@@ -309,7 +322,6 @@ int main(int argc, char* argv[])
 	}
    pthread_exit(NULL);
 */
-
 	return (0);
 }
 
