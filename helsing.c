@@ -43,7 +43,7 @@
  * (note: thread count above #cores may not improve performance)
  */
 
-#define THREADS 8
+#define THREADS 1
 #define thread_t uint16_t
 
 /*
