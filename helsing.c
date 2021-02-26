@@ -19,128 +19,219 @@
 */
 
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
 #include <pthread.h>
 
-/*
-Compile with:
-gcc -pthread -O3 -Wall -Wextra -ansi -o helsing helsing.c
-*/
+// Compile with: gcc -O3 -Wall -Wextra -pthread -o helsing helsing.c
 
-#define NUM_THREADS 8
-#define ITERATOR 1000000 /* How long until new work is assigned to threads */
 
-/*
-#define __SANITY_CHECK__
-#define __OEIS_OUTPUT__
-*/
+/*--------------------------- COMPILATION OPTIONS  ---------------------------*/
+#define NUM_THREADS 8 // Thread count above #cores may not improve performance
+#define ITERATOR 10000000ULL // How long until new work is assigned to threads
 
-#define __SPEED_TEST__
-#define __RESULT__
+//#define __SANITY_CHECK__
+//#define __OEIS_OUTPUT__
 
+#define MEASURE_RUNTIME
+#define PRINT_VAMPIRE_COUNT
 
 /*---------------------------- PREPROCESSOR_STUFF ----------------------------*/
-
 #ifndef __OEIS_OUTPUT__
 
-#ifdef __RESULT__
-#define __RESULT___
+#ifdef PRINT_VAMPIRE_COUNT
+#define __RESULTS__
 #endif
 
-#if defined(__SPEED_TEST__) && (defined(CLOCK_MONOTONIC) || defined(CLOCK_REALTIME))
-#define __SPEED_TEST___
+#if defined(MEASURE_RUNTIME) && (defined(CLOCK_MONOTONIC) || defined(CLOCK_REALTIME))
+#define SPD_TEST
 
 #if defined(CLOCK_MONOTONIC)
-#define __CLOCK_MODE__ CLOCK_MONOTONIC
+#define SPDT_CLK_MODE CLOCK_MONOTONIC
 #elif defined(CLOCK_REALTIME)
-#define __CLOCK_MODE__ CLOCK_REALTIME
+#define SPDT_CLK_MODE CLOCK_REALTIME
 #endif
 
 #endif
 
 #endif
 
-/*----------------------------------------------------------------------------*/
+/*----------------------------- ULLONG FUNCTIONS -----------------------------*/
 
-unsigned long long atoull (const char * str)
+unsigned long long atoull (const char *str)	// ASCII to unsigned long long
 {
-	unsigned long long i;
 	unsigned long long number = 0;
-	for(i = 0; str[i] >= '0' && str[i] <= '9'; i++){
+	for (unsigned long long i = 0; str[i] >= '0' && str[i] <= '9'; i++) {
 		number = 10 * number + (str[i] - '0');
 	}
-
 	return (number);
 }
-
-unsigned long long u_length (unsigned long long number)
+/*
+unsigned long long u_length_normal (unsigned long long number)
 {
 	unsigned long long length = 1;
 	for (; number > 9; length++) {
-		number = number / 10;	/* Using division to avoid overflow for numbers around 2^64 -1 */
+		number = number / 10;	// Using division to avoid overflow for numbers around 2^64 -1
 	}
 	return (length);
 }
+*/
+unsigned long long u_length_bin (unsigned long long number)
+{
+	if (number < 10000000000ULL){
+		if (number < 100000ULL) {
+			if (number < 1000ULL){
+				if (number < 10ULL)
+					return 1;
+				else if (number < 100ULL)
+					return 2;
+				else
+					return 3;
+			} else {
+				if (number < 10000ULL)
+					return 4;
+				else
+					return 5;
+			}
+		} else {
+			if (number < 100000000ULL) {
+				if (number < 1000000ULL)
+					return 6;
+				else if (number < 10000000ULL)
+					return 7;
+				else
+					return 8;
+			} else {
+				if (number < 1000000000ULL)
+					return 9;
+				else
+					return 10;
+			}
+		}
+	} else {
+		if (number < 1000000000000000ULL) {
+			if (number < 10000000000000ULL) {
+				if (number < 100000000000ULL)
+					return 11;
+				else if (number < 1000000000000ULL)
+					return 12;
+				else
+					return 13;
+			} else {
+				if (number < 100000000000000ULL)
+					return 14;
+				else
+					return 15;
+			}
+		} else {
+			if (number < 1000000000000000000ULL){
+				if (number < 10000000000000000ULL)
+					return 16;
+				else if (number < 100000000000000000ULL)
+					return 17;
+				else
+					return 18;
+			} else {
+				if (number < 10000000000000000000ULL)
+					return 19;
+				else
+					return 20;
+			}
+		}
+	}
+}
 
-unsigned long long u_length_isodd (unsigned long long number)
+int u_length_isodd (unsigned long long number)
 {
 	unsigned long long result = 1;
 	while (number > 9) {
-		number = number / 10;	/* Using division to avoid overflow for numbers around 2^64 -1 */
+		number = number / 10;	// Using division to avoid overflow for numbers around 2^64 -1
 		result = !result;
 	}
 	return (result);
 }
 
-unsigned long long ten_pow (unsigned long long exponent)
+unsigned long long ten_pow_bin (unsigned long long exponent) // Returns 10 ^ exponent
 {
-	unsigned long long result = 1;
-	for(; exponent > 0; exponent --){
-		result *= 10;
+#ifdef __SANITY_CHECK__
+	assert(exponent <= u_length_bin(ULLONG_MAX));
+#endif
+
+	if (exponent < 10){
+		if (exponent < 5) {
+			if (exponent < 3){
+				if (exponent == 0)
+					return 1ULL;
+				else if (exponent == 1)
+					return 10ULL;
+				else
+					return 100ULL;
+			} else {
+				if (exponent == 3)
+					return 1000ULL;
+				else
+					return 10000ULL;
+			}
+		} else {
+			if (exponent < 8) {
+				if (exponent == 5)
+					return 100000ULL;
+				else if (exponent == 6)
+					return 1000000ULL;
+				else
+					return 10000000ULL;
+			} else {
+				if (exponent == 8)
+					return 100000000ULL;
+				else
+					return 1000000000ULL;
+			}
+		}
+	} else {
+		if (exponent < 15) {
+			if (exponent < 13) {
+				if (exponent == 10)
+					return 10000000000ULL;
+				else if (exponent == 11)
+					return 100000000000ULL;
+				else
+					return 1000000000000ULL;
+			} else {
+				if (exponent == 13)
+					return 10000000000000ULL;
+				else
+					return 100000000000000ULL;
+			}
+		} else {
+			if (exponent < 18){
+				if (exponent == 15)
+					return 1000000000000000ULL;
+				else if (exponent == 16)
+					return 10000000000000000ULL;
+				else
+					return 100000000000000000ULL;
+			} else {
+				if (exponent == 18)
+					return 1000000000000000000ULL;
+				else
+					return 1000000000000000000ULL;
+			}
+		}
 	}
-	return (result);
 }
 
-unsigned long long u_sqrt(unsigned long long number)
-{
-	unsigned long long square_root = 1;
-	while(square_root * square_root < number){
-		square_root ++;
-	}
-	return (square_root);
-}
-
-unsigned long long u_sqrt_binary(unsigned long long number)
-{
-	unsigned long long square_root = number / 2;
-	if(square_root > 4294967295)
-		square_root = 4294967295;
-	unsigned long long lim_min = 0;
-	unsigned long long lim_max = number / 2;
-	while(1){
-		if((square_root * square_root <= number) && ((square_root + 1) * (square_root + 1) > number))
-			return (square_root);
-		
-		if(square_root * square_root > number){
-			lim_max = square_root;
-			square_root = ((square_root - lim_min) / 2) + lim_min;
-		}
-		else{
-			lim_min = square_root;
-			square_root = ((lim_max - square_root) / 2) + square_root;
-		}
-	}
-	return (0);
+unsigned long long u_lastzero (unsigned long long number){
+	return( !(number - ((number / 10) * 10)) );
 }
 
 /*---------------------------------- ULIST  ----------------------------------*/
 
-typedef struct ulist	/* List of unsigned long longeges */
+typedef struct ulist	// List of unsigned long long
 {
-	unsigned long long *array;	/* Set to NULL when the array is empty. Check if NULL before traversing the array! */
-	unsigned long long last;	/* Code should traverse the array up to [last]. May be smaller or equal than the actual size of the array. */
+	unsigned long long *array;	// Set to NULL when the array is empty. Check if NULL before traversing the array!
+	unsigned long long last;	// Code should traverse the array up to [last]. May be smaller or equal than the actual size of the array.
 } ulist;
 
 ulist *ulist_init(unsigned long long number)
@@ -148,13 +239,12 @@ ulist *ulist_init(unsigned long long number)
 	ulist *new = malloc(sizeof(ulist));
 	assert(new != NULL);
 
-	new->last = u_length(number) - 1;
+	new->last = u_length_bin(number) - 1;
 
-	new->array = malloc(sizeof(unsigned long long)*(new->last + 1));
+	new->array = malloc(sizeof(unsigned long long) * (new->last + 1));
 	assert(new->array != NULL);
 
-	unsigned long long i;
-	for (i = new->last; i > 0; i--) {
+	for (unsigned long long i = new->last; i > 0; i--) {
 		new->array[i] = number % 10;
 		number = number/10;
 	}
@@ -191,8 +281,7 @@ ulist *ulist_copy(ulist *original)
 		copy->array = malloc(sizeof(unsigned long long)*(copy->last + 1));
 		assert(copy->array != NULL);
 
-		unsigned long long i;
-		for (i=0; i<=copy->last; i++) {
+		for (unsigned long long i = 0; i<=copy->last; i++) {
 			copy->array[i] = original->array[i];
 		}
 	} else
@@ -205,7 +294,7 @@ int ulist_remove(ulist* ulist_ptr, unsigned long long element)
 {
 #ifdef __SANITY_CHECK__
 	assert(ulist_ptr != NULL);
-	assert(j <= ulist_ptr->last);
+	assert(element <= ulist_ptr->last);
 #endif
 
 	if (ulist_ptr->array != NULL) {
@@ -213,9 +302,8 @@ int ulist_remove(ulist* ulist_ptr, unsigned long long element)
 			free(ulist_ptr->array);
 			ulist_ptr->array = NULL;
 		} else {
-			unsigned long long i;
-			for (i = element; i < ulist_ptr->last; i++) {
-				ulist_ptr->array[i] = ulist_ptr->array[i+1];
+			for (; element < ulist_ptr->last; element++) {
+				ulist_ptr->array[element] = ulist_ptr->array[element + 1];
 			}
 			ulist_ptr->last = ulist_ptr->last - 1;
 		}
@@ -230,14 +318,12 @@ int ulist_pop(ulist* ulist_ptr, unsigned long long number)
 #endif
 
 	if (ulist_ptr->array != NULL) {
-		unsigned long long i;
-		for (i = 0; i <= ulist_ptr->last; i++) {
+		for (unsigned long long i = 0; i <= ulist_ptr->last; i++) {
 			if (ulist_ptr->array[i] == number) {
 				if (ulist_ptr->last == 0) {
 					free(ulist_ptr->array);
 					ulist_ptr->array = NULL;
-				}
-				else{
+				} else {
 					for (; i < ulist_ptr->last; i++) {
 						ulist_ptr->array[i] = ulist_ptr->array[i+1];
 					}
@@ -258,22 +344,21 @@ unsigned long long ulist_combine_digits(ulist *digits)
 
 	unsigned long long number = 0;
 	if (digits->array != NULL) {
-		unsigned long long i;
-		for (i = 0; i <= digits->last; i++) {
+		for (unsigned long long i = 0; i <= digits->last; i++) {
 			number = (number * 10)+ digits->array[i];
 		}
 	}
 	return (number);
 }
 
-unsigned long long ulist_islastzero(ulist *ulist_ptr)
+unsigned long long ulist_lastnotzero(ulist *ulist_ptr)
 {
 #ifdef __SANITY_CHECK__
 	assert(ulist_ptr != NULL);
 #endif
 
 	if (ulist_ptr->array != NULL) {
-		return(ulist_ptr->array[ulist_ptr->last] == 0);
+		return(ulist_ptr->array[ulist_ptr->last] != 0);
 	}
 	return (0);
 }
@@ -297,8 +382,7 @@ llist *llist_init(unsigned long long number, llist* next)
 
 int llist_free(llist *llist_ptr)
 {
-	llist *temp = NULL;
-	while(llist_ptr != NULL) {
+	for (llist *temp = NULL; llist_ptr != NULL ;) {
 		temp = llist_ptr;
 		llist_ptr = llist_ptr->next;
 		free(temp);
@@ -309,27 +393,19 @@ int llist_free(llist *llist_ptr)
 llist *get_fangs(unsigned long long dividend)
 {
 	llist *divisors = NULL;
-	llist *current = NULL;
-	unsigned long long dividend_length = u_length(dividend);
-	unsigned long long divisor = ten_pow((dividend_length / 2) - 1);
-	unsigned long long divisor_length;
-	unsigned long long quotient;
-	unsigned long long quotient_length;
+	unsigned long long dividend_length = u_length_bin(dividend);
+	unsigned long long fang_length = dividend_length / 2;
+	unsigned long long divisor = ten_pow_bin(fang_length - 1);
+	for (; u_length_bin(dividend/divisor) > fang_length; divisor++) {}
 
-	for (; divisor * divisor <= dividend; divisor++) {
-		if (dividend % divisor == 0) {
-			quotient = dividend/divisor;
-			divisor_length = u_length(divisor);
-			quotient_length = u_length(quotient);
-			if ((dividend_length == divisor_length + quotient_length) && (divisor_length == quotient_length)) {
-				if (current == NULL) {
-					divisors = llist_init(divisor, NULL);
-					current = divisors;
-				}
-				else{
-					current->next = llist_init(divisor, current->next);
-					current = current->next;
-				}
+	for (llist *current = NULL; divisor * divisor <= dividend; divisor++) {
+		if (dividend % divisor == 0 && !( u_lastzero(divisor) && u_lastzero(dividend/divisor))) {
+			if (current == NULL) {
+				divisors = llist_init(divisor, NULL);
+				current = divisors;
+			} else {
+				current->next = llist_init(divisor, current->next);
+				current = current->next;
 			}
 		}
 	}
@@ -342,8 +418,7 @@ llist *llist_copy(llist *original)
 	if (original != NULL) {
 		copy = llist_init(original->number, NULL);
 		llist *current = copy;
-		llist *i;
-		for (i = original->next; i != NULL; i = i->next) {
+		for (llist *i = original->next; i != NULL; i = i->next) {
 			llist *llist_ptr = llist_init(i->number, NULL);
 			current->next = llist_ptr;
 			current = current->next;
@@ -392,8 +467,7 @@ llhead *llhead_copy(llhead *original) {
 int llhead_pop(llhead *llhead_ptr, unsigned long long number)
 {
 	llist *prev = NULL;
-	llist *i;
-	for (i = llhead_ptr->first; i != NULL; i = i->next) {
+	for (llist *i = llhead_ptr->first; i != NULL; i = i->next) {
 		if (i->number == number) {
 			if (i == llhead_ptr->first) {
 				llhead_ptr->first = i->next;
@@ -446,7 +520,6 @@ int vargs_free(vargs *vargs_ptr)
 	free (vargs_ptr);
 	return (0);
 }
-
 int vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
 {
 	unsigned long long current = 0;
@@ -463,47 +536,46 @@ int vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
 
 	return(current);
 }
-
 /*----------------------------------------------------------------------------*/
 
 void *vampire(void *void_args)
 {
 
-#ifdef __SPEED_TEST___
+#ifdef SPD_TEST
 	struct timespec start, finish;
 	double elapsed;
-	clock_gettime(__CLOCK_MODE__, &start);
+	double fang_time;
+	clock_gettime(SPDT_CLK_MODE, &start);
 #endif
 
 	vargs *args = (vargs *)void_args;
-	unsigned long long is_not_vampire;
-	unsigned long long is_vampire;
+	int is_not_vampire;
+	int is_vampire;
+	unsigned long long j;
 
 	/* iterate all numbers */
-	unsigned long long number;
-	for (number = args->min; number <= args->max; number += args->step) {
+	for (unsigned long long number = args->min; number <= args->max; number += args->step) {
 		if (u_length_isodd(number)) {
+			assert(0);
 			continue;
 		}
 		is_vampire = 0;
-#ifdef __SPEED_TEST___
-	struct timespec al_start, al_finish;
-	double al_elapsed;
-	clock_gettime(__CLOCK_MODE__, &al_start);
+
+#ifdef SPD_TEST
+	struct timespec fang_start, fang_finish;
+	clock_gettime(SPDT_CLK_MODE, &fang_start);
 #endif
 		llist *divisors = get_fangs(number);
-#ifdef __SPEED_TEST___
-	clock_gettime(__CLOCK_MODE__, &al_finish);
+#ifdef SPD_TEST
+	clock_gettime(SPDT_CLK_MODE, &fang_finish);
 
-	al_elapsed = (al_finish.tv_sec - al_start.tv_sec);
-	al_elapsed += (al_finish.tv_nsec - al_start.tv_nsec) / 1000000000.0;
-	args->algorithm_runtime += al_elapsed;
-
+	fang_time = (fang_finish.tv_sec - fang_start.tv_sec);
+	fang_time += (fang_finish.tv_nsec - fang_start.tv_nsec) / 1000000000.0;
+	args->algorithm_runtime += fang_time;
 #endif
-		ulist *digits = ulist_init(number);
 
-		llist *i;
-		for (i = divisors; i != NULL && !is_vampire; i = i->next) { /* iterate all divisors */
+		ulist *digits = ulist_init(number);
+		for (llist *i = divisors; i != NULL && is_vampire != 1; i = i->next) { /* iterate all divisors */
 
 			ulist *digit = ulist_copy(digits);
 			ulist* divisor = ulist_init(i->number);
@@ -511,17 +583,15 @@ void *vampire(void *void_args)
 
 			is_not_vampire = 0;
 			/* iterate all divisor digits */
-			unsigned long long j;
-			for (j = 0; !is_not_vampire && j <= divisor->last && !is_not_vampire && digit->array != NULL; j++) {
+			for (j = 0; !is_not_vampire && j <= divisor->last && digit->array != NULL; j++) {
 				if (!ulist_pop(digit,divisor->array[j]))
 					is_not_vampire = 1;
 			}
-
-			for (j = 0; !is_not_vampire && j <= quotient->last && !is_not_vampire && digit->array != NULL; j++) {
+			for (j = 0; !is_not_vampire && j <= quotient->last && digit->array != NULL; j++) {
 				if (!ulist_pop(digit,quotient->array[j]))
 					is_not_vampire = 1;
 			}
-			if (!is_not_vampire && digit->array == NULL  && (!ulist_islastzero(divisor) || !ulist_islastzero(quotient))) {
+			if (!is_not_vampire && digit->array == NULL) {
 #if defined(__OEIS_OUTPUT__)
 				if (args->result->first == NULL) {
 					args->result->first = llist_init(number, NULL);
@@ -538,7 +608,6 @@ void *vampire(void *void_args)
 				printf("%llu / %llu = %llu\n", number, i->number, number / i->number);
 				*/
 			}
-
 			ulist_free(digit);
 			ulist_free(divisor);
 			ulist_free(quotient);
@@ -547,11 +616,8 @@ void *vampire(void *void_args)
 		ulist_free(digits);
 	}
 
-#ifdef __SPEED_TEST___
-	clock_gettime(__CLOCK_MODE__, &finish);
-#endif
-
-#ifdef __SPEED_TEST___
+#ifdef SPD_TEST
+	clock_gettime(SPDT_CLK_MODE, &finish);
 	elapsed = (finish.tv_sec - start.tv_sec);
 	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
 	args->runtime += elapsed;
@@ -559,7 +625,6 @@ void *vampire(void *void_args)
 	printf("%llu \t%llu \t%llu\tin %lf\n", args->min, args->max, counter, elapsed);
 	*/
 #endif
-
 	return(0);
 }
 
@@ -574,10 +639,8 @@ int main(int argc, char* argv[])
 	unsigned long long max = atoull(argv[2]);
 
 	unsigned long long new_min = 1;
-	unsigned long long min_length = u_length(min);
-	for (i = 0; i < min_length; i++) {
-		new_min = (new_min * 10);
-	}
+	unsigned long long min_length = u_length_bin(min);
+	new_min = ten_pow_bin(min_length);
 	if (u_length_isodd(min)) {
 		if (new_min <= max) {
 			min = new_min;
@@ -586,14 +649,11 @@ int main(int argc, char* argv[])
 	unsigned long long lmax = max;
 	if (u_length_isodd(max)) {
 		unsigned long long new_max = 0;
-		unsigned long long max_length = u_length(max);
-	
-		for (i = 0; i < max_length - 1; i++) {
-			new_max = (new_max * 10) + 9;
-		}
-		if (min <= new_max) {
+		unsigned long long max_length = u_length_bin(max);
+
+		new_max = ten_pow_bin(max_length-1) - 1;
+		if (min <= new_max)
 			max = new_max;
-		}
 	}
 	unsigned long long lmin = min;
 	if (lmax > 10 * new_min -1) {
@@ -656,25 +716,28 @@ int main(int argc, char* argv[])
 
 		if (lmax-lmin > ITERATOR)
 			iterator = ITERATOR;
-
 		else
 			iterator = lmin -lmax;
 
 	}
 	unsigned long long result = 0;
+
+#ifdef SPD_TEST
 	double algorithm_time = 0.0;
+	printf("Thread  Count   Rutime\n");
+#endif
+
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 		result += input[thread]->count;
 
-#ifdef __SPEED_TEST___
-		printf("%llu \t%llu \t%llu\tin %lf\n", input[thread]->min, input[thread]->max, input[thread]->count, input[thread]->runtime);
+#ifdef SPD_TEST
+		printf("%llu\t%llu\t%lf\t[%llu\t%llu]\n", thread, input[thread]->count, input[thread]->runtime, input[thread]->min, input[thread]->max);
 		algorithm_time += input[thread]->algorithm_runtime,
-
 #endif
 		vargs_free(input[thread]);
 	}
-#ifdef __SPEED_TEST___
-	printf("algorithm took: %lf\n", algorithm_time);
+#ifdef SPD_TEST
+	printf("Fang search took: %lf, average: %lf\n", algorithm_time, algorithm_time / NUM_THREADS);
 #endif
 #if defined(__OEIS_OUTPUT__)
 	unsigned long long k = 1;
@@ -685,12 +748,11 @@ int main(int argc, char* argv[])
 	}
 #endif
 
-#if defined(__RESULT___)
-	printf("found: %llu\n", result);
+#if defined(__RESULTS__)
+	printf("Found: %llu vampire numbers.\n", result);
 #endif
 	llhead_free(result_list);
 
 	pthread_exit(NULL);
-
 	return (0);
 }
