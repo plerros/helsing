@@ -29,17 +29,17 @@
 #include <math.h>
 
 // Compile with: gcc -O3 -Wall -Wextra -pthread -lm -o helsing helsing.c
-//Record to break: The 208423682 14-digit vampires were computed to a 7 GB file in 19 hours on November 12-13 2002.
+// Record to break: The 208423682 14-digit vampires were computed to a 7 GB file in 19 hours on November 12-13 2002.
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
-#define NUM_THREADS 8 // Thread count above #cores may not improve performance 
+#define NUM_THREADS 16 // Thread count above #cores may not improve performance 
 #define ITERATOR 100000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
 //18446744073709551616
 
 //#define SANITY_CHECK
 //#define OEIS_OUTPUT
 
-//#define MEASURE_RUNTIME
+#define MEASURE_RUNTIME
 #define PRINT_VAMPIRE_COUNT
 #define DISTRIBUTION_COMPENSATION
 
@@ -65,20 +65,11 @@
 
 /*----------------------------- ULLONG FUNCTIONS -----------------------------*/
 
-unsigned long long atoull (const char *str)	// ASCII to unsigned long long
+uint8_t length(unsigned long long number)
 {
-	unsigned long long number = 0;
-	for (unsigned short i = 0; str[i] >= '0' && str[i] <= '9'; i++) {
-		number = 10 * number + (str[i] - '0');
-	}
-	return number;
-}
-
-uint8_t length (unsigned long long number)
-{
-	if (number < 10000000000ULL){
+	if (number < 10000000000ULL) {
 		if (number < 100000ULL) {
-			if (number < 1000ULL){
+			if (number < 1000ULL) {
 				if (number < 10ULL)
 					return 1;
 				else if (number < 100ULL)
@@ -122,7 +113,7 @@ uint8_t length (unsigned long long number)
 					return 15;
 			}
 		} else {
-			if (number < 1000000000000000000ULL){
+			if (number < 1000000000000000000ULL) {
 				if (number < 10000000000000000ULL)
 					return 16;
 				else if (number < 100000000000000000ULL)
@@ -139,30 +130,20 @@ uint8_t length (unsigned long long number)
 	}
 }
 
-bool length_isodd (unsigned long long number)
+bool length_isodd(unsigned long long number)
 {
-	number = number / 10;
-	bool result = true;
-	unsigned long long i = 1;
-	while (i < number) {
-		i *= 10;
-		result = !result;
-	}
-	if (i == number) {
-		result = !result;
-	}
-	return result;
+	return (length(number) % 2);
 }
 
-unsigned long long pow10ull (uint8_t exponent) // Returns 10 ^ exponent
+unsigned long long pow10ull(uint8_t exponent) // Returns 10 ^ exponent
 {
 #ifdef SANITY_CHECK
-	assert(exponent <= length(ULLONG_MAX));
+	assert(exponent <= length(ULLONG_MAX) - 1);
 #endif
 
-	if (exponent < 10){
+	if (exponent < 10) {
 		if (exponent < 5) {
-			if (exponent < 3){
+			if (exponent < 3) {
 				if (exponent == 0)
 					return 1ULL;
 				else if (exponent == 1)
@@ -206,7 +187,7 @@ unsigned long long pow10ull (uint8_t exponent) // Returns 10 ^ exponent
 					return 100000000000000ULL;
 			}
 		} else {
-			if (exponent < 18){
+			if (exponent < 18) {
 				if (exponent == 15)
 					return 1000000000000000ULL;
 				else if (exponent == 16)
@@ -217,32 +198,47 @@ unsigned long long pow10ull (uint8_t exponent) // Returns 10 ^ exponent
 				if (exponent == 18)
 					return 1000000000000000000ULL;
 				else
-					return 1000000000000000000ULL;
+					return 10000000000000000000ULL;
 			}
 		}
 	}
 }
 
-bool trailingzero (unsigned long long number)
+unsigned long long atoull(const char *str, bool *error)	// ASCII to unsigned long long
+{
+	unsigned long long number = 0;
+	unsigned long long temp;
+	for (uint8_t i = 0; str[i] >= '0' && str[i] <= '9'; i++) {
+		temp = 10 * number + (str[i] - '0');
+		if (temp < number) {  // overflow
+			*error = true;
+			return 1;
+		}
+		number = temp;
+	}
+	return number;
+}
+
+bool notrailingzero(unsigned long long number)
 {
 	return ((number % 10) != 0);
 }
 
-unsigned long long get_min ( unsigned long long min, unsigned long long max )
+unsigned long long get_min(unsigned long long min, unsigned long long max)
 {
 	if (length_isodd(min)) {
 		uint8_t min_length = length(min);
 		if (min_length < length(max))
-			min = pow10ull (min_length);
+			min = pow10ull(min_length);
 		else
 			min = max;
 	}
 	return min;
 }
 
-unsigned long long get_max ( unsigned long long min, unsigned long long max )
+unsigned long long get_max(unsigned long long min, unsigned long long max)
 {
-	if (length_isodd(max)){
+	if (length_isodd(max)) {
 		uint8_t max_length = length(max);
 		if (max_length > length(min))
 			max = pow10ull(max_length -1) -1;
@@ -252,26 +248,26 @@ unsigned long long get_max ( unsigned long long min, unsigned long long max )
 	return max;
 }
 
-unsigned long long get_lmax ( unsigned long long lmin, unsigned long long max )
+unsigned long long get_lmax(unsigned long long lmin, unsigned long long max)
 {
 	unsigned long long lmax;
-	if(length(lmin) < length(ULLONG_MAX)){
+	if (length(lmin) < length(ULLONG_MAX)) {
 		lmax = pow10ull(length(lmin)) - 1;
-		if( lmax < max )
+		if (lmax < max)
 			return lmax;
 	}
 	return max;
 }
 
-unsigned long long sqrtull ( unsigned long long s )
+unsigned long long sqrtull(unsigned long long s)
 {
 	unsigned long long x0 = s >> 1;						// Initial estimate
 
-	if (x0){											// Sanity check
-		unsigned long long x1 = ( x0 + s / x0 ) >> 1;	// Update
-		while (x1 < x0){								// This also checks for cycle
+	if (x0) {											// Sanity check
+		unsigned long long x1 = (x0 + s / x0) >> 1;		// Update
+		while (x1 < x0) {								// This also checks for cycle
 			x0 = x1;
-			x1 = ( x0 + s / x0 ) >> 1;
+			x1 = (x0 + s / x0) >> 1;
 		}
 		return x0;
 	} else {
@@ -279,50 +275,11 @@ unsigned long long sqrtull ( unsigned long long s )
 	}
 }
 
-bool vampirism_check(unsigned long long product, unsigned long long multiplicant, uint8_t mult_array[])
-{
-/*
-	int8_t product_array[10] = {0};
-	for (; multiplicant != 0; multiplicant /= 10){
-		product_array[multiplicant % 10] -= 1;		//Underflow is expected here.
-	}
-	for (; product != 0; product /= 10){
-		product_array[product % 10] += 1;
-	}
-	for (uint8_t i = 0; i < 8; i++){ //maybe just 8?
-		if(product_array[i] != mult_array[i])
-			return false;
-	}
-	
-	return true;
-*/
-	int16_t product_array[10] = {0};
-	int8_t temp = 0;
-	for (; product != 0; product /= 10){
-		product_array[product % 10] += 1;
-	}
-	for (uint8_t i = 0; i < 8; i++){
-		if(product_array[i] < mult_array[i])
-			return false;
-	}
-	for (; multiplicant != 0; multiplicant /= 10){
-		temp = multiplicant % 10;
-		product_array[temp] -= 1;
-		if(product_array[temp] < 0)
-			return false;
-	}
-	for (uint8_t i = 0; i < 8; i++){ //maybe just 8?
-		if(product_array[i] != mult_array[i])
-			return false;
-	}
-	return true;
-	
-}
-
 /*--------------------------------- ULLBTREE ---------------------------------*/
 
 typedef struct ullbtree
 {
+	struct ullbtree *parent;
 	struct ullbtree *left;
 	struct ullbtree *right;
 	unsigned long long value;
@@ -334,11 +291,12 @@ typedef struct ullbtree
  * Instead, their memory location is NULL. This minimizes memory usage.
 */
 
-ullbtree *ullbtree_init(unsigned long long value)
+ullbtree *ullbtree_init(unsigned long long value, ullbtree *parent)
 {
 	ullbtree *new = malloc(sizeof(ullbtree));
 	assert(new != NULL);
 
+	new->parent = parent;
 	new->left = NULL;
 	new->right = NULL;
 	new->height = 0;
@@ -346,9 +304,43 @@ ullbtree *ullbtree_init(unsigned long long value)
 	return new;
 }
 
-int ullbtree_free(ullbtree *tree)
+int ullbtree_free_(ullbtree *tree)
 {
-	if(tree != NULL){
+	ullbtree *current;
+	for (; tree != NULL;) {
+		current = tree;
+		for (;current != NULL;) {
+			if (current->left != NULL) {
+				if (current->left->left == NULL && current->left->right == NULL) {
+					free(current->left);
+					current->left = NULL;
+				} else {
+					current = current->left;
+					continue;
+				}
+			}
+			if (current->right != NULL){
+				if (current->right->left == NULL && current->right->right == NULL) {
+					free(current->right);
+					current->right = NULL;
+				} else {
+					current = current->right;
+					continue;
+				}
+			}
+			if (current == tree) {
+				free(tree);
+				return 0;
+			}
+			current = NULL;
+		}
+	}
+	return 0;
+}
+
+int ullbtree_free(ullbtree *tree) // recursive
+{
+	if (tree != NULL) {
 		if (tree->left != NULL)
 			ullbtree_free(tree->left);
 		if (tree->right != NULL)
@@ -358,9 +350,9 @@ int ullbtree_free(ullbtree *tree)
 	return 0;
 }
 
-int ullbtree_results(ullbtree *tree, unsigned long long i)
+unsigned long long ullbtree_results(ullbtree *tree, unsigned long long i) // recursive
 {
-	if(tree !=NULL){
+	if (tree !=NULL) {
 		i = ullbtree_results(tree->left, i);
 
 		i++;
@@ -381,29 +373,29 @@ int ullbtree_results(ullbtree *tree, unsigned long long i)
 int8_t is_balanced(ullbtree *tree)
 {
 	//assert(tree != NULL);
-	if(tree != NULL){
-		if(tree->left != NULL && tree->right != NULL){
-			if(tree->left->height > tree->right->height){	//We do this to avoid overflow
-				if(tree->left->height > tree->right->height + 1)
+	if (tree != NULL) {
+		if (tree->left != NULL && tree->right != NULL) {
+			if (tree->left->height > tree->right->height) {	//We do this to avoid overflow
+				if (tree->left->height > tree->right->height + 1)
 					return 1;
 				else
 					return 2;
 			}
-			else if(tree->right->height > tree->left->height){	//We do this to avoid overflow
-				if(tree->right->height > tree->left->height + 1)
+			else if (tree->right->height > tree->left->height) {	//We do this to avoid overflow
+				if (tree->right->height > tree->left->height + 1)
 					return -1;
 				else
 					return -2;
 			}
 		}
-		else if(tree->left != NULL){
-			if(tree->left->height > 0)
+		else if (tree->left != NULL) {
+			if (tree->left->height > 0)
 				return 1;
 			else
 				return 2;
 		}
-		else if(tree->right != NULL){
-			if(tree->right->height > 0)
+		else if (tree->right != NULL) {
+			if (tree->right->height > 0)
 				return -1;
 			else
 				return -2;
@@ -412,37 +404,56 @@ int8_t is_balanced(ullbtree *tree)
 	return 0;
 }
 
-int ullbtree_reset_height(ullbtree *tree)
+void ullbtree_reset_height(ullbtree *tree)
 {
 	//assert(tree != NULL);
 	tree->height = 0;
-		if(tree->left != NULL && tree->left->height >= tree->height)
-			tree->height = tree->left->height + 1;
-		if(tree->right != NULL && tree->right->height >= tree->height)
-			tree->height = tree->right->height + 1;
-		return 0;
+	if (tree->left != NULL && tree->left->height >= tree->height)
+		tree->height = tree->left->height + 1;
+	if (tree->right != NULL && tree->right->height >= tree->height)
+		tree->height = tree->right->height + 1;
 }
+
+/*
+ * Binary tree right rotation:
+ * 
+ *       A             B
+ *      / \           / \
+ *     B  ...  -->  ...  A
+ *    / \               / \
+ *  ...  C             C  ...
+ * 
+ * The '...' are completely unaffected.
+*/
 
 ullbtree *ullbtree_rotate_r(ullbtree *tree)
 {
-	//assert(tree != NULL);
-	//assert(tree->left != NULL);
-	if(tree->left != NULL){
-		ullbtree *left = tree->left;
-		tree->left = left->right;
-		ullbtree_reset_height(tree);
-		left->right = tree;
-		ullbtree_reset_height(left);
-		return left;
-	}
-	return tree;
+	if (tree->left == NULL)
+		return tree;
+
+	ullbtree *parent = tree->parent;
+	ullbtree *A = tree;
+	ullbtree *B = tree->left;
+	ullbtree *C = tree->left->right;
+
+	A->left = C;
+	ullbtree_reset_height(A);
+
+	B->right = A;
+	ullbtree_reset_height(B);
+
+	A->parent = B;
+	B->parent = parent;
+	if(C != NULL)
+		C->parent = A;
+	return B;
 }
 
 ullbtree *ullbtree_rotate_l(ullbtree *tree)
 {
 	//assert(tree != NULL);
 	//assert(tree->right != NULL);
-	if(tree->right != NULL){
+	if (tree->right != NULL) {
 		ullbtree *right = tree->right;
 		tree->right = right->left;
 		ullbtree_reset_height(tree);
@@ -458,7 +469,7 @@ ullbtree *ullbtree_balance(ullbtree *tree)
 	//assert(tree != NULL);
 	switch(is_balanced(tree)){
 		case 1:
-			if(is_balanced(tree->left) < 0){
+			if (is_balanced(tree->left) < 0) {
 				tree->left = ullbtree_rotate_l(tree->left);
 				ullbtree_reset_height(tree); //maybe optional?
 			}
@@ -466,7 +477,7 @@ ullbtree *ullbtree_balance(ullbtree *tree)
 			break;
 
 		case -1:
-			if(is_balanced(tree->right) > 0){
+			if (is_balanced(tree->right) > 0) {
 				tree->right = ullbtree_rotate_r(tree->right);
 				ullbtree_reset_height(tree); //maybe optional?
 			}
@@ -479,20 +490,19 @@ ullbtree *ullbtree_balance(ullbtree *tree)
 	return tree;
 }
 
-ullbtree *ullbtree_add(ullbtree *tree, ullbtree *node, unsigned long long *count)
+ullbtree *ullbtree_add(ullbtree *tree, unsigned long long node, unsigned long long *count, ullbtree *parent) // recursive
 {
-	if(tree == NULL){
+	if (tree == NULL) {
 		*count += 1;
-		return node;
+		return ullbtree_init(node, parent);
 	}
-	if(node->value == tree->value){
-		ullbtree_free(node);
+	if (node == tree->value) {
 		return tree;
 	}
-	else if(node->value < tree->value){
-		tree->left = ullbtree_add(tree->left, node, count);
+	else if (node < tree->value) {
+		tree->left = ullbtree_add(tree->left, node, count, tree);
 	} else {
-		tree->right = ullbtree_add(tree->right, node, count);
+		tree->right = ullbtree_add(tree->right, node, count, tree);
 	}
 	ullbtree_reset_height(tree);
 	tree = ullbtree_balance(tree);
@@ -505,23 +515,19 @@ typedef struct vargs	/* Vampire arguments */
 {
 	unsigned long long min;
 	unsigned long long max;
-	uint16_t step;	//step is usually 1. Alternative thread load balancing changes this to #threads.
 	unsigned long long count;
 	double	runtime;
-	double 	algorithm_runtime;
 	ullbtree *result;
 } vargs;
 
-vargs *vargs_init(unsigned long long min, unsigned long long max, uint16_t step)
+vargs *vargs_init(unsigned long long min, unsigned long long max)
 {
 	vargs *new = malloc(sizeof(vargs));
 	assert(new != NULL);
 	new->min = min;
 	new->max = max;
-	new->step = step;
 	new->count = 0;
 	new->runtime = 0.0;
-	new->algorithm_runtime = 0.0;
 	new->result = NULL;
 	return new;
 }
@@ -549,7 +555,6 @@ uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long 
 		min = input[current]->max + 1;
 		current ++;
 		input[current]->min = min;
-
 		input[current]->max = (max-min)/(NUM_THREADS - current) + min;
 	}
 
@@ -557,10 +562,10 @@ uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long 
 	//unsigned long long factor_min = pow10ull((length(min)) - 1);
 	unsigned long long factor_max = pow10ull((length(max))) -1;
 	unsigned long long temp;
-	for(uint16_t i = 0; i < current; i++){
+	for (uint16_t i = 0; i < current; i++) {
 		temp = (double)factor_max * distribution_inverted_integral(((double)i+1)/((double)NUM_THREADS));
 
-		if(temp > input[i]->min && temp < input[i]->max){
+		if (temp > input[i]->min && temp < input[i]->max) {
 			//printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
 			input[i]->max = temp;
 			input[i+1]->min = temp + 1;
@@ -578,14 +583,8 @@ void *vampire(void *void_args)
 {
 #ifdef SPD_TEST
 	struct timespec start, finish;
-	struct timespec fang_start, fang_finish;
 	double elapsed;
-	double fang_time;
 	clock_gettime(SPDT_CLK_MODE, &start);
-#endif
-
-#ifdef SPD_TEST
-	clock_gettime(SPDT_CLK_MODE, &fang_start);
 #endif
 
 	vargs *args = (vargs *)void_args;
@@ -597,7 +596,7 @@ void *vampire(void *void_args)
 	//unsigned long long factor_min = pow10ull((length(min) / 2) - 1);
 	unsigned long long factor_max = pow10ull((length(max) / 2)) -1;
 
-	if(max >= factor_max * factor_max)
+	if (max >= factor_max * factor_max)
 		max = factor_max * factor_max;
 	
 	unsigned long long min_sqrt = min / sqrtull(min);
@@ -612,48 +611,64 @@ void *vampire(void *void_args)
 	bool mult_zero;
 
 	//printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier);
-	for(unsigned long long multiplicant; multiplier <= factor_max; multiplier++){
-		if(multiplier % 3 == 1){
+	for (unsigned long long multiplicant; multiplier <= factor_max; multiplier++) {
+		if (multiplier % 3 == 1) {
 			continue;
 		}
 		multiplicant = min/multiplier + !!(min % multiplier); // fmin * fmax <= min - 10^n
-		if(multiplier >= max_sqrt){
+		if (multiplier >= max_sqrt) {
 			multiplicant_max = max/multiplier;
 		} else {
 			multiplicant_max = multiplier; //multiplicant can be equal to multiplier, 5267275776 = 72576 * 72576.
 		}
 
-		if(multiplicant <= multiplicant_max){
+		if (multiplicant <= multiplicant_max) {
 			uint8_t mult_array[10] = {0};
-			for(unsigned long long i = multiplier; i != 0; i /= 10){
+			for (unsigned long long i = multiplier; i != 0; i /= 10) {
 				mult_array[i % 10] += 1;
 			}
 
-			mult_zero = trailingzero(multiplier);
+			mult_zero = notrailingzero(multiplier);
 
-			for(;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++){}
+			for (;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++) {}
 
 			product_iterator = multiplier * 9;
 			product = multiplier*(multiplicant);
 
-			for(;multiplicant <= multiplicant_max; multiplicant += 9){
-				if (vampirism_check(product, multiplicant, mult_array)){
-					if((mult_zero || trailingzero(multiplicant))){
-						args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
+			for (;multiplicant <= multiplicant_max; multiplicant += 9) {
+				uint16_t product_array[10] = {0};
+				for (unsigned long long p = product; p != 0; p /= 10) {
+					product_array[p % 10] += 1;
+				}
+				for (uint8_t i = 0; i < 8; i++) {
+					if (product_array[i] < mult_array[i]) {
+						goto vampire_exit;
 					}
 				}
+				uint8_t temp;
+				for (unsigned long long m = multiplicant; m != 0; m /= 10) {
+					temp = m % 10;
+					if (product_array[temp] < 1) {
+						goto vampire_exit;
+					} else {
+						product_array[temp]--;
+					}
+				}
+
+				for (uint8_t i = 0; i < 8; i++) {
+					if (product_array[i] != mult_array[i]) {
+						goto vampire_exit;
+					}
+				}
+
+				if ((mult_zero || notrailingzero(multiplicant))) {
+					args->result = ullbtree_add(args->result, product, &(args->count), NULL);
+				}
+vampire_exit:
 				product += product_iterator;
 			}
 		}
 	}
-
-#ifdef SPD_TEST
-	clock_gettime(SPDT_CLK_MODE, &fang_finish);
-
-	fang_time = (fang_finish.tv_sec - fang_start.tv_sec);
-	fang_time += (fang_finish.tv_nsec - fang_start.tv_nsec) / 1000000000.0;
-	args->algorithm_runtime += fang_time;
-#endif
 
 #ifdef SPD_TEST
 	clock_gettime(SPDT_CLK_MODE, &finish);
@@ -674,8 +689,17 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	unsigned long long min = atoull(argv[1]);
-	unsigned long long max = atoull(argv[2]);
+	bool error = 0;
+	unsigned long long min = atoull(argv[1], &error);
+	if (error) {
+		printf("Minimum value overflows the limit: %llu\n", ULLONG_MAX);
+		return 1;
+	}
+	unsigned long long max = atoull(argv[2], &error);
+	if (error) {
+		printf("Maximum value overflows the limit: %llu\n", ULLONG_MAX);
+		return 1;
+	}
 
 	if (min > max) {
 		printf("Invalid arguments, min <= max\n");
@@ -693,7 +717,7 @@ int main(int argc, char* argv[])
 	uint16_t thread;
 
 	for (thread = 0; thread < NUM_THREADS; thread++) {
-		input[thread] = vargs_init(0, 0, 1);
+		input[thread] = vargs_init(0, 0);
 	}
 
 	pthread_t threads[NUM_THREADS];
@@ -729,7 +753,7 @@ int main(int argc, char* argv[])
 				input[thread]->result = NULL;
 			}
 		}
-		if(lmax != max){
+		if (lmax != max) {
 			lmin = get_min (lmax + 1, max); // lmax + 1 <= ULLONG_MAX, because lmax < max.
 			lmax = get_lmax(lmin, max);
 		} else {
@@ -738,13 +762,13 @@ int main(int argc, char* argv[])
 	}
 
 #ifdef SPD_TEST
-	double algorithm_time = 0.0;
+	double total_time = 0.0;
 	printf("Thread  Count   Runtime\n");
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 		printf("%u\t%llu\t%lf\t[%llu\t%llu]\n", thread, input[thread]->count, input[thread]->runtime, input[thread]->min, input[thread]->max);
-		algorithm_time += input[thread]->algorithm_runtime;
+		total_time += input[thread]->runtime;
 	}
-	printf("\nFang search took: %lf, average: %lf\n", algorithm_time, algorithm_time / NUM_THREADS);
+	printf("\nFang search took: %lf, average: %lf\n", total_time, total_time / NUM_THREADS);
 #endif
 
 #ifdef RESULTS
@@ -757,7 +781,7 @@ int main(int argc, char* argv[])
 		distrubution += ((double)input[thread]->count) / ((double)(result));
 		printf("(1+%u/%u,%lf),", thread+1, NUM_THREADS/9, distrubution);
 		//printf("(1+%u/%u,%llu/%llu),", thread, NUM_THREADS/9,input[thread]->count, result/(NUM_THREADS/9));
-		if((thread+1) % 10 == 0)
+		if ((thread+1) % 10 == 0)
 			printf("\n");
 	}
 #endif
