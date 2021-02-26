@@ -104,8 +104,8 @@
  * integers that hold the total count of each digit (except 0s & 1s) of its
  * array key. For example a 32-bit sized element gets split into 8 * 4-bit
  * segments and a 64-bit sized element gets split into 8 * 8-bit segments:
- *                                     [77776666|55554444|33332222|99998888]
- * [77777777|66666666|55555555|44444444|33333333|22222222|99999999|88888888]
+ *                                     [99998888|77776666|55554444|33332222]
+ * [99999999|88888888|77777777|66666666|55555555|44444444|33333333|22222222]
  * 64       56       48       40       32       24       16       8        0
  *
  * 	We can choose any digit and ignore it, I chose not to store the 0s.
