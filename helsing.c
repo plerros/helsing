@@ -32,7 +32,7 @@
 //Record to break: The 208423682 14-digit vampires were computed to a 7 GB file in 19 hours on November 12-13 2002.
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
-#define NUM_THREADS 9 // Thread count above #cores may not improve performance 
+#define NUM_THREADS 90 // Thread count above #cores may not improve performance 
 #define ITERATOR 100000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
 //18446744073709551616
 
@@ -41,6 +41,8 @@
 
 #define MEASURE_RUNTIME
 #define PRINT_VAMPIRE_COUNT
+//#define COMPENSATE_BENFORDS_LAW
+//#define ADJUST_BENFORDS_LAW
 
 /*---------------------------- PREPROCESSOR_STUFF ----------------------------*/
 #ifndef OEIS_OUTPUT
@@ -334,13 +336,16 @@ int ullbtree_free(ullbtree *tree)
 	return 0;
 }
 
-int print_tree(ullbtree *tree, unsigned long long i)
+int ullbtree_results(ullbtree *tree, unsigned long long i)
 {
 	if(tree !=NULL){
-		i = print_tree(tree->left, i);
-		printf("%llu %llu\n", i, tree->value);
+		i = ullbtree_results(tree->left, i);
+
 		i++;
-		i = print_tree(tree->right, i);
+#if defined(OEIS_OUTPUT)
+		printf("%llu %llu\n", i, tree->value);
+#endif
+		i = ullbtree_results(tree->right, i);
 	}
 	return i;
 }
@@ -517,14 +522,36 @@ int vargs_free(vargs *vargs_ptr)
 	return 0;
 }
 
-inline double benfords_law(double digit)
+double benfords_law(double digit)
 {
+#ifdef ADJUST_BENFORDS_LAW
+//	digit = tan( (acos(-1)/20.0) * (digit - 0.5) ) * 4; // This function is based on trial and error, there is no solid math foundation backing this up.
+//	digit = tan( (acos(-1)/20.0) * (digit - 0.51) ) * 7.7; // This function is based on trial and error, there is no solid math foundation backing this up.
+#endif
+/*
+	int i = digit;
+	switch(i){
+		case(1):
+			return 0.34;
+		case(2):
+			return 0.19;
+		case(3):
+			return 0.15;
+		case(4):
+			return 0.11;
+		case(5):
+			return 0.0826;
+		case(6):
+			return 0.06;
+		case(7):
+			return 0.04;
+		case(8):
+			return 0.02;
+		case(9):
+			return 0.007;
+	}
+*/
 	return (log10(1.0+1.0/digit));
-}
-
-inline double inverse_benfords_law(double var)
-{
-	return (1.0/(pow(10.0, var) - 1.0));
 }
 
 double benfords_law_sum(uint8_t n){
@@ -532,16 +559,6 @@ double benfords_law_sum(uint8_t n){
 	if(n > 0){
 		for(uint8_t i = 1; i <= n; i++){
 			result += benfords_law(i);
-		}
-	}
-	return result;
-}
-
-double inverse_benfords_law_sum(uint8_t n){
-	double result = 0;
-	if(n > 0){
-		for(uint8_t i = 1; i <= n; i++){
-			result += inverse_benfords_law(i);
 		}
 	}
 	return result;
@@ -580,6 +597,7 @@ unsigned long long bl_transform (unsigned long long number)
 	else{
 		n = 9;
 	}
+	assert(n != 0);
 /*
 	unsigned long long result = 
 		max * (
@@ -660,6 +678,7 @@ unsigned long long bl_invert (unsigned long long number)
 	else {
 		n = 9;
 	}
+	assert(n != 0);
 	//for(int i = 1; i < 10; i++)
 		//printf("%llu\n",(unsigned long long)(max*benfords_law_sum(i)));
 
@@ -715,20 +734,21 @@ uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long 
 
 		input[current]->max = (max-min)/(NUM_THREADS - current) + min;
 	}
-/*
+
+#ifdef COMPENSATE_BENFORDS_LAW
 	unsigned long long temp;
 	for(uint16_t i = 0; i < current; i++){
 		temp = bl_invert(input[i]->max);
 		//printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
 
 		if(temp > input[i]->min && temp < input[i]->max){
-			printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
+			//printf("min %llu, bl %llu, bli %llu, bli(bl) %llu\n", input[i]->max, bl_transform(input[i]->max),bl_invert(input[i]->max), bl_invert(bl_transform(input[i]->max)));
 			input[i]->max = temp;
 			input[i+1]->min = temp + 1;
 		}
 	}
+#endif
 
-*/
 	input[current]->max = max;
 	return (current);
 }
@@ -855,24 +875,16 @@ int main(int argc, char* argv[])
 	unsigned long long max = atoull(argv[2]);
 
 	if (min > max) {
-		printf("Invalid arguments min <= max\n");
+		printf("Invalid arguments, min <= max\n");
 		return 0;
 	}
 
 	min = get_min(min, max);
 	max = get_max(min, max);
 
-	unsigned long long lmin = min;	// local min for use in loop
-	unsigned long long lmax = max;	// local max for use in loop
-	unsigned long long l_roof;
-
-
-/*
-	l_roof = pow10ull(length(lmin)) - 1;
-	if( max > l_roof)
-		lmax = l_roof;
-*/
-	lmax = get_lmax(lmin, max);
+	// local min, max for use inside loop
+	unsigned long long lmin = min;	
+	unsigned long long lmax = get_lmax(lmin, max);
 
 	vargs *input[NUM_THREADS];
 	uint16_t thread;
@@ -881,94 +893,74 @@ int main(int argc, char* argv[])
 		input[thread] = vargs_init(0, 0, 1);
 	}
 
-	int rc;
 	pthread_t threads[NUM_THREADS];
-	ullbtree *result_tree = NULL;
 	unsigned long long iterator = ITERATOR;
 	uint16_t active_threads = NUM_THREADS;
+	int returncode;
+
+	unsigned long long result = 0;
 
 	for (; lmax <= max;) {
+
+#ifndef OEIS_OUTPUT
 		printf("Checking range: [%llu, %llu]\n", lmin, lmax);
+#endif
+		iterator = ITERATOR;
 		for (unsigned long long i = lmin; i <= lmax; i += iterator + 1) {
-			if (lmax-i < iterator) {
-				iterator = lmax-i;
-			}
+			if (lmax - i < ITERATOR)
+				iterator = lmax - i;
+
 			active_threads = vargs_split(input, i, i + iterator) + 1;
 
 			for (thread = 0; thread < active_threads; thread++) {
-				rc = pthread_create(&threads[thread], NULL, vampire, (void *)input[thread]);
-				if (rc) {
-					printf("Error:unable to create thread, %d\n", rc);
-					exit(-1);
+				returncode = pthread_create(&threads[thread], NULL, vampire, (void *)input[thread]);
+				if (returncode) {
+					printf("Error: unable to create thread %d\n", returncode);
+					return 1;
 				}
 			}
 			for (thread = 0; thread < active_threads; thread++) {
 				pthread_join(threads[thread], 0);
-#if defined(OEIS_OUTPUT)
-				if (input[thread]->result != NULL){
-					if(result_tree != NULL){
-						result_tree = ullbtree_add(result_tree, input[thread]->result, NULL);
-					} else {
-						result_tree = input[thread]->result;
-					}
-				}
+				result = ullbtree_results(input[thread]->result, result);
+				ullbtree_free(input[thread]->result);
 				input[thread]->result = NULL;
-#endif
 			}
 		}
-		if(lmax < max){
-			lmin = get_min (lmax + 1, max);
-/*
-			lmax = get_max (lmin, max);
-			l_roof = pow10ull(length(lmin)) - 1;
-			if(max > l_roof)
-				lmax = l_roof;
-*/
+		if(lmax != max){
+			lmin = get_min (lmax + 1, max); // lmax + 1 <= ULLONG_MAX, because lmax < max.
 			lmax = get_lmax(lmin, max);
-			if (lmax - lmin > ITERATOR)
-				iterator = ITERATOR;
-			else
-				iterator = lmin - lmax;
 		} else {
 			break;
 		}
 	}
-	unsigned long long result = 0;
 
 #ifdef SPD_TEST
 	double algorithm_time = 0.0;
 	printf("Thread  Count   Runtime\n");
-#endif
-
 	for (thread = 0; thread<NUM_THREADS; thread++) {
-#ifdef SPD_TEST
 		printf("%u\t%llu\t%lf\t[%llu\t%llu]\n", thread, input[thread]->count, input[thread]->runtime, input[thread]->min, input[thread]->max);
-
 		algorithm_time += input[thread]->algorithm_runtime;
-#endif
-		result += input[thread]->count;
-		vargs_free(input[thread]);
 	}
+	printf("\nFang search took: %lf, average: %lf\n", algorithm_time, algorithm_time / NUM_THREADS);
+#endif
+
+#ifdef RESULTS
+	printf("Found: %llu vampire numbers.\n", result);
+#endif
+	double distrubution = 0.0;
 	for (thread = 0; thread < NUM_THREADS; thread++) {
 #if (defined SPD_TEST) && (NUM_THREADS > 8)
-		printf("(1+%u/%u,%llu/%llu),", thread, NUM_THREADS/9,input[thread]->count, result/(NUM_THREADS/9));
+		distrubution += ((double)input[thread]->count) / ((double)(result));
+		printf("(1+%u/%u,%lf),", thread+1, NUM_THREADS/9, distrubution);
+		//printf("(1+%u/%u,%llu/%llu),", thread, NUM_THREADS/9,input[thread]->count, result/(NUM_THREADS/9));
+		if((thread+1) % 10 == 0)
+			printf("\n");
 #endif
 	}
 	printf("\n");
-
-#ifdef SPD_TEST
-	printf("Fang search took: %lf, average: %lf\n", algorithm_time, algorithm_time / NUM_THREADS);
-#endif
-
-#if defined(OEIS_OUTPUT)
-	print_tree(result_tree, 1);
-#endif
-
-#if defined(RESULTS)
-	printf("Found: %llu vampire numbers.\n", result);
-#endif
-
-	ullbtree_free(result_tree);
+	for (thread = 0; thread<NUM_THREADS; thread++) {
+		vargs_free(input[thread]);
+	}
 	pthread_exit(NULL);
 	return 0;
 }
