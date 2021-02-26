@@ -43,7 +43,7 @@
  * (note: thread count above #cores may not improve performance)
  */
 
-#define THREADS 1
+#define THREADS 8
 #define thread_t uint16_t
 
 /*
@@ -86,6 +86,8 @@
 #define AUTO_TILE_SIZE true
 #define TILE_SIZE 18446744073709551615ULL
 
+// 2 25 5.137s
+// 1 50 5.163s
 /*
  * JENS_K_A_OPTIMIZATION:
  *
@@ -104,8 +106,8 @@
  * integers that hold the total count of each digit (except 0s & 1s) of its
  * array key. For example a 32-bit sized element gets split into 8 * 4-bit
  * segments and a 64-bit sized element gets split into 8 * 8-bit segments:
- *                                     [99998888|77776666|55554444|33332222]
- * [99999999|88888888|77777777|66666666|55555555|44444444|33333333|22222222]
+ *                                     [77776666|55554444|33332222|99998888]
+ * [77777777|66666666|55555555|44444444|33333333|22222222|99999999|88888888]
  * 64       56       48       40       32       24       16       8        0
  *
  * 	We can choose any digit and ignore it, I chose not to store the 0s.
@@ -123,7 +125,7 @@
  * DIG_ELEMENT_BITS to 64.
  */
 
-#define JENS_K_A_OPTIMIZATION true
+#define JENS_K_A_OPTIMIZATION false
 #define DIG_ELEMENT_BITS 32
 
 /*
@@ -881,8 +883,10 @@ void vargs_free(struct vargs *args)
 }
 
 /*---------------------------------------------------------------------------*/
-/*
-void *vampire_verify(struct vargs *args)
+
+#if !JENS_K_A_OPTIMIZATION
+
+void *vampire(struct vargs *args)
 {
 #ifdef SPDT_CLK_MODE
 	struct timespec start, finish;
@@ -986,7 +990,9 @@ vampire_exit:
 
 	return 0;
 }
-*/
+
+#else
+
 void *vampire(struct vargs *args)
 {
 #ifdef SPDT_CLK_MODE
@@ -1126,6 +1132,8 @@ void *vampire(struct vargs *args)
 
 	return 0;
 }
+
+#endif
 
 void *thread_worker(void *void_args)
 {
@@ -1275,8 +1283,10 @@ int main(int argc, char* argv[])
 		struct matrix *mat = matrix_init(lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++){
 			input[thread]->mat = mat;
+#if JENS_K_A_OPTIMIZATION
 			input[thread]->dig = dig;
 			input[thread]->digsize = digsize;
+#endif
 		}
 
 		for (thread_t thread = 0; thread < THREADS; thread++)
