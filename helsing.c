@@ -43,7 +43,8 @@
  * (note: thread count above #cores may not improve performance)
  */
 
-#define THREADS 1
+#define THREADS 9
+#define CORES 8
 #define thread_t uint16_t
 
 /*
@@ -85,7 +86,12 @@
 
 #define AUTO_TILE_SIZE true
 #define TILE_SIZE 18446744073709551615ULL
+#define SIZE_TILE 1
+#define TILESPLIT 81
+//TILESPLIT ~= (THREADS+1) * 9
 
+// 2 25 5.137s
+// 1 50 5.163s
 /*
  * JENS_K_A_OPTIMIZATION:
  *
@@ -129,9 +135,8 @@
 /*
  * VERBOSE_LEVEL:
  *
- * 0 - SILENT
- * 	Doesn't store, process or print anything.
- *	(Compilers are smart and will ignore code that does nothing)
+ * 0 - COUNT_RAW
+ * 	Count vampire numbers as they are being discovered.
  *
  * 1 - PRINT RAW
  * 	Print vampire numbers as they are being discovered.
@@ -146,7 +151,7 @@
  *	Print the total count
  */
 
-#define VERBOSE_LEVEL 1
+#define VERBOSE_LEVEL 2
 
 /*
  * MEASURE_RUNTIME:
@@ -177,13 +182,16 @@ typedef unsigned long long vamp_t;
 #define vamp_max ULLONG_MAX
 
 typedef unsigned long fang_t;
-#define fang_max ULONG_MAX
+#define fang_max UINT_MAX
+
+typedef uint8_t digit_t;
+typedef uint8_t length_t;
 
 /*--------------------------- PREPROCESSOR_STUFF  ---------------------------*/
-#if DIG_ELEMENT_BITS == 64
-	typedef uint64_t dig_t;
-#elif DIG_ELEMENT_BITS == 32
-	typedef uint32_t dig_t;
+#if DIG_ELEMENT_BITS == 32
+	typedef uint32_t digits_t;
+#elif DIG_ELEMENT_BITS == 64
+	typedef uint64_t digits_t;
 #endif
 
 #define DIGMULT (DIG_ELEMENT_BITS/8)
@@ -196,7 +204,9 @@ typedef unsigned long fang_t;
 	#endif
 #endif
 
-#if (VERBOSE_LEVEL == 1)
+#if (VERBOSE_LEVEL == 0)
+	#define COUNT_RESULTS
+#elif (VERBOSE_LEVEL == 1)
 	#define DUMP_RESULTS
 #elif (VERBOSE_LEVEL == 2)
 	#define PROCESS_RESULTS
@@ -208,9 +218,9 @@ typedef unsigned long fang_t;
 
 /*---------------------------- HELPER FUNCTIONS  ----------------------------*/
 
-uint8_t length(vamp_t x) // bugfree
+length_t length(vamp_t x) // bugfree
 {
-	uint8_t length = 0;
+	length_t length = 0;
 	for (; x > 0; x /= 10)
 		length++;
 	return length;
@@ -222,7 +232,7 @@ bool length_isodd(vamp_t x) // bugfree
 }
 
 // pow10 for vampire type.
-vamp_t pow10v(uint8_t exponent) // bugfree
+vamp_t pow10v(length_t exponent) // bugfree
 {
 	assert(exponent <= length(vamp_max) - 1);
 	vamp_t base = 1;
@@ -233,7 +243,7 @@ vamp_t pow10v(uint8_t exponent) // bugfree
 
 // willoverflow: Checks if (10 * x + digit) will overflow.
 
-bool willoverflow(vamp_t x, uint8_t digit) // bugfree
+bool willoverflow(vamp_t x, digit_t digit) // bugfree
 {
 #if SANITY_CHECK
 	assert(digit < 10);
@@ -253,8 +263,8 @@ vamp_t atoull(const char *str, bool *err) // bugfree
 	assert(err != NULL);
 #endif
 	vamp_t number = 0;
-	for (uint8_t i = 0; isdigit(str[i]); i++) {
-		uint8_t digit = str[i] - '0';
+	for (length_t i = 0; isdigit(str[i]); i++) {
+		digit_t digit = str[i] - '0';
 		if (willoverflow(number, digit)) {
 			*err = true;
 			return 1;
@@ -272,7 +282,7 @@ bool notrailingzero(fang_t x) // bugfree
 vamp_t get_min(vamp_t min, vamp_t max)
 {
 	if (length_isodd(min)) {
-		uint8_t min_length = length(min);
+		length_t min_length = length(min);
 		if (min_length < length(max))
 			min = pow10v(min_length);
 		else
@@ -284,7 +294,7 @@ vamp_t get_min(vamp_t min, vamp_t max)
 vamp_t get_max(vamp_t min, vamp_t max)
 {
 	if (length_isodd(max)) {
-		uint8_t max_length = length(max);
+		length_t max_length = length(max);
 		if (max_length > length(min))
 			max = pow10v(max_length - 1) - 1;
 		else
@@ -305,19 +315,28 @@ vamp_t get_lmax(vamp_t lmin, vamp_t max)
 }
 
 // Vampire square root to fang.
-fang_t sqrtv(vamp_t x)
+fang_t sqrtv_floor(vamp_t x)
 {
 	vamp_t x2 = x / 2;
 	vamp_t root = x2; // Initial estimate
 	if (root > 0) { // Sanity check
-		vamp_t tmp = root / 2 + x2 / root; // Update
+		vamp_t tmp = (root  + x / root) / 2; // Update
 		while (tmp < root) { // This also checks for cycle
 			root = tmp;
-			tmp = root / 2 + x2 / root;
+			tmp = (root  + x / root) / 2;
 		}
 		return root;
 	}
 	return x;
+}
+
+fang_t sqrtv_roof(vamp_t x)
+{
+	fang_t root = sqrtv_floor(x);
+	if (root == fang_max)
+		return root;
+
+	return (x / root);
 }
 
 // Modulo 9 lack of congruence
@@ -481,7 +500,7 @@ struct ullbtree
 	struct ullbtree *left;
 	struct ullbtree *right;
 	vamp_t value;
-	uint8_t height; //Should probably be less than 32
+	length_t height; //Should probably be less than 32
 };
 
 struct ullbtree *ullbtree_init(vamp_t value)
@@ -700,6 +719,10 @@ void bthandle_reset(struct bthandle *handle)
 	handle->size = 0;
 }
 
+/*
+ * Move inactive data from binary tree to linked list
+ * and free up memory. Works best with low thread counts.
+ */
 void bthandle_cleanup(struct bthandle *handle, vamp_t number, struct llhandle *ll)
 {
 	handle->tree = ullbtree_cleanup(handle->tree, number, ll, &(handle->size));
@@ -753,7 +776,8 @@ struct tile *tile_init(vamp_t min, vamp_t max)
 
 	new->size = 1;
 	if (max - min > THREADS - 1)
-		new->size = THREADS;
+		//new->size = THREADS;
+		new->size = SIZE_TILE;
 	else
 		new->size = max - min + 1;
 	
@@ -881,7 +905,7 @@ struct vargs	/* Vampire arguments */
 #endif
 
 #if JENS_K_A_OPTIMIZATION
-	dig_t *dig;
+	digits_t *dig;
 	fang_t digsize;
 #endif
 	vamp_t *total_count;
@@ -916,8 +940,8 @@ void vargs_free(struct vargs *args)
 }
 
 /*---------------------------------------------------------------------------*/
-
-void *vampire(struct vargs *args)
+/*
+void *vampire_verify(struct vargs *args)
 {
 #ifdef SPDT_CLK_MODE
 	struct timespec start, finish;
@@ -929,33 +953,19 @@ void *vampire(struct vargs *args)
 	vamp_t max = args->max;
 	vamp_t fmax = pow10v(length(max) / 2); // Max factor value.
 
-	/*
-	 * armhf was giving me errors, because unsigned long was 32-bit,
-	 * while on my x86_64 pc unsigned long was 64-bit.
-	 */
 	vamp_t fmaxsquare = fmax * fmax;
 
 	if (max > fmaxsquare && min <= fmaxsquare)
 		max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
 
-	fang_t min_sqrt = min / sqrtv(min);
-	fang_t max_sqrt = max / sqrtv(max);
-
-	#if (JENS_K_A_OPTIMIZATION)
-		fang_t power10 = pow10v((length(min) / 2)) / 100;
-		if (power10 < 900)
-			power10 = 1000;
-
-		dig_t *dig = args->dig;
-	#endif
+	fang_t min_sqrt = min / sqrtv_floor(min);
+	fang_t max_sqrt = max / sqrtv_floor(max);
 
 	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
 			continue;
 
-		vamp_t multiplicand = min / multiplier + !!(min % multiplier);
-		// fmin * fmax <= min - 10^n
-
+		vamp_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
@@ -970,84 +980,41 @@ void *vampire(struct vargs *args)
 			#ifdef PROCESS_RESULTS
 				if (mult_zero)
 					bthandle_cleanup(args->thandle, (multiplier + 1) *  multiplier, args->lhandle);
-				/*
-				* Move inactive data from binary tree to linked list
-				* and free up memory. Works best with low thread counts.
-				*/
 			#endif
 		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
 
 		if (multiplicand <= multiplicand_max) {
-			//mult_zero = notrailingzero(multiplier);
-
 			vamp_t product_iterator = multiplier * 9; // <= 9 * 2^32
 			vamp_t product = multiplier * multiplicand;
 
-			#if (JENS_K_A_OPTIMIZATION)
-				fang_t step0 = product_iterator % power10;
-				fang_t step1 = product_iterator / power10; // 90 <= step1 < 900
-
-				fang_t e0 = multiplicand % power10; // e0 < 1000
-				fang_t e1 = multiplicand / power10; // e1 < 10
-
-				/*
-				 * digd = dig[multiplier];
-				 * Each digd is calculated and accessed only once, we don't need to store them in memory.
-				 * We can calculate digd on the spot and make the dig array 10 times smaller.
-				 */
-
-				dig_t digd;
-
-				if(min_sqrt >= args->digsize) {
-					digd = 0;
-					for (fang_t i = multiplier; i > 0; i /= 10) {
-						uint8_t digit = i % 10;
-						if(digit > 1)
-							digd += ((vamp_t)1 << ((digit % 8) * DIGMULT)); 
-					}
-				}
-				else {
-					digd = dig[multiplier];
-				}
-
-				fang_t de0 = product % power10;
-				fang_t de1 = (product / power10) % power10;
-				fang_t de2 = ((product / power10) / power10); // 10^3 <= de2 < 10^4
-
-			#else
-				uint8_t mult_array[10] = {0};
-				for (fang_t i = multiplier; i != 0; i /= 10)
-					mult_array[i % 10] += 1;
-			#endif
+			length_t mult_array[10] = {0};
+			for (fang_t i = multiplier; i != 0; i /= 10)
+				mult_array[i % 10] += 1;
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
 				//assert(multiplicand < UINT_MAX - 9);
-				#if (JENS_K_A_OPTIMIZATION)
-					if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
-				#else
-					uint16_t product_array[10] = {0};
-					for (vamp_t p = product; p != 0; p /= 10)
-						product_array[p % 10] += 1;
+				uint16_t product_array[10] = {0};
+				for (vamp_t p = product; p != 0; p /= 10)
+					product_array[p % 10] += 1;
 
-					for (uint8_t i = 0; i < 10; i++)
-					// Yes, we want to check all 10, this runs faster than checking only 8.
-						if (product_array[i] < mult_array[i])
-							goto vampire_exit;
+				for (digit_t i = 0; i < 10; i++)
+				// Yes, we want to check all 10, this runs faster than checking only 8.
+					if (product_array[i] < mult_array[i])
+						goto vampire_exit;
 
-					uint8_t temp;
-					for (fang_t m = multiplicand; m != 0; m /= 10) {
-						temp = m % 10;
-						if (product_array[temp] < 1)
-							goto vampire_exit;
-						else
-							product_array[temp]--;
-					}
-					for (uint8_t i = 0; i < 8; i++)
-						if (product_array[i] != mult_array[i])
-							goto vampire_exit;
-				#endif
+				digit_t temp;
+				for (fang_t m = multiplicand; m != 0; m /= 10) {
+					temp = m % 10;
+					if (product_array[temp] < 1)
+						goto vampire_exit;
+					else
+						product_array[temp]--;
+				}
+				for (digit_t i = 0; i < 8; i++)
+					if (product_array[i] != mult_array[i])
+						goto vampire_exit;
 
 				if (mult_zero || notrailingzero(multiplicand)) {
 					#ifdef PROCESS_RESULTS
@@ -1059,28 +1026,150 @@ void *vampire(struct vargs *args)
 						//printf("%llu = %llu %llu\n", product, multiplier, multiplicand);
 					#endif
 				}
-				#if (JENS_K_A_OPTIMIZATION)
-					e0 += 9;
-					if (e0 >= power10) {
-						e0 -= power10;
-						e1 ++;
-					}
-					de0 += step0;
-					if (de0 >= power10) {
-						de0 -= power10;
-						de1 += 1;
-					}
-					de1 += step1;
-					if (de1 >= power10) {
-						de1 -= power10;
-						de2 += 1;
-					}
-				#else
 vampire_exit:
-				#endif
 				product += product_iterator;
 			}
 		}
+	}
+
+#ifdef PROCESS_RESULTS
+	bthandle_cleanup(args->thandle, 0, args->lhandle);
+#endif
+
+#ifdef SPDT_CLK_MODE
+	clock_gettime(SPDT_CLK_MODE, &finish);
+	elapsed = (finish.tv_sec - start.tv_sec);
+	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+	args->runtime += elapsed;
+#endif
+
+	return 0;
+}
+*/
+void *vampire(struct vargs *args)
+{
+#ifdef SPDT_CLK_MODE
+	struct timespec start, finish;
+	double elapsed;
+	clock_gettime(SPDT_CLK_MODE, &start);
+#endif
+
+	vamp_t min = args->min;
+	vamp_t max = args->max;
+	length_t fang_length = length(min) / 2;
+
+	vamp_t fmax;
+	if (fang_length == length(fang_max))
+		fmax = fang_max;
+	else
+		fmax = pow10v(fang_length); // Max factor value.
+
+	fang_t min_sqrt = sqrtv_roof(min);
+	fang_t max_sqrt = sqrtv_floor(max);
+
+	if (fmax < fang_max) {
+		vamp_t fmaxsquare = fmax * fmax;
+		if (max > fmaxsquare && min <= fmaxsquare)
+			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
+	}
+
+	fang_t power10 = pow10v(fang_length) / 100;
+	if (power10 < 900)
+		power10 = 1000;
+
+	//printf("%lu\n", power10);
+	digits_t *dig = args->dig;
+
+	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
+		if (multiplier % 3 == 1)
+			continue;
+
+		vamp_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
+		bool mult_zero = notrailingzero(multiplier);
+
+		fang_t multiplicand_max;
+		if (multiplier >= max_sqrt) {
+			multiplicand_max = max / multiplier;
+			// max can be less than (10^(n+1) -1)^2
+		} else {
+			multiplicand_max = multiplier;
+			// multiplicand can be equal to multiplier:
+			// 5267275776 = 72576 * 72576.
+		}
+		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
+			multiplicand++;
+
+		if (multiplicand <= multiplicand_max) {
+			vamp_t product_iterator = multiplier * 9; // <= 9 * 2^32
+			//vamp_t product = multiplier * multiplicand;
+			vamp_t product = multiplier;
+			product *= multiplicand;
+
+			fang_t step0 = product_iterator % power10;
+			fang_t step1 = product_iterator / power10; // 90 <= step1 < 900
+
+			fang_t e0 = multiplicand % power10; // e0 < n - 1
+			uint16_t e1 = multiplicand / power10; // e1 < 10
+
+			/*
+			 * digd = dig[multiplier];
+			 * Each digd is calculated and accessed only once, we don't need to store them in memory.
+			 * We can calculate digd on the spot and make the dig array 10 times smaller.
+			 */
+
+			digits_t digd;
+
+			if(min_sqrt >= args->digsize) {
+				digd = 0;
+				for (fang_t i = multiplier; i > 0; i /= 10) {
+					digit_t digit = i % 10;
+					if(digit > 1)
+						digd += (digits_t)1 << ((digit - 2) * DIGMULT); 
+				}
+			} else {
+				digd = dig[multiplier];
+			}
+
+			fang_t de0 = product % power10;
+			fang_t de1 = (product / power10) % power10;
+			uint16_t de2 = ((product / power10) / power10); // 10^3 <= de2 < 10^4
+
+			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
+				//assert(multiplicand < UINT_MAX - 9);
+				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
+					if (mult_zero || notrailingzero(multiplicand)) {
+					#ifdef COUNT_RESULTS
+						args->count += 1;
+					#endif
+					#ifdef DUMP_RESULTS
+						printf("%llu = %llu %llu\n", product, multiplier, multiplicand);
+					#endif
+					#ifdef PROCESS_RESULTS
+						bthandle_add(args->thandle, product);
+					#endif
+					}
+				e0 += 9;
+				if (e0 >= power10) {
+					e0 -= power10;
+					e1 ++;
+				}
+				de0 += step0;
+				if (de0 >= power10) {
+					de0 -= power10;
+					de1 += 1;
+				}
+				de1 += step1;
+				if (de1 >= power10) {
+					de1 -= power10;
+					de2 += 1;
+				}
+				product += product_iterator;
+			}
+			#ifdef PROCESS_RESULTS
+			if (multiplier < max_sqrt && mult_zero)
+				bthandle_cleanup(args->thandle, product, args->lhandle);
+			#endif
+			}
 	}
 
 #ifdef PROCESS_RESULTS
@@ -1231,15 +1320,15 @@ int main(int argc, char* argv[])
 	fang_t digsize = pow10v(length(max) / 2 - 1);
 	if (digsize < 1000)
 		digsize = 1000;
-	dig_t *dig = malloc(sizeof(dig_t) * digsize);
+	digits_t *dig = malloc(sizeof(digits_t) * digsize);
 	assert(dig != NULL);
 
 	for (fang_t d = 0; d < digsize; d++) {
 		dig[d] = 0;
 		for (fang_t i = d; i > 0; i /= 10) {
-			uint8_t digit = i % 10;
+			digit_t digit = i % 10;
 			if(digit > 1)
-				dig[d] += ((dig_t)1 << ((digit % 8) * DIGMULT));
+				dig[d] += (digits_t)1 << ((digit - 2) * DIGMULT);
 		}
 	}
 #endif
@@ -1262,7 +1351,17 @@ int main(int argc, char* argv[])
 #endif
 
 #if (AUTO_TILE_SIZE)
-		vamp_t tile = lmax / 1;
+		vamp_t tile = lmax / TILESPLIT;
+
+#if (THREADS == 1)
+		//vamp_t tile = lmax;
+#elif (THREADS < CORES)
+		//vamp_t tile = lmax / (THREADS - 1);
+#else
+		//vamp_t tile = lmax / (CORES - 1);
+#endif
+
+
 #else
 		vamp_t tile = TILE_SIZE;
 #endif
