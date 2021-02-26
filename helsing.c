@@ -17,6 +17,7 @@
  * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -24,12 +25,13 @@
 #include <time.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // Compile with: gcc -O3 -Wall -Wextra -pthread -o helsing helsing.c
 
 /*--------------------------- COMPILATION OPTIONS  ---------------------------*/
-#define NUM_THREADS 1 // Thread count above #cores may not improve performance
-#define ITERATOR 1000000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
+#define NUM_THREADS 8 // Thread count above #cores may not improve performance 
+#define ITERATOR 100000000000ULL // How long until new work is assigned to threads 1000000000000000ULL
 
 //#define SANITY_CHECK
 //#define OEIS_OUTPUT
@@ -68,7 +70,7 @@ unsigned long long atoull (const char *str)	// ASCII to unsigned long long
 	return number;
 }
 
-unsigned short length (unsigned long long number)
+uint8_t length (unsigned long long number)
 {
 	if (number < 10000000000ULL){
 		if (number < 100000ULL) {
@@ -148,7 +150,7 @@ bool length_isodd (unsigned long long number)
 	return result;
 }
 
-unsigned long long pow10ull (unsigned short exponent) // Returns 10 ^ exponent
+unsigned long long pow10ull (uint8_t exponent) // Returns 10 ^ exponent
 {
 #ifdef SANITY_CHECK
 	assert(exponent <= length(ULLONG_MAX));
@@ -218,12 +220,12 @@ unsigned long long pow10ull (unsigned short exponent) // Returns 10 ^ exponent
 }
 
 inline bool trailingzero (unsigned long long number){
-	return (!(number % 10));
+	return ((number % 10) != 0);
 }
 
 unsigned long long get_min (unsigned long long min, unsigned long long max){
 	if (length_isodd(min)) {
-		unsigned short min_length = length(min);
+		uint8_t min_length = length(min);
 		if (min_length < length(max))
 			min = pow10ull (min_length);
 		else
@@ -234,7 +236,7 @@ unsigned long long get_min (unsigned long long min, unsigned long long max){
 
 unsigned long long get_max (unsigned long long min, unsigned long long max){
 	if (length_isodd(max)){
-		unsigned short max_length = length(max);
+		uint8_t max_length = length(max);
 		if (max_length > length(min))
 			max = pow10ull(max_length -1) -1;
 		else
@@ -245,14 +247,11 @@ unsigned long long get_max (unsigned long long min, unsigned long long max){
 
 unsigned long long sqrtull ( unsigned long long s )
 {
-	unsigned long long x0 = s >> 1;				// Initial estimate
+	unsigned long long x0 = s >> 1;						// Initial estimate
 
-	// Sanity check
-	if (x0){
+	if (x0){											// Sanity check
 		unsigned long long x1 = ( x0 + s / x0 ) >> 1;	// Update
-		
-		while ( x1 < x0 )				// This also checks for cycle
-		{
+		while (x1 < x0){								// This also checks for cycle
 			x0 = x1;
 			x1 = ( x0 + s / x0 ) >> 1;
 		}
@@ -262,247 +261,25 @@ unsigned long long sqrtull ( unsigned long long s )
 	}
 }
 
-bool vampirism_check(unsigned long long product, unsigned long long multiplier, unsigned long long multiplicant)
+bool vampirism_check(unsigned long long product, unsigned long long multiplicant, uint8_t mult_array[])
 {
-	unsigned short product_array[10] = {0};
-	unsigned short digit;
+	uint8_t product_array[10] = {0};
+
+	for (uint8_t digit; multiplicant != 0; multiplicant /= 10){
+		digit = multiplicant % 10;
+		product_array[digit] -= 1;
+	}
 	while (product != 0){
 		product_array[product % 10] += 1;
 		product /= 10;
 	}
-	while (multiplier != 0){
-		digit = multiplier % 10;
-		if(product_array[digit] > 0)
-			product_array[digit] -= 1;
-		else
-			return 0;
-		multiplier /= 10;
-	}
-	while (multiplicant != 0){
-		digit = multiplicant % 10;
-		if(product_array[digit] > 0)
-			product_array[digit] -= 1;
-		else
-			return 0;
-		multiplicant /= 10;
-	}
-	for (int i = 0; i < 10; i++){
-		if(product_array[i] != 0)
-			return 0;
-	}
-	return 1;
-}
 
-/*---------------------------------- dllist ----------------------------------*/
-
-/*
- *         |<------------- n <= 2^16 - 1 ------------->|
- *         [ digit 1 ]   [ digit 2 ]   ...   [ digit n ]
- * NULL <--[prev next]<->[prev next]<->...<->[prev next]--> NULL
-*/
-
-typedef struct dllist	/* Linked list of unsigned short digits*/
-{
-	unsigned short digit :4;
-	struct dllist *prev;
-	struct dllist *next;
-} dllist;
-
-dllist *dllist_init(unsigned short digit, dllist *prev, dllist *next)
-{
-	dllist *new = malloc(sizeof(dllist));
-	assert(new != NULL);
-
-	new->digit = digit;
-	new->prev = prev;
-	new->next = next;
-
-	return new;
-}
-
-
-dllist *dllist_ull_init(unsigned long long number)	// N to 1 conversion
-{
-	dllist *new = NULL;
-	dllist *temp = NULL;
-
-	for(unsigned short i = length(number); i > 0; i--){
-		new = dllist_init(number % 10, NULL, temp);
-		if(temp != NULL)
-			temp->prev = new;
-		temp = new;
-		number /= 10;
-	}
-	return new;
-}
-
-dllist *dllist_char_p_init(const char *str)	// 1 to N conversion
-{
-	dllist *new = NULL;
-	dllist *current = NULL;
-	dllist *temp = NULL;
-	for (unsigned short i = 0; str[i] >= '0' && str[i] <= '9'; i++) {
-		current = dllist_init((str[i] - '0'), temp, NULL);
-		if(new == NULL){
-			new = current;
-		} else {
-			temp->next = current;
-		}
-		temp = current;
-	}
-	return new;
-}
-
-dllist *dllist_copy(dllist *original)	// 1 to N conversion
-{
-	dllist *copy = NULL;
-	if (original != NULL) {
-		dllist *current = NULL;
-		dllist *temp = NULL;
-		for(dllist *i = original; i != NULL; i = i->next){
-			current = dllist_init(i->digit, temp, NULL);
-			if(copy == NULL){
-				copy = current;
-			} else {
-				temp->next = current;
-			}
-			temp = current;
-		}	
-	}
-	return (copy);
-}
-
-int dllist_free(dllist *dllist_ptr)
-{
-	dllist *current = dllist_ptr;
-	for (dllist *temp = current; current != NULL ;) {
-		temp = current;
-		current = current->next;
-		free(temp);
-	}
-	return 0;
-}
-
-/*--------------------------------- dllhead  ---------------------------------*/
-
-typedef struct dllhead
-{
-	struct dllist *first;
-	struct dllist *last;
-} dllhead;
-
-dllhead *dllhead_init(dllist *first, dllist *last)
-{
-	dllhead *new = malloc(sizeof(dllhead));
-	assert(new != NULL);
-	new->first = first;
-
-	for(new->last = first; new->last->next != NULL; new->last = new->last->next){}
-
-	return new;
-}
-
-int dllhead_free(dllhead *dllhead_ptr)
-{
-	if (dllhead_ptr != NULL) {
-		dllist_free(dllhead_ptr->first);
-	}
-	free(dllhead_ptr);
-	return 0;
-}
-
-dllhead *dllhead_copy(dllhead *original) {
-	dllist *first = NULL;
-	dllist *last = NULL;
-	first = dllist_copy(original->first);
-	for(last = first; last->next != NULL; last = last->next){}
-	dllhead *copy = dllhead_init(first,last);
-	return (copy);
-}
-
-int dllhead_pop(dllhead *dllhead_ptr, unsigned short digit)
-{
-	dllist *prev = NULL;
-	for (dllist *i = dllhead_ptr->first; i != NULL; i = i->next) {
-		if (i->digit == digit) {
-			if (i == dllhead_ptr->first) {
-				dllhead_ptr->first = i->next;
-			}
-			if (i == dllhead_ptr->last) {
-				dllhead_ptr->last = prev;
-			}
-			if (prev != NULL) {
-				prev->next = i->next;
-			}
-			free(i);
-			return 1;
-		}
-		else
-			prev = i;
-	}
-	return 0;
-}
-
-int dllhead_increment(dllhead *dllhead_ptr)
-{
-	dllist *temp = dllhead_ptr->last;
-	if(temp->digit == 9){
-		for(;temp->digit == 9; temp = temp->prev){
-			if(temp->prev == NULL){
-				temp->prev = dllist_init(1, NULL, temp);
-				dllhead_ptr->first = temp->prev;
-			} else {
-				temp->digit = 0;
-			}
-		}
-	} else {
-		temp->digit += 1;
-	}
-	return 0;
-}
-
-bool dllhead_vampirism_check(dllhead *product, dllhead *mutiplier, dllhead *multiplicant)
-{
-	unsigned short count[10] = {0};
-	for(dllist *i = product->first; i != NULL; i = i->next){
-		//printf("%d", i->digit);
-		count[i->digit] += 1;
-	}
-	//printf("\n-");
-	for(dllist *i = mutiplier->first; i != NULL; i = i->next){
-		if(i->digit != 0 && count[i->digit] == 0){
+	for (uint8_t i = 0; i < 10; i++){ //maybe just 8?
+		if(product_array[i] != mult_array[i])
 			return false;
-		}
-		count[i->digit] -= 1;
-		//printf("%d", i->digit);
 	}
-	//printf("\n-");
-	for(dllist *i = multiplicant->first; i != NULL; i = i->next){
-		if(count[i->digit] == 0){
-			return false;
-		}
-		count[i->digit] -= 1;
-		//printf("%d", i->digit);
-	}
-	//printf("\n");
 
-	for(int i = 0; i < 10; i++){
-		if(count[i] != 0){
-			return false;
-		}
-	}
 	return true;
-}
-
-int dllhead_print(dllhead *dllhead_ptr)
-{
-
-	printf("dllhead print:\t");
-	for(dllist*i = dllhead_ptr->first; i != NULL; i = i->next){
-		printf("%d", i->digit);
-	}
-	printf("\n");
-	return 0;
 }
 
 /*--------------------------------- ULLBTREE ---------------------------------*/
@@ -561,7 +338,7 @@ int print_tree(ullbtree *tree, unsigned long long i)
  * If the right is bigger, it returns -1;
 */
 
-int is_balanced(ullbtree *tree)
+int8_t is_balanced(ullbtree *tree)
 {
 	//assert(tree != NULL);
 	if(tree != NULL){
@@ -612,12 +389,10 @@ ullbtree *ullbtree_rotate_r(ullbtree *tree)
 	//assert(tree->left != NULL);
 	if(tree->left != NULL){
 		ullbtree *left = tree->left;
-		//printf("Rotating right: %llu / %llu\n", left->value, tree->value);
 		tree->left = left->right;
 		ullbtree_reset_height(tree);
 		left->right = tree;
 		ullbtree_reset_height(left);
-		//printf("Rotated right: %llu \\ %llu\n", left->value, tree->value);
 		return left;
 	}
 	return tree;
@@ -629,12 +404,10 @@ ullbtree *ullbtree_rotate_l(ullbtree *tree)
 	//assert(tree->right != NULL);
 	if(tree->right != NULL){
 		ullbtree *right = tree->right;
-		//printf("Rotating left: %llu \\ %llu\n", tree->value, right->value);
 		tree->right = right->left;
 		ullbtree_reset_height(tree);
 		right->left = tree;
 		ullbtree_reset_height(right);
-		//printf("Rotated left: %llu / %llu\n", tree->value, right->value);
 		return right;
 	}
 	return tree;
@@ -703,14 +476,14 @@ typedef struct vargs	/* Vampire arguments */
 {
 	unsigned long long min;
 	unsigned long long max;
-	unsigned long long step;
+	uint16_t step;	//step is usually 1. Alternative thread load balancing changes this to #threads.
 	unsigned long long count;
 	double	runtime;
 	double 	algorithm_runtime;
 	ullbtree *result;
 } vargs;
 
-vargs *vargs_init(unsigned long long min, unsigned long long max, unsigned long long step)
+vargs *vargs_init(unsigned long long min, unsigned long long max, uint16_t step)
 {
 	vargs *new = malloc(sizeof(vargs));
 	assert(new != NULL);
@@ -731,10 +504,9 @@ int vargs_free(vargs *vargs_ptr)
 	return 0;
 }
 
-int vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
+uint16_t vargs_split(vargs *input[], unsigned long long min, unsigned long long max)
 {
-	unsigned long long current = 0;
-
+	uint16_t current = 0;
 	input[current]->min = min;
 	input[current]->max = (max-min)/(NUM_THREADS - current) + min;
 
@@ -789,91 +561,84 @@ void *vampire(void *void_args)
 	unsigned long long factor_min = pow10ull((length(min) / 2) - 1);
 	unsigned long long factor_max = pow10ull((length(max) / 2)) -1;
 
-	unsigned long long product_max = factor_max * factor_max;
+	if(max >= factor_max * factor_max)
+		max = factor_max * factor_max;
+	
+	unsigned long long min_sqrt = min / sqrtull(min);
+	unsigned long long max_sqrt = max / sqrtull(max);
 
-	unsigned long long max_sqrt;
-
-	if(max >= product_max){
-		max = product_max;
-		max_sqrt = factor_max;
-	} else {
-		max_sqrt = max / sqrtull(max);
-	}
-
-	//Adjust range for Multiplier
-	unsigned long long multiplier = factor_max;
-	unsigned long long multiplier_min = min / sqrtull(min);
-
-	//Adjust range for Multiplicant
-	unsigned long long multiplicant_max;
+	//Adjust range for Factors
 
 	unsigned long long product;
+	bool mult_zero;
+	const bool asdf = true;//(max_sqrt - factor_min < factor_max - min_sqrt);
 
-	dllhead *dllhead_product = NULL;
-	dllhead *dllhead_multiplier = NULL;
-	dllhead *dllhead_multiplicant = NULL;
-
-	printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier_min);
-
-	for(unsigned long long multiplicant; multiplier >= multiplier_min; multiplier--){
-		if(multiplier % 3 == 1){
-			continue;
-		}
-		multiplicant = min/multiplier + !(!(min % multiplier));
-		if(multiplier >= max_sqrt){
-			multiplicant_max = max/multiplier;
-		} else {
-			multiplicant_max = multiplier -1; 
-			//multiplier cannot be equal to mutiplicant, because a square number can end only with digits 0, 1, 4, 5, 6 or 9.
-		}
-		//if(multiplicant <= multiplicant_max && multiplicant <= multiplier_max){
-			//printf("%llu, %llu, %llu = %llu\n", multiplier, multiplicant, multiplicant_max, multiplier * multiplicant);
-		//}
-		dllhead_multiplier = dllhead_init(dllist_ull_init(multiplier), NULL);
-		dllhead_multiplicant = dllhead_init(dllist_ull_init(multiplicant-1), NULL);
-		for(;multiplicant <= multiplicant_max; multiplicant++){
-			//dllhead_print(dllhead_multiplicant);
-			dllhead_increment(dllhead_multiplicant);
-			//dllhead_print(dllhead_multiplicant);
-			product = multiplier*multiplicant;
-			//if(multiplicant > multiplier){
-			//	printf("%llu, %llu, %llu = %llu\n", multiplier, multiplicant, multiplicant_max, multiplier * multiplicant);
-			//}
-
-
-			if((multiplier + multiplicant) % 9 != product % 9){
-				//if((multiplier * (multiplicant + 9) == product + (multiplicant * 9))){
-				//	printf("%llu = %llu * %llu\n", product, multiplier, multiplicant);
-				//	assert(0);
-				//}
+	if(asdf){
+		unsigned long long multiplier = min_sqrt;
+		unsigned long long multiplicant_max;
+		//printf("min max [%llu, %llu], fmin fmax [%llu, %llu], %llu\n", min, max, factor_min, factor_max, multiplier);
+		for(unsigned long long multiplicant; multiplier <= factor_max; multiplier++){
+			if(multiplier % 3 == 1){
 				continue;
 			}
-			//if ((multiplicant + 2) % 3 == 0){
-			//	continue;
-			//}
-			if (!(trailingzero(multiplier) && trailingzero(multiplicant))){
-				//if ((product + 1) % 3 == 0){
-				//	continue;
-				//}
-				//if (product <= max){
-				
-				dllhead_product = dllhead_init(dllist_ull_init(product), NULL);
-					//bool testresult = vampirism_check(product, multiplier, multiplicant);
-					bool testresult = dllhead_vampirism_check(dllhead_product, dllhead_multiplier,dllhead_multiplicant);
-					if (testresult) {
-						if (args->result == NULL) {
-							args->result = ullbtree_init(product);
-							args->count += 1;
-						} else {
-							args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
-						}
+			multiplicant = min/multiplier + !(!(min % multiplier));
+			if(multiplier >= max_sqrt){
+				multiplicant_max = max/multiplier;
+			} else {
+				multiplicant_max = multiplier; //multiplicant can be equal to mutiplicant, 5267275776 = 72576 * 72576.
+			}
+			uint8_t mult_array[10] = {0};
+			for(unsigned long long i = multiplier; i != 0; i /= 10){
+				mult_array[i % 10] += 1;
+			}
+	
+			mult_zero = trailingzero(multiplier);
+
+			for(;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++){}
+
+			for(;multiplicant <= multiplicant_max; multiplicant += 9){
+				product = multiplier*multiplicant;
+				if ((mult_zero || trailingzero(multiplicant)) && vampirism_check(product, multiplicant, mult_array)){
+					if (args->result == NULL) {
+						args->result = ullbtree_init(product);
+						args->count += 1;
+					} else {
+						args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
 					}
-				
-				dllhead_free(dllhead_product);
+				}
 			}
 		}
-		dllhead_free(dllhead_multiplier);
-		dllhead_free(dllhead_multiplicant);
+	} else {
+		unsigned long long multiplier = factor_min;
+		for(unsigned long long multiplicant; multiplier <= max_sqrt; multiplier++){
+			if(multiplier % 3 == 1){
+				continue;
+			}
+			if(multiplier < min_sqrt){
+				multiplicant = min/multiplier + !(!(min % multiplier));
+			} else {
+				multiplicant = multiplier;
+			}
+			uint8_t mult_array[10] = {0};
+			for(unsigned long long i = multiplier; i != 0; i /= 10){
+				mult_array[i % 10] += 1;
+			}
+			mult_zero = trailingzero(multiplier);
+
+			for(; (multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9; multiplicant ++){}
+
+			for(unsigned long long multiplicant_max = max/multiplier; multiplicant <= multiplicant_max; multiplicant += 9){
+				product = multiplier*multiplicant;
+				if ((mult_zero || trailingzero(multiplicant)) && vampirism_check(product, multiplicant, mult_array)){
+					if (args->result == NULL) {
+						args->result = ullbtree_init(product);
+						args->count += 1;
+					} else {
+						args->result = ullbtree_add(args->result, ullbtree_init(product), &(args->count));
+					}
+				}
+			}
+		}
 	}
 
 #ifdef SPD_TEST
@@ -901,7 +666,7 @@ int main(int argc, char* argv[])
 		printf("Usage: vampire [min] [max]\n");
 		return 0;
 	}
-	unsigned long long i;
+
 	unsigned long long min = atoull(argv[1]);
 	unsigned long long max = atoull(argv[2]);
 
@@ -919,22 +684,22 @@ int main(int argc, char* argv[])
 	if( max > l_roof)
 		lmax = l_roof;
 
+	vargs *input[NUM_THREADS];
+	uint16_t thread;
+
+	for (thread = 0; thread < NUM_THREADS; thread++) {
+		input[thread] = vargs_init(0, 0, 1);
+	}
 
 	int rc;
 	pthread_t threads[NUM_THREADS];
-	vargs *input[NUM_THREADS];
-	unsigned long long thread;
-	for (i = 0; i < NUM_THREADS; i++) {
-		input[i] = vargs_init(0, 0, 1);
-	}
 	ullbtree *result_tree = NULL;
 	unsigned long long iterator = ITERATOR;
-	unsigned long long active_threads = NUM_THREADS;
-
+	uint16_t active_threads = NUM_THREADS;
 
 	for (; lmax <= max;) {
 		printf("Checking range: [%llu, %llu]\n", lmin, lmax);
-		for (i = lmin; i <= lmax; i += iterator + 1) {
+		for (unsigned long long i = lmin; i <= lmax; i += iterator + 1) {
 			if (lmax-i < iterator) {
 				iterator = lmax-i;
 			}
@@ -952,7 +717,7 @@ int main(int argc, char* argv[])
 #if defined(OEIS_OUTPUT)
 				if (input[thread]->result != NULL){
 					if(result_tree != NULL){
-						result_tree = ullbtree_add(result_tree, input[thread]->result);
+						result_tree = ullbtree_add(result_tree, input[thread]->result, NULL);
 					} else {
 						result_tree = input[thread]->result;
 					}
@@ -985,15 +750,17 @@ int main(int argc, char* argv[])
 
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 #ifdef SPD_TEST
-		printf("%llu\t%llu\t%lf\t[%llu\t%llu]\n", thread, input[thread]->count, input[thread]->runtime, input[thread]->min, input[thread]->max);
+		printf("%u\t%llu\t%lf\t[%llu\t%llu]\n", thread, input[thread]->count, input[thread]->runtime, input[thread]->min, input[thread]->max);
 		algorithm_time += input[thread]->algorithm_runtime,
 #endif
 		result += input[thread]->count;
 		vargs_free(input[thread]);
 	}
+
 #ifdef SPD_TEST
 	printf("Fang search took: %lf, average: %lf\n", algorithm_time, algorithm_time / NUM_THREADS);
 #endif
+
 #if defined(OEIS_OUTPUT)
 	print_tree(result_tree, 1);
 #endif
@@ -1001,8 +768,8 @@ int main(int argc, char* argv[])
 #if defined(RESULTS)
 	printf("Found: %llu vampire numbers.\n", result);
 #endif
-	ullbtree_free(result_tree);
 
+	ullbtree_free(result_tree);
 	pthread_exit(NULL);
 	return 0;
 }
