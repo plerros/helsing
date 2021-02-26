@@ -39,7 +39,7 @@
 //#define SANITY_CHECK
 //#define OEIS_OUTPUT
 
-#define MEASURE_RUNTIME
+//#define MEASURE_RUNTIME
 #define PRINT_VAMPIRE_COUNT
 #define DISTRIBUTION_COMPENSATION
 
@@ -279,7 +279,6 @@ unsigned long long sqrtull(unsigned long long s)
 
 typedef struct ullbtree
 {
-	struct ullbtree *parent;
 	struct ullbtree *left;
 	struct ullbtree *right;
 	unsigned long long value;
@@ -291,12 +290,11 @@ typedef struct ullbtree
  * Instead, their memory location is NULL. This minimizes memory usage.
 */
 
-ullbtree *ullbtree_init(unsigned long long value, ullbtree *parent)
+ullbtree *ullbtree_init(unsigned long long value)
 {
 	ullbtree *new = malloc(sizeof(ullbtree));
 	assert(new != NULL);
 
-	new->parent = parent;
 	new->left = NULL;
 	new->right = NULL;
 	new->height = 0;
@@ -304,41 +302,7 @@ ullbtree *ullbtree_init(unsigned long long value, ullbtree *parent)
 	return new;
 }
 
-int ullbtree_free_(ullbtree *tree)
-{
-	ullbtree *current;
-	for (; tree != NULL;) {
-		current = tree;
-		for (;current != NULL;) {
-			if (current->left != NULL) {
-				if (current->left->left == NULL && current->left->right == NULL) {
-					free(current->left);
-					current->left = NULL;
-				} else {
-					current = current->left;
-					continue;
-				}
-			}
-			if (current->right != NULL){
-				if (current->right->left == NULL && current->right->right == NULL) {
-					free(current->right);
-					current->right = NULL;
-				} else {
-					current = current->right;
-					continue;
-				}
-			}
-			if (current == tree) {
-				free(tree);
-				return 0;
-			}
-			current = NULL;
-		}
-	}
-	return 0;
-}
-
-int ullbtree_free(ullbtree *tree) // recursive
+int ullbtree_free(ullbtree *tree)
 {
 	if (tree != NULL) {
 		if (tree->left != NULL)
@@ -350,7 +314,7 @@ int ullbtree_free(ullbtree *tree) // recursive
 	return 0;
 }
 
-unsigned long long ullbtree_results(ullbtree *tree, unsigned long long i) // recursive
+unsigned long long ullbtree_results(ullbtree *tree, unsigned long long i)
 {
 	if (tree !=NULL) {
 		i = ullbtree_results(tree->left, i);
@@ -428,32 +392,36 @@ void ullbtree_reset_height(ullbtree *tree)
 
 ullbtree *ullbtree_rotate_r(ullbtree *tree)
 {
-	if (tree->left == NULL)
-		return tree;
-
-	ullbtree *parent = tree->parent;
-	ullbtree *A = tree;
-	ullbtree *B = tree->left;
-	ullbtree *C = tree->left->right;
-
-	A->left = C;
-	ullbtree_reset_height(A);
-
-	B->right = A;
-	ullbtree_reset_height(B);
-
-	A->parent = B;
-	B->parent = parent;
-	if(C != NULL)
-		C->parent = A;
-	return B;
+	//assert(tree != NULL);
+	//assert(tree->left != NULL);
+	if(tree->left != NULL){
+		ullbtree *left = tree->left;
+		tree->left = left->right;
+		ullbtree_reset_height(tree);
+		left->right = tree;
+		ullbtree_reset_height(left);
+		return left;
+	}
+	return tree;
 }
+
+/*
+ * Binary tree left rotation:
+ * 
+ *       A             B
+ *      / \           / \
+ *    ...  B   -->   A  ...
+ *        / \       / \
+ *       C  ...   ...  C
+ * 
+ * The '...' are completely unaffected.
+*/
 
 ullbtree *ullbtree_rotate_l(ullbtree *tree)
 {
 	//assert(tree != NULL);
 	//assert(tree->right != NULL);
-	if (tree->right != NULL) {
+	if(tree->right != NULL){
 		ullbtree *right = tree->right;
 		tree->right = right->left;
 		ullbtree_reset_height(tree);
@@ -490,19 +458,19 @@ ullbtree *ullbtree_balance(ullbtree *tree)
 	return tree;
 }
 
-ullbtree *ullbtree_add(ullbtree *tree, unsigned long long node, unsigned long long *count, ullbtree *parent) // recursive
+ullbtree *ullbtree_add(ullbtree *tree, unsigned long long node, unsigned long long *count)
 {
 	if (tree == NULL) {
 		*count += 1;
-		return ullbtree_init(node, parent);
+		return ullbtree_init(node);
 	}
 	if (node == tree->value) {
 		return tree;
 	}
 	else if (node < tree->value) {
-		tree->left = ullbtree_add(tree->left, node, count, tree);
+		tree->left = ullbtree_add(tree->left, node, count);
 	} else {
-		tree->right = ullbtree_add(tree->right, node, count, tree);
+		tree->right = ullbtree_add(tree->right, node, count);
 	}
 	ullbtree_reset_height(tree);
 	tree = ullbtree_balance(tree);
@@ -616,6 +584,7 @@ void *vampire(void *void_args)
 			continue;
 		}
 		multiplicant = min/multiplier + !!(min % multiplier); // fmin * fmax <= min - 10^n
+
 		if (multiplier >= max_sqrt) {
 			multiplicant_max = max/multiplier;
 		} else {
@@ -630,7 +599,23 @@ void *vampire(void *void_args)
 
 			mult_zero = notrailingzero(multiplier);
 
-			for (;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++) {}
+			/*
+			 * Modulo 9 check:
+			 * for (;multiplicant <= multiplicant_max && ((multiplier + multiplicant) % 9 != (multiplier*multiplicant) % 9); multiplicant ++) {}
+			*/
+
+			/*
+			 * Modulo 9 check, slightly simplified:
+			 * for (;multiplicant <= multiplicant_max && ((multiplier - 1) * multiplicant - multiplier) % 9 != 0; multiplicant ++) {}
+			*/
+
+			/*
+			 * Modulo 9 check, simplified a bit further:
+			*/
+			unsigned long long A_1 = multiplier - 1;
+			unsigned long long AB_A_B = A_1 * (multiplicant - 1) - 1;
+			for(unsigned long long CA_1 = 0; (multiplicant <= multiplicant_max) && ((AB_A_B + CA_1) % 9 != 0); CA_1 += A_1){multiplicant++;}
+
 
 			product_iterator = multiplier * 9;
 			product = multiplier*(multiplicant);
@@ -640,7 +625,7 @@ void *vampire(void *void_args)
 				for (unsigned long long p = product; p != 0; p /= 10) {
 					product_array[p % 10] += 1;
 				}
-				for (uint8_t i = 0; i < 8; i++) {
+				for (uint8_t i = 0; i < 10; i++) { //Yes, we want to check all 10, this is faster than only checking 8.
 					if (product_array[i] < mult_array[i]) {
 						goto vampire_exit;
 					}
@@ -660,9 +645,9 @@ void *vampire(void *void_args)
 						goto vampire_exit;
 					}
 				}
-
+	
 				if ((mult_zero || notrailingzero(multiplicant))) {
-					args->result = ullbtree_add(args->result, product, &(args->count), NULL);
+					args->result = ullbtree_add(args->result, product, &(args->count));
 				}
 vampire_exit:
 				product += product_iterator;
@@ -684,8 +669,7 @@ vampire_exit:
 int main(int argc, char* argv[])
 {
 	if (argc != 3) {
-		printf("A posix compatible vampire number generator\n");
-		printf("Usage: vampire [min] [max]\n");
+		printf("A vampire number generator\nUsage: vampire [min] [max]\n");
 		return 0;
 	}
 
@@ -785,7 +769,7 @@ int main(int argc, char* argv[])
 			printf("\n");
 	}
 #endif
-	printf("\n");
+	//printf("\n");
 	for (thread = 0; thread<NUM_THREADS; thread++) {
 		vargs_free(input[thread]);
 	}
