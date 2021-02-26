@@ -43,8 +43,7 @@
  * (note: thread count above #cores may not improve performance)
  */
 
-#define THREADS 9
-#define CORES 8
+#define THREADS 8
 #define thread_t uint16_t
 
 /*
@@ -86,9 +85,6 @@
 
 #define AUTO_TILE_SIZE true
 #define TILE_SIZE 18446744073709551615ULL
-#define SIZE_TILE 1
-#define TILESPLIT 81
-//TILESPLIT ~= (THREADS+1) * 9
 
 // 2 25 5.137s
 // 1 50 5.163s
@@ -730,7 +726,7 @@ void bthandle_cleanup(struct bthandle *handle, vamp_t number, struct llhandle *l
 
 /*----------------------------------- arr -----------------------------------*/
 
-struct job_t
+struct tile
 {
 	vamp_t lmin;
 	vamp_t lmax;
@@ -741,18 +737,22 @@ struct job_t
 #endif
 };
 
-void job_reset(struct job_t *ptr, vamp_t lmin, vamp_t lmax)
+
+struct tile *tile_init(vamp_t min, vamp_t max)
 {
-	ptr->lmin = lmin;
-	ptr->lmax = lmax;
+	struct tile *new = malloc(sizeof(struct tile));
+
+	new->lmin = min;
+	new->lmax = max;
 
 #ifdef PROCESS_RESULTS
-	ptr->result = NULL;
-	ptr->complete = false;
+	new->result = NULL;
+	new->complete = false;
 #endif
+	return new;
 }
 
-void job_free(struct job_t *ptr)
+void tile_free(struct tile *ptr)
 {
 #ifdef PROCESS_RESULTS
 	if (ptr != NULL)
@@ -760,67 +760,6 @@ void job_free(struct job_t *ptr)
 #endif
 	free(ptr);
 }
-
-/*---------------------------------- tile  ----------------------------------*/
-
-struct tile
-{
-	struct job_t *job;
-	volatile thread_t size;
-};
-
-struct tile *tile_init(vamp_t min, vamp_t max)
-{
-	struct tile *new = malloc(sizeof(struct tile));
-	assert(new != NULL);
-
-	new->size = 1;
-	if (max - min > THREADS - 1)
-		//new->size = THREADS;
-		new->size = SIZE_TILE;
-	else
-		new->size = max - min + 1;
-	
-	new->job = malloc(sizeof(struct job_t) * new->size);
-	assert(new->job != NULL);
-
-	thread_t i = 0;
-
-	do {
-		job_reset(&(new->job[i]), min, (max - min) / (new->size - i) + min);
-
-#if DIST_COMPENSATION && (THREADS > 1)
-		long double area = ((long double)i+1) / ((long double)new->size);
-		vamp_t temp = (long double)max * distribution_inverted_integral(area);
-		if (temp > new->job[i].lmin && temp < new->job[i].lmax)
-			new->job[i].lmax = temp;
-#endif
-
-		min = new->job[i].lmax + 1;
-		//printf("[%llu %lu]\n", new->job[i].lmin, new->job[i].lmax);
-	} while (new->job[i++].lmax < max && i < new->size);
-	i--;
-
-	new->job[i].lmax = max;
-	//for (thread_t j = 0; j < new->size; j++)
-	//	printf("-[%llu %lu]\n", new->job[i].lmin, new->job[i].lmax);
-
-	return new;
-}
-
-void tile_free(struct tile *ptr)
-{
-	if (ptr == NULL)
-		return;
-
-#ifdef PROCESS_RESULTS
-	for(thread_t i = 0; i < ptr->size; i++)
-		llhandle_free(ptr->job[i].result);
-#endif
-	free(ptr->job);
-	free(ptr);
-}
-
 
 /*--------------------------------- matrix  ---------------------------------*/
 
@@ -833,11 +772,17 @@ struct matrix
 	thread_t column;	// Current column to help iteration.
 };
 
-struct matrix *matrix_init(vamp_t lmin, vamp_t lmax, vamp_t tile)
+struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 {
 	assert(lmin <= lmax);
 	struct matrix *new = malloc(sizeof(struct matrix));
 	assert(new != NULL);
+
+#if (AUTO_TILE_SIZE && THREADS > 1)
+		vamp_t tile = lmax / (THREADS * 8);
+#else
+		vamp_t tile = TILE_SIZE;
+#endif
 
 	new->size = div_roof((lmax - lmin + 1), tile + (tile < vamp_max));
 	new->row = 0;
@@ -880,10 +825,8 @@ void matrix_print(struct matrix *ptr, vamp_t *count)
 {
 	for (vamp_t x = ptr->row_cleanup; x < ptr->size; x++)
 		if(ptr->arr[x] != NULL){
-			for (thread_t y = 0; y < ptr->arr[x]->size; y++){
-				llist_print(ptr->arr[x]->job[y].result->head, *count);
-				*count += ptr->arr[x]->job[y].result->size;
-			}
+			llist_print(ptr->arr[x]->result->head, *count);
+			*count += ptr->arr[x]->result->size;
 		}
 }
 #endif
@@ -1194,37 +1137,30 @@ void *thread_worker(void *void_args)
 	while (active) {
 		active = false;
 		vamp_t row;
-		thread_t column;
 
 // Critical section start
 		pthread_mutex_lock(args->mutex);
 
 		if(args->mat->row < args->mat->size){
 			row = args->mat->row;
-			column = args->mat->column;
 			active = true;
 
-			//Iterate row & column
-			args->mat->column++;
-			if (args->mat->column == args->mat->arr[row]->size) {
-				args->mat->column = 0;
-				args->mat->row++;
-			}
+			args->mat->row++;
 		}
 		pthread_mutex_unlock(args->mutex);
 // Critical section end
 
 		if (active){
-			struct job_t *current = &(args->mat->arr[row]->job[column]);
+			struct tile *current = args->mat->arr[row];
 			args->min = current->lmin;
 			args->max = current->lmax;
 			vampire(args);
 
 			#ifdef PROCESS_RESULTS
 				args->count += args->lhandle->size;
-				bool row_complete = true;
+				bool row_complete = false;
 				vamp_t tmp_count;
-				struct tile *tmp;
+				struct tile *tmp = NULL;
 
 // Critical section start
 				pthread_mutex_lock(args->mutex);
@@ -1232,36 +1168,25 @@ void *thread_worker(void *void_args)
 				current->result = args->lhandle;
 				current->complete = true;
 
-				if (args->mat->row_cleanup < args->mat->size){
-					for (thread_t i = 0; i < args->mat->arr[args->mat->row_cleanup]->size; i++){
-						if (args->mat->arr[args->mat->row_cleanup]->job[i].complete == false){
-							row_complete = false;
-							break;
-						}
-					}
-				} else {
-					row_complete = false;
-				}
+				if (args->mat->row_cleanup < args->mat->size)
+					row_complete = args->mat->arr[args->mat->row_cleanup]->complete;
 
 				if (row_complete == true) {
 					tmp_count = *(args->total_count);
 					tmp = args->mat->arr[args->mat->row_cleanup];
-					for (thread_t i = 0; i < args->mat->arr[args->mat->row_cleanup]->size; i++)
-						*(args->total_count) += args->mat->arr[args->mat->row_cleanup]->job[i].result->size;
 					args->mat->arr[args->mat->row_cleanup] = NULL;
+					*(args->total_count) += tmp->result->size;
 					args->mat->row_cleanup += 1;
 				}
-
 				pthread_mutex_unlock(args->mutex);
 // Critical section end
 
 				if (row_complete == true) {
-					for(thread_t i = 0; i < tmp->size; i++){
-						#ifdef PRINT_RESULTS
-							llist_print(tmp->job[i].result->head, tmp_count);
-						#endif
-						tmp_count += tmp->job[i].result->size;
-					}
+					#ifdef PRINT_RESULTS
+						llist_print(tmp->result->head, tmp_count);
+					#endif
+					tmp_count += tmp->result->size;
+
 					tile_free(tmp);
 				}
 
@@ -1271,7 +1196,6 @@ void *thread_worker(void *void_args)
 			#endif
 		}
 	}
-	//pthread_exit(NULL);
 	return 0;
 }
 
@@ -1337,7 +1261,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
 
 
-#if DIST_COMPENSATION && (TILE_SIZE >= THREADS)
+#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
 		vamp_t maxtmp;
 		if(length(lmin) < length(max))
 			maxtmp = pow10v(length(lmin)) - 1.0;
@@ -1350,22 +1274,7 @@ int main(int argc, char* argv[])
 			lmax = temp;
 #endif
 
-#if (AUTO_TILE_SIZE)
-		vamp_t tile = lmax / TILESPLIT;
-
-#if (THREADS == 1)
-		//vamp_t tile = lmax;
-#elif (THREADS < CORES)
-		//vamp_t tile = lmax / (THREADS - 1);
-#else
-		//vamp_t tile = lmax / (CORES - 1);
-#endif
-
-
-#else
-		vamp_t tile = TILE_SIZE;
-#endif
-		struct matrix *mat = matrix_init(lmin, lmax, tile);
+		struct matrix *mat = matrix_init(lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++){
 			input[thread]->mat = mat;
 			input[thread]->dig = dig;
@@ -1386,7 +1295,7 @@ int main(int argc, char* argv[])
 		if (lmax == max)
 			break;
 
-		lmin = get_min (lmax + 1, max);
+		lmin = get_min(lmax + 1, max);
 		lmax = get_lmax(lmin, max);
 	}
 
