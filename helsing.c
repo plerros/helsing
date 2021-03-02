@@ -26,7 +26,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 #include <stdio.h>
 #include <limits.h>
@@ -162,7 +162,7 @@
  * Measures the total runtime of each thread and prints it at the end.
  */
 
-#define MEASURE_RUNTIME true
+#define MEASURE_RUNTIME false
 #define PRINT_VAMPIRE_COUNT true
 
 /*
@@ -191,16 +191,16 @@ typedef uint8_t digit_t;
 typedef uint8_t length_t;
 
 /*--------------------------- PREPROCESSOR_STUFF  ---------------------------*/
+//DIGMULT = (DIG_ELEMENT_BITS/DIGSTORED)
 #if DIG_ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
 	#define DIGSTORED 8
+	#define DIGMULT 4
 #elif DIG_ELEMENT_BITS == 64
 	typedef uint64_t digits_t;
 	#define DIGSTORED 9
+	#define DIGMULT 7
 #endif
-
-//#define DIGMULT (DIG_ELEMENT_BITS/8)
-#define DIGMULT (DIG_ELEMENT_BITS/DIGSTORED)
 
 #if MEASURE_RUNTIME
 	#if defined(CLOCK_MONOTONIC)
@@ -240,7 +240,9 @@ bool length_isodd(vamp_t x) // bugfree
 // pow10 for vampire type.
 vamp_t pow10v(length_t exponent) // bugfree
 {
+#if SANITY_CHECK
 	assert(exponent <= length(vamp_max) - 1);
+#endif
 	vamp_t base = 1;
 	for (; exponent > 0; exponent--)
 		base *= 10;
@@ -396,7 +398,8 @@ struct llist	/* Linked list of unsigned short digits*/
 struct llist *llist_init(vamp_t value , struct llist *next)
 {
 	struct llist *new = malloc(sizeof(struct llist));
-	assert(new != NULL);
+	if(new == NULL)
+		abort();
 
 	new->value = value;
 	new->next = next;
@@ -433,6 +436,7 @@ struct llhandle *llhandle_init()
 {
 	struct llhandle *new = malloc(sizeof(struct llhandle));
 	assert(new != NULL);
+
 	new->size = 0;
 
 #ifdef STORE_RESULTS
@@ -487,7 +491,8 @@ struct btree
 struct btree *btree_init(vamp_t value)
 {
 	struct btree *new = malloc(sizeof(struct btree));
-	assert(new != NULL);
+	if(new == NULL)
+		abort();
 
 	new->left = NULL;
 	new->right = NULL;
@@ -509,7 +514,6 @@ void btree_free(struct btree *tree)
 
 int is_balanced(struct btree *tree)
 {
-	//assert (tree != NULL);
 	if (tree == NULL)
 		return 0;
 
@@ -526,7 +530,9 @@ int is_balanced(struct btree *tree)
 
 void btree_reset_height(struct btree *tree)
 {
-	//assert(tree != NULL);
+#if SANITY_CHECK
+	assert(tree != NULL);
+#endif
 	tree->height = 0;
 	if (tree->left != NULL && tree->left->height >= tree->height)
 		tree->height = tree->left->height + 1;
@@ -548,8 +554,6 @@ void btree_reset_height(struct btree *tree)
 
 struct btree *btree_rotate_l(struct btree *tree)
 {
-	//assert(tree != NULL);
-	//assert(tree->right != NULL);
 	if (tree->right != NULL) {
 		struct btree *right = tree->right;
 		tree->right = right->left;
@@ -575,8 +579,6 @@ struct btree *btree_rotate_l(struct btree *tree)
 
 struct btree *btree_rotate_r(struct btree *tree)
 {
-	//assert(tree != NULL);
-	//assert(tree->left != NULL);
 	if (tree->left != NULL) {
 		struct btree *left = tree->left;
 		tree->left = left->right;
@@ -590,7 +592,9 @@ struct btree *btree_rotate_r(struct btree *tree)
 
 struct btree *btree_balance(struct btree *tree)
 {
-	//assert(tree != NULL);
+#if SANITY_CHECK
+	assert(tree != NULL);
+#endif
 	int isbalanced = is_balanced(tree);
 	if (isbalanced > 1) {
 		if (is_balanced(tree->left) < 0) {
@@ -675,6 +679,9 @@ struct bthandle
 struct bthandle *bthandle_init()
 {
 	struct bthandle *new = malloc(sizeof(struct bthandle));
+	if(new == NULL)
+		abort();
+
 	new->tree = NULL;
 	new->size = 0;
 	return new;
@@ -682,14 +689,16 @@ struct bthandle *bthandle_init()
 
 void bthandle_free(struct bthandle *handle)
 {
-	if(handle != NULL)
+	if (handle != NULL)
 		btree_free(handle->tree);
 	free(handle);
 }
 
 void bthandle_add(struct bthandle *handle, vamp_t number)
 {
+#if SANITY_CHECK
 	assert(handle != NULL);
+#endif
 	handle->tree = btree_add(handle->tree, number, &(handle->size));
 }
 
@@ -731,6 +740,8 @@ struct tile
 struct tile *tile_init(vamp_t min, vamp_t max)
 {
 	struct tile *new = malloc(sizeof(struct tile));
+	if(new == NULL)
+		abort();
 
 	new->lmin = min;
 	new->lmax = max;
@@ -762,86 +773,73 @@ struct matrix
 	thread_t column;	// Current column to help iteration.
 };
 
-struct matrix *matrix_init(vamp_t min, vamp_t max)
+struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 {
-	assert(min <= max);
+	#if SANITY_CHECK
+		assert(lmin <= lmax);
+	#endif
 	struct matrix *new = malloc(sizeof(struct matrix));
-	assert(new != NULL);
+	if(new == NULL)
+		abort();
 
-#if (AUTO_TILE_SIZE && THREADS > 1)
-		vamp_t tile = div_roof(max-min, 6 * THREADS - 3);
-		//vamp_t tile = div_roof(max-min, 45);
-		//vamp_t tile = div_roof(max-min, 9);
-#else
-		vamp_t tile = TILE_SIZE;
-#endif
+	#if (AUTO_TILE_SIZE && THREADS > 1)
+		vamp_t tile_size = (lmax - lmin) / (4 * THREADS + 2);
+	#else
+		vamp_t tile_size = TILE_SIZE;
+	#endif
 
-	new->size = div_roof((max - min + 1), tile + (tile < vamp_max));
+	new->size = div_roof((lmax - lmin + 1), tile_size + (tile_size < vamp_max));
 	new->row = 0;
 	new->row_cleanup = 0;
 	new->column = 0;
 
 	new->arr = malloc(sizeof(struct tile *) * new->size);
-	assert(new->arr != NULL);
+	if(new->arr == NULL)
+		abort();
 
 	vamp_t x = 0;
-	vamp_t iterator = tile;
+	vamp_t iterator = tile_size;
+
 	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
-		vamp_t tmp = min;
-		vamp_t actual_max;
-		if (length(max) == length(vamp_max))
-			actual_max = vamp_max;
+		vamp_t current = lmin;
+		long double max;
+		if (length(lmax) == length(vamp_max))
+			max = vamp_max;
 		else
-			actual_max = pow10v(length(max))-1;
-	#endif
-	for (vamp_t i = min; i <= max; i += iterator + 1) {
-		if (max - i < tile)
-			iterator = max - i;
-
-
-		vamp_t lmin = i;
-		vamp_t lmax = i + iterator;
-
-	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
-		long double area = ((long double)(i + iterator - min)) / ((long double)(actual_max - min));
-		vamp_t temp = (double)max * distribution_inverted_integral(area);
-		lmin = tmp;
-		if(temp >= tmp && temp <= lmax) {
-			lmax = temp;
-		}
-		tmp = lmax + 1;
+			max = pow10v(length(lmax))-1;
+		long double total_area = max - lmin + 1;
 	#endif
 
-		new->arr[x++] = tile_init(lmin, lmax);
+	for (vamp_t i = lmin; i <= lmax; i += iterator + 1) {
+		if (lmax - i < tile_size)
+			iterator = lmax - i;
 
-		if (i == max)
+		vamp_t first = i;
+		vamp_t last = i + iterator;
+
+		#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
+			long double area = ((long double)(last - lmin)) / total_area;
+			vamp_t tmp = max * distribution_inverted_integral(area);
+			first = current;
+			if (tmp >= current && tmp <= last)
+				last = tmp;
+			current = last + 1;
+		#endif
+
+		new->arr[x++] = tile_init(first, last);
+
+		if (i == lmax)
 			break;
 		if (i + iterator == vamp_max)
 			break;
 	}
-
-/*
-	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
-		for (vamp_t i = 0; i < x; i++) {
-			long double area = ((long double)(i + 1)) / ((long double)(x));
-			vamp_t temp = (double)max * distribution_inverted_integral(area);
-			//printf("%llu %llu\n",i , temp);
-			if(temp >= new->arr[i]->lmin && temp <= max) {
-				new->arr[i]->lmax = temp;
-				if (x > 0 && i < x - 1) {
-					new->arr[i+1]->lmin = temp + 1;
-				}
-			}
-		}
-	#endif
-*/
 
 	return new;
 }
 
 void matrix_free(struct matrix *ptr)
 {
-	if(ptr == NULL)
+	if (ptr == NULL)
 		return;
 
 	for (vamp_t i = 0; i < ptr->size; i++)
@@ -854,7 +852,7 @@ void matrix_free(struct matrix *ptr)
 void matrix_print(struct matrix *ptr, vamp_t *count)
 {
 	for (vamp_t x = ptr->row_cleanup; x < ptr->size; x++)
-		if(ptr->arr[x] != NULL){
+		if (ptr->arr[x] != NULL) {
 			llist_print(ptr->arr[x]->result->head, *count);
 			*count += ptr->arr[x]->result->size;
 		}
@@ -887,7 +885,9 @@ struct vargs	/* Vampire arguments */
 struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct matrix *mat, vamp_t *total_count)
 {
 	struct vargs *new = malloc(sizeof(struct vargs));
-	assert(new != NULL);
+	if(new == NULL)
+		abort();
+
 	new->min = min;
 	new->max = max;
 	new->count = 0;
@@ -969,7 +969,6 @@ void *vampire(struct vargs *args)
 				mult_array[i % 10] += 1;
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
-				//assert(multiplicand < UINT_MAX - 9);
 				uint16_t product_array[10] = {0};
 				for (vamp_t p = product; p != 0; p /= 10)
 					product_array[p % 10] += 1;
@@ -1096,12 +1095,12 @@ void *vampire(struct vargs *args)
 
 			digits_t digd;
 
-			if(min_sqrt >= args->digsize) {
+			if (min_sqrt >= args->digsize) {
 				digd = 0;
 				for (fang_t i = multiplier; i > 0; i /= 10) {
 					digit_t digit = i % 10;
-					if(digit > 1)
-						digd += (digits_t)1 << ((digit - (10 - DIGSTORED)) * DIGMULT); 
+					if (digit > 1)
+						digd += (digits_t)1 << ((digit - (10 - DIGSTORED)) * DIGMULT);
 				}
 			} else {
 				digd = dig[multiplier];
@@ -1112,7 +1111,6 @@ void *vampire(struct vargs *args)
 			uint16_t de2 = ((product / power10) / power10); // 10^3 <= de2 < 10^4
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
-				//assert(multiplicand < UINT_MAX - 9);
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
 					if (mult_zero || notrailingzero(multiplicand)) {
 					#ifdef COUNT_RESULTS
@@ -1177,7 +1175,7 @@ void *thread_worker(void *void_args)
 // Critical section start
 		pthread_mutex_lock(args->mutex);
 
-		if(args->mat->row < args->mat->size){
+		if (args->mat->row < args->mat->size) {
 			row = args->mat->row;
 			active = true;
 
@@ -1186,7 +1184,7 @@ void *thread_worker(void *void_args)
 		pthread_mutex_unlock(args->mutex);
 // Critical section end
 
-		if (active){
+		if (active) {
 			struct tile *current = args->mat->arr[row];
 			args->min = current->lmin;
 			args->max = current->lmax;
@@ -1281,13 +1279,14 @@ int main(int argc, char* argv[])
 	if (digsize < 1000)
 		digsize = 1000;
 	digits_t *dig = malloc(sizeof(digits_t) * digsize);
-	assert(dig != NULL);
+	if(dig == NULL)
+		abort();
 
 	for (fang_t d = 0; d < digsize; d++) {
 		dig[d] = 0;
 		for (fang_t i = d; i > 0; i /= 10) {
 			digit_t digit = i % 10;
-			if(digit > 1)
+			if (digit > 1)
 				dig[d] += (digits_t)1 << ((digit - (10 - DIGSTORED)) * DIGMULT);
 		}
 	}
@@ -1297,7 +1296,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
 
 		struct matrix *mat = matrix_init(lmin, lmax);
-		for (thread_t thread = 0; thread < THREADS; thread++){
+		for (thread_t thread = 0; thread < THREADS; thread++) {
 			input[thread]->mat = mat;
 #if JENS_K_A_OPTIMIZATION
 			input[thread]->dig = dig;
