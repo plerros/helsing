@@ -1051,9 +1051,15 @@ void *vampire(struct vargs *args)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
 	}
 
-	fang_t power10 = pow10v(fang_length) / 100;
-	if (power10 < 900)
-		power10 = 1000;
+
+	fang_t length_a = (2 * fang_length) / 3;
+	fang_t length_b = 2 * (fang_length - length_a);
+
+	fang_t power_a = pow10v(length_a);
+	fang_t power_b = pow10v(length_b);
+
+	if (power_a < 900)
+		power_a = power_b;
 
 	digits_t *dig = args->dig;
 
@@ -1072,6 +1078,11 @@ void *vampire(struct vargs *args)
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
+
+			#ifdef PROCESS_RESULTS
+				if (mult_zero)
+					bthandle_cleanup(args->thandle, (multiplier + 1) *  multiplier, args->lhandle);
+			#endif
 		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
@@ -1081,11 +1092,11 @@ void *vampire(struct vargs *args)
 			vamp_t product = multiplier;
 			product *= multiplicand; // avoid overflow
 
-			fang_t step0 = product_iterator % power10;
-			fang_t step1 = product_iterator / power10; // 90 <= step1 < 900
+			fang_t step0 = product_iterator % power_a;
+			fang_t step1 = product_iterator / power_a; // 90 <= step1 < 900
 
-			fang_t e0 = multiplicand % power10; // e0 < 10 ^ (n - 1)
-			uint16_t e1 = multiplicand / power10; // e1 < 10
+			fang_t e0 = multiplicand % power_a; // e0 < 10 ^ (n - 1)
+			fang_t e1 = multiplicand / power_a; // e1 < 100
 
 			/*
 			 * digd = dig[multiplier];
@@ -1106,9 +1117,9 @@ void *vampire(struct vargs *args)
 				digd = dig[multiplier];
 			}
 
-			fang_t de0 = product % power10;
-			fang_t de1 = (product / power10) % power10;
-			uint16_t de2 = ((product / power10) / power10); // 10^3 <= de2 < 10^4
+			fang_t de0 = product % power_a;
+			fang_t de1 = (product / power_a) % power_a;
+			fang_t de2 = ((product / power_a) / power_a); // 10^3 <= de2 < 10^4
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
@@ -1124,18 +1135,18 @@ void *vampire(struct vargs *args)
 					#endif
 					}
 				e0 += 9;
-				if (e0 >= power10) {
-					e0 -= power10;
+				if (e0 >= power_a) {
+					e0 -= power_a;
 					e1 ++;
 				}
 				de0 += step0;
-				if (de0 >= power10) {
-					de0 -= power10;
+				if (de0 >= power_a) {
+					de0 -= power_a;
 					de1 += 1;
 				}
 				de1 += step1;
-				if (de1 >= power10) {
-					de1 -= power10;
+				if (de1 >= power_a) {
+					de1 -= power_a;
 					de2 += 1;
 				}
 				product += product_iterator;
@@ -1284,10 +1295,7 @@ int main(int argc, char* argv[])
 		input[thread] = vargs_init(0, 0, &mutex, NULL, &counter);
 
 #if JENS_K_A_OPTIMIZATION
-	fang_t digsize = pow10v(length(max) / 2 - 1);
-	if (digsize < 1000)
-		digsize = 1000;
-	printf("%lu digsize\n", digsize);
+	fang_t digsize = pow10v(length(max) - 2 * (length(max) / 3));
 	digits_t *dig = malloc(sizeof(digits_t) * digsize);
 	if (dig == NULL)
 		abort();
