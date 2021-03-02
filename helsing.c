@@ -7,20 +7,20 @@
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright 
+ * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the copyright holder nor the names of its 
- *    contributors may be used to endorse or promote products derived from 
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
@@ -38,23 +38,17 @@
 #include <stdint.h>
 #include <math.h>	// pow
 #include <ctype.h>	// isdigit
+#include <string.h>
 
 // Compile with: gcc -O3 -Wall -Wextra -pthread -lm -o helsing helsing.c
 // Check memory with valgrind --tool=massif
 
 /*--------------------------- COMPILATION OPTIONS ---------------------------*/
-
-/*
- * THREADS:
- *
- * Default value: 1
- *
- * Affects how many processing threads will spawn.
- * (note: thread count above #cores may not improve performance)
- */
-
 #define THREADS 1
 #define thread_t uint16_t
+
+#define MEASURE_RUNTIME false
+#define SANITY_CHECK false
 
 /*
  * DIST_COMPENSATION:
@@ -82,15 +76,8 @@
  *
  * TILE_SIZE should be set as unsigned long long (ULL extension at the end).
  *
- * 	You can optimize the code for specific [min,max] runs, to use less
- * memory by setting TILE_SIZE below max. A good balance between performance
- * loss and memory usage is max/10. AUTO_TILE_SIZE does that automatically
- * for you.
- *
- * Using massif in range [100000000000, 999999999999] on a single thread:
- * 	TILE_SIZE        peak
- * 	1000000000000ULL 85.2 MiB
- * 	10000000000ULL   5.7  MiB
+ * 	You can manually optimize the code for specific [min,max] runs, to use
+ * less memory by setting AUTO_TILE_SIZE to false and adjusting TILE_SIZE.
  */
 
 #define AUTO_TILE_SIZE true
@@ -110,7 +97,7 @@
  * 	Each element has a position, an array key; for example in the array
  * "array[]" the element "array[1]" has the array key 1.
  *
- * 	The value of each element is a concatenation of (n/DIGSTORED)-bit
+ * 	The value of each element is a concatenation of n/(10 - DIGSKIP)-bit
  * unsigned integers that hold the total count of each digit (except 0s & 1s)
  * of its array key.
  * 	For example a 32-bit sized element gets split into 8 * 4-bit segments
@@ -157,23 +144,6 @@
 #define VERBOSE_LEVEL 2
 
 /*
- * MEASURE_RUNTIME:
- *
- * Measures the total runtime of each thread and prints it at the end.
- */
-
-#define MEASURE_RUNTIME false
-#define PRINT_VAMPIRE_COUNT true
-
-/*
- * SANITY_CHECK:
- *
- * Performs extra checks to catch runtime problems. (Currently does nothing)
- */
-
-#define SANITY_CHECK false
-
-/*
  * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size
  * of fang_t and fang_max, vamp_max should be set accordingly.
  *
@@ -190,15 +160,15 @@ typedef unsigned long fang_t;
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
 
-/*--------------------------- PREPROCESSOR_STUFF  ---------------------------*/
-//DIGMULT = (DIG_ELEMENT_BITS/DIGSTORED)
+/*--------------------------- PREPROCESSOR STUFF  ---------------------------*/
+//DIGMULT = DIG_ELEMENT_BITS/(10 - DIGSKIP)
 #if DIG_ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
-	#define DIGSTORED 8
+	#define DIGSKIP 2
 	#define DIGMULT 4
 #elif DIG_ELEMENT_BITS == 64
 	typedef uint64_t digits_t;
-	#define DIGSTORED 9
+	#define DIGSKIP 1
 	#define DIGMULT 7
 #endif
 
@@ -223,6 +193,38 @@ typedef uint8_t length_t;
 #endif
 
 /*---------------------------- HELPER FUNCTIONS  ----------------------------*/
+
+void print_licence()
+{
+	printf("\n\
+Copyright (c) 2021, Pierro Zachareas, et al.\n\
+All rights reserved.\n\
+\n\
+Redistribution and use in source and binary forms, with or without\n\
+modification, are permitted provided that the following conditions are met:\n\
+1. Redistributions of source code must retain the above copyright notice, this\n\
+   list of conditions and the following disclaimer.\n\
+\n\
+2. Redistributions in binary form must reproduce the above copyright notice,\n\
+   this list of conditions and the following disclaimer in the documentation\n\
+   and/or other materials provided with the distribution.\n\
+\n\
+3. Neither the name of the copyright holder nor the names of its contributors\n\
+   may be used to endorse or promote products derived from this software\n\
+   without specific prior written permission.\n\
+\n\
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND\n\
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED\n\
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\n\
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\n\
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\n\
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\n\
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\n\
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n\
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT  OF THE USE\n\
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\
+	\n");
+}
 
 length_t length(vamp_t x) // bugfree
 {
@@ -263,7 +265,7 @@ bool willoverflow(vamp_t x, digit_t digit) // bugfree
 }
 
 // ASCII to vampire type
-vamp_t atoull(const char *str, bool *err) // bugfree
+vamp_t atov(const char *str, bool *err) // bugfree
 {
 #if SANITY_CHECK
 	assert(str != NULL);
@@ -398,7 +400,7 @@ struct llist	/* Linked list of unsigned short digits*/
 struct llist *llist_init(vamp_t value , struct llist *next)
 {
 	struct llist *new = malloc(sizeof(struct llist));
-	if(new == NULL)
+	if (new == NULL)
 		abort();
 
 	new->value = value;
@@ -491,7 +493,7 @@ struct btree
 struct btree *btree_init(vamp_t value)
 {
 	struct btree *new = malloc(sizeof(struct btree));
-	if(new == NULL)
+	if (new == NULL)
 		abort();
 
 	new->left = NULL;
@@ -679,7 +681,7 @@ struct bthandle
 struct bthandle *bthandle_init()
 {
 	struct bthandle *new = malloc(sizeof(struct bthandle));
-	if(new == NULL)
+	if (new == NULL)
 		abort();
 
 	new->tree = NULL;
@@ -740,7 +742,7 @@ struct tile
 struct tile *tile_init(vamp_t min, vamp_t max)
 {
 	struct tile *new = malloc(sizeof(struct tile));
-	if(new == NULL)
+	if (new == NULL)
 		abort();
 
 	new->lmin = min;
@@ -764,7 +766,7 @@ void tile_free(struct tile *ptr)
 
 /*--------------------------------- matrix  ---------------------------------*/
 
-struct matrix 
+struct matrix
 {
 	struct tile **arr;
 	vamp_t size;
@@ -779,7 +781,7 @@ struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 		assert(lmin <= lmax);
 	#endif
 	struct matrix *new = malloc(sizeof(struct matrix));
-	if(new == NULL)
+	if (new == NULL)
 		abort();
 
 	#if (AUTO_TILE_SIZE && THREADS > 1)
@@ -794,7 +796,7 @@ struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 	new->column = 0;
 
 	new->arr = malloc(sizeof(struct tile *) * new->size);
-	if(new->arr == NULL)
+	if (new->arr == NULL)
 		abort();
 
 	vamp_t x = 0;
@@ -885,7 +887,7 @@ struct vargs	/* Vampire arguments */
 struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct matrix *mat, vamp_t *total_count)
 {
 	struct vargs *new = malloc(sizeof(struct vargs));
-	if(new == NULL)
+	if (new == NULL)
 		abort();
 
 	new->min = min;
@@ -1053,7 +1055,6 @@ void *vampire(struct vargs *args)
 	if (power10 < 900)
 		power10 = 1000;
 
-	//printf("%lu\n", power10);
 	digits_t *dig = args->dig;
 
 	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
@@ -1077,14 +1078,13 @@ void *vampire(struct vargs *args)
 
 		if (multiplicand <= multiplicand_max) {
 			vamp_t product_iterator = multiplier * 9; // <= 9 * 2^32
-			//vamp_t product = multiplier * multiplicand;
 			vamp_t product = multiplier;
-			product *= multiplicand;
+			product *= multiplicand; // avoid overflow
 
 			fang_t step0 = product_iterator % power10;
 			fang_t step1 = product_iterator / power10; // 90 <= step1 < 900
 
-			fang_t e0 = multiplicand % power10; // e0 < n - 1
+			fang_t e0 = multiplicand % power10; // e0 < 10 ^ (n - 1)
 			uint16_t e1 = multiplicand / power10; // e1 < 10
 
 			/*
@@ -1100,7 +1100,7 @@ void *vampire(struct vargs *args)
 				for (fang_t i = multiplier; i > 0; i /= 10) {
 					digit_t digit = i % 10;
 					if (digit > 1)
-						digd += (digits_t)1 << ((digit - (10 - DIGSTORED)) * DIGMULT);
+						digd += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
 				}
 			} else {
 				digd = dig[multiplier];
@@ -1238,18 +1238,27 @@ void *thread_worker(void *void_args)
 int main(int argc, char* argv[])
 {
 	if (argc != 3) {
-		fprintf(stderr, "A vampire number generator\n");
-		fprintf(stderr, "Usage: vampire [min] [max]\n");
+		if (argc == 2) {
+			if (strcmp(argv[1], "--version") == 0) {
+				printf("Helsing 1.0, a vampire number generator.\n");
+				print_licence();
+			}
+		} else {
+			printf("Usage: helsing [min] [max] | [OPTIONS]\n");
+			printf("\nArguments:\n");
+			printf("  --version                  \
+				output version information and exit\n");
+		}
 		return 0;
 	}
 
 	bool err = false;
-	vamp_t min = atoull(argv[1], &err);
+	vamp_t min = atov(argv[1], &err);
 	if (err) {
 		fprintf(stderr, "Min out of range: [0, %llu]\n", vamp_max);
 		return 1;
 	}
-	vamp_t max = atoull(argv[2], &err);
+	vamp_t max = atov(argv[2], &err);
 	if (err) {
 		fprintf(stderr, "Max out of range: [0, %llu]\n", vamp_max);
 		return 1;
@@ -1278,8 +1287,9 @@ int main(int argc, char* argv[])
 	fang_t digsize = pow10v(length(max) / 2 - 1);
 	if (digsize < 1000)
 		digsize = 1000;
+	printf("%lu digsize\n", digsize);
 	digits_t *dig = malloc(sizeof(digits_t) * digsize);
-	if(dig == NULL)
+	if (dig == NULL)
 		abort();
 
 	for (fang_t d = 0; d < digsize; d++) {
@@ -1287,7 +1297,7 @@ int main(int argc, char* argv[])
 		for (fang_t i = d; i > 0; i /= 10) {
 			digit_t digit = i % 10;
 			if (digit > 1)
-				dig[d] += (digits_t)1 << ((digit - (10 - DIGSTORED)) * DIGMULT);
+				dig[d] += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
 		}
 	}
 #endif
@@ -1336,10 +1346,7 @@ int main(int argc, char* argv[])
 	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
 #endif
 
-#ifdef PROCESS_RESULTS
-	//fprintf(stderr, "Found: %llu vampire numbers.\n", counter);
-
-	#if (PRINT_DIST_MATRIX) && (THREADS > 8)
+	#if (defined PROCESS_RESULTS) && (PRINT_DIST_MATRIX) && (THREADS > 8)
 		double distrubution = 0.0;
 		for (thread_t thread = 0; thread < THREADS; thread++) {
 			distrubution += ((double)input[thread]->count) / ((double)(counter));
@@ -1348,7 +1355,6 @@ int main(int argc, char* argv[])
 				fprintf(stderr, "\n");
 		}
 	#endif
-#endif
 
 	vamp_t tmp = 0;
 	for (thread_t thread = 0; thread<THREADS; thread++)
