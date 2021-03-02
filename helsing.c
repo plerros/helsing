@@ -4,18 +4,28 @@
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ * 2. Redistributions in binary form must reproduce the above copyright 
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * 3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+ * 3. Neither the name of the copyright holder nor the names of its 
+ *    contributors may be used to endorse or promote products derived from 
+ *    this software without specific prior written permission.
  * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <stdio.h>
@@ -49,10 +59,13 @@
 /*
  * DIST_COMPENSATION:
  *
- * 	Based on results, I produced a function that tries to estimate the
+ * 	Based on results, I produced 6 functions that try to estimate the
  * distribution of vampire numbers. The integral of the inverse can help with
  * load distribution between threads, minimizing the need for load balancing
- * and its overhead.
+ * and its overhead. In practice I haven't noticed any performance increase.
+ *
+ * 	You can set DIST_COMPENSATION to false to disable it, or any value
+ * between 1 and 6 to select a specific version.
  */
 
 #define DIST_COMPENSATION false
@@ -149,7 +162,7 @@
  * Measures the total runtime of each thread and prints it at the end.
  */
 
-#define MEASURE_RUNTIME false
+#define MEASURE_RUNTIME true
 #define PRINT_VAMPIRE_COUNT true
 
 /*
@@ -235,7 +248,6 @@ vamp_t pow10v(length_t exponent) // bugfree
 }
 
 // willoverflow: Checks if (10 * x + digit) will overflow.
-
 bool willoverflow(vamp_t x, digit_t digit) // bugfree
 {
 #if SANITY_CHECK
@@ -343,60 +355,36 @@ vamp_t div_roof (vamp_t x, vamp_t y)
 	return (x/y + !!(x%y));
 }
 
+#if DIST_COMPENSATION
 long double distribution_inverted_integral(long double area)
 {
-	/*
-	 * avg 274416
-	 * min 242686
-	 * max 347540
-	 * close to avg 2
-	 */
-	//return (1.0 - 0.9 * pow(1.0-area, 1.0/(3.0-(0.7*area))));
+	#if (DIST_COMPENSATION == 1)
+		return (1.0 - 0.9 * powl(1.0-area, 1.0/(3.0-(0.7*area))));
 
-	/*
-	 * avg 274416
-	 * min 245220
-	 * max 316262
-	 * close to avg 2
-	 */
-	//return (1.0 - 0.9 * pow(1.0-area, 1.0/(3.0 -(0.3 * area * area) -(0.7 * area) + 0.3)));
+	#elif (DIST_COMPENSATION == 2)
+		long double exponent = 1.0/(3.0 -(0.3 * area * area) -(0.7 * area) + 0.3);
+		return (1.0 - 0.9 * powl(1.0-area, exponent));
 
-	/*
-	 * avg 274416
-	 * min 249141
-	 * max 312688
-	 * close to avg 4
-	 */
-	//return (1.0 - 0.9 * pow(1.0-area, 1.0/(3.0 -(0.1 * area * area) -(1.05 * area) + 0.4)));
+	#elif (DIST_COMPENSATION == 3)
+		long double exponent = 1.0/(3.0 -(0.1 * area * area) -(1.05 * area) + 0.4);
+		return (1.0 - 0.9 * powl(1.0-area, exponent));
 
-	/*
-	 * avg 274416
-	 * min 251143
-	 * max 307573
-	 * close to avg 4
-	 */
-	//return (1.0 - 0.9 * pow(1.0-area, 1.0/(3.0 -0.1 * pow(area, 3.0) + 0.27 * pow(area, 2.0) -1.4 * area + 0.5)));
+	#elif (DIST_COMPENSATION == 4)
+		long double exponent = 1.0/(3.0 -0.1 * pow(area, 3.0) + 0.27 * pow(area, 2.0) -1.4 * area + 0.5);
+		return (1.0 - 0.9 * powl(1.0-area, exponent));
 
-	/*
-	 * avg 274416
-	 * min 245202
-	 * max 303460
-	 * close to avg 5 + 2
-	 */
-	double exponent = 1.0/(3.0 -0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) -1.7 * area + 0.59);
-	return (1.0 - 0.899999999999999999L * pow(1.0-area, exponent));
+	#elif (DIST_COMPENSATION == 5)
+		long double exponent = 1.0/(3.0 -0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) -1.7 * area + 0.59);
+		return (1.0 - 0.899999999999999999L * powl(1.0-area, exponent));
 
-	/*
-	 * avg 274416
-	 * min 245202
-	 * max 301303
-	 * close to avg 6 + 2
-	 */
-	//long double exponent = 1.0/(3.0 -0.27 * powl(area, 3.0) + 0.64 * powl(area, 2.0) -1.7 * area + 0.59);
-	//return (1.0 - 0.899999999999999999L * powl(1.0-area, exponent));
-	// This is a hand made approximation.
+	#elif (DIST_COMPENSATION == 6)
+		long double exponent = 1.0/(3.0 -0.27 * powl(area, 3.0) + 0.64 * powl(area, 2.0) -1.7 * area + 0.59);
+		return (1.0 - 0.899999999999999999L * powl(1.0-area, exponent));
+
+	#endif
+	// These are hand made approximations.
 }
-
+#endif
 /*------------------------------- linked list -------------------------------*/
 
 struct llist	/* Linked list of unsigned short digits*/
@@ -488,17 +476,17 @@ void llhandle_reset(struct llhandle *handle)
 
 /*------------------------------- binary tree -------------------------------*/
 
-struct ullbtree
+struct btree
 {
-	struct ullbtree *left;
-	struct ullbtree *right;
+	struct btree *left;
+	struct btree *right;
 	vamp_t value;
 	length_t height; //Should probably be less than 32
 };
 
-struct ullbtree *ullbtree_init(vamp_t value)
+struct btree *btree_init(vamp_t value)
 {
-	struct ullbtree *new = malloc(sizeof(struct ullbtree));
+	struct btree *new = malloc(sizeof(struct btree));
 	assert(new != NULL);
 
 	new->left = NULL;
@@ -508,18 +496,18 @@ struct ullbtree *ullbtree_init(vamp_t value)
 	return new;
 }
 
-void ullbtree_free(struct ullbtree *tree)
+void btree_free(struct btree *tree)
 {
 	if (tree != NULL) {
 		if (tree->left != NULL)
-			ullbtree_free(tree->left);
+			btree_free(tree->left);
 		if (tree->right != NULL)
-			ullbtree_free(tree->right);
+			btree_free(tree->right);
 	}
 	free(tree);
 }
 
-int is_balanced(struct ullbtree *tree)
+int is_balanced(struct btree *tree)
 {
 	//assert (tree != NULL);
 	if (tree == NULL)
@@ -536,7 +524,7 @@ int is_balanced(struct ullbtree *tree)
 	return (lheight - rheight);
 }
 
-void ullbtree_reset_height(struct ullbtree *tree)
+void btree_reset_height(struct btree *tree)
 {
 	//assert(tree != NULL);
 	tree->height = 0;
@@ -558,16 +546,16 @@ void ullbtree_reset_height(struct ullbtree *tree)
  * The '...' are completely unaffected.
  */
 
-struct ullbtree *ullbtree_rotate_l(struct ullbtree *tree)
+struct btree *btree_rotate_l(struct btree *tree)
 {
 	//assert(tree != NULL);
 	//assert(tree->right != NULL);
 	if (tree->right != NULL) {
-		struct ullbtree *right = tree->right;
+		struct btree *right = tree->right;
 		tree->right = right->left;
-		ullbtree_reset_height(tree);
+		btree_reset_height(tree);
 		right->left = tree;
-		ullbtree_reset_height(right);
+		btree_reset_height(right);
 		return right;
 	}
 	return tree;
@@ -585,73 +573,73 @@ struct ullbtree *ullbtree_rotate_l(struct ullbtree *tree)
  * The '...' are completely unaffected.
  */
 
-struct ullbtree *ullbtree_rotate_r(struct ullbtree *tree)
+struct btree *btree_rotate_r(struct btree *tree)
 {
 	//assert(tree != NULL);
 	//assert(tree->left != NULL);
 	if (tree->left != NULL) {
-		struct ullbtree *left = tree->left;
+		struct btree *left = tree->left;
 		tree->left = left->right;
-		ullbtree_reset_height(tree);
+		btree_reset_height(tree);
 		left->right = tree;
-		ullbtree_reset_height(left);
+		btree_reset_height(left);
 		return left;
 	}
 	return tree;
 }
 
-struct ullbtree *ullbtree_balance(struct ullbtree *tree)
+struct btree *btree_balance(struct btree *tree)
 {
 	//assert(tree != NULL);
 	int isbalanced = is_balanced(tree);
 	if (isbalanced > 1) {
 		if (is_balanced(tree->left) < 0) {
-			tree->left = ullbtree_rotate_l(tree->left);
-			ullbtree_reset_height(tree); //maybe optional?
+			tree->left = btree_rotate_l(tree->left);
+			btree_reset_height(tree); //maybe optional?
 		}
-		tree = ullbtree_rotate_r(tree);
+		tree = btree_rotate_r(tree);
 	}
 	else if (isbalanced < -1) {
 		if (is_balanced(tree->right) > 0) {
-			tree->right = ullbtree_rotate_r(tree->right);
-			ullbtree_reset_height(tree); //maybe optional?
+			tree->right = btree_rotate_r(tree->right);
+			btree_reset_height(tree); //maybe optional?
 		}
-		tree = ullbtree_rotate_l(tree);
+		tree = btree_rotate_l(tree);
 
 	}
 	return tree;
 }
 
-struct ullbtree *ullbtree_add(
-	struct ullbtree *tree,
+struct btree *btree_add(
+	struct btree *tree,
 	vamp_t node,
 	vamp_t *count)
 {
 	if (tree == NULL) {
 		*count += 1;
-		return ullbtree_init(node);
+		return btree_init(node);
 	}
 	if (node == tree->value)
 		return tree;
 	else if (node < tree->value)
-		tree->left = ullbtree_add(tree->left, node, count);
+		tree->left = btree_add(tree->left, node, count);
 	else
-		tree->right = ullbtree_add(tree->right, node, count);
+		tree->right = btree_add(tree->right, node, count);
 
-	ullbtree_reset_height(tree);
-	tree = ullbtree_balance(tree);
+	btree_reset_height(tree);
+	tree = btree_balance(tree);
 	return tree;
 }
 
-struct ullbtree *ullbtree_cleanup(
-	struct ullbtree *tree,
+struct btree *btree_cleanup(
+	struct btree *tree,
 	vamp_t number,
 	struct llhandle *lhandle,
 	vamp_t *btree_size)
 {
 	if (tree == NULL)
 		return NULL;
-	tree->right = ullbtree_cleanup(tree->right, number, lhandle, btree_size);
+	tree->right = btree_cleanup(tree->right, number, lhandle, btree_size);
 
 	if (tree->value >= number) {
 		#ifdef STORE_RESULTS
@@ -660,18 +648,18 @@ struct ullbtree *ullbtree_cleanup(
 		llhandle_add(lhandle);
 		#endif
 
-		struct ullbtree *tmp = tree->left;
+		struct btree *tmp = tree->left;
 		tree->left = NULL;
-		ullbtree_free(tree);
+		btree_free(tree);
 		*btree_size -= 1;
 
-		tree = ullbtree_cleanup(tmp, number, lhandle, btree_size);
+		tree = btree_cleanup(tmp, number, lhandle, btree_size);
 	}
 
 	if (tree == NULL)
 		return NULL;
-	ullbtree_reset_height(tree);
-	tree = ullbtree_balance(tree);
+	btree_reset_height(tree);
+	tree = btree_balance(tree);
 
 	return tree;
 }
@@ -680,7 +668,7 @@ struct ullbtree *ullbtree_cleanup(
 
 struct bthandle
 {
-	struct ullbtree *tree;
+	struct btree *tree;
 	vamp_t size;
 };
 
@@ -695,19 +683,19 @@ struct bthandle *bthandle_init()
 void bthandle_free(struct bthandle *handle)
 {
 	if(handle != NULL)
-		ullbtree_free(handle->tree);
+		btree_free(handle->tree);
 	free(handle);
 }
 
 void bthandle_add(struct bthandle *handle, vamp_t number)
 {
 	assert(handle != NULL);
-	handle->tree = ullbtree_add(handle->tree, number, &(handle->size));
+	handle->tree = btree_add(handle->tree, number, &(handle->size));
 }
 
 void bthandle_reset(struct bthandle *handle)
 {
-	ullbtree_free(handle->tree);
+	btree_free(handle->tree);
 	handle->tree = NULL;
 	handle->size = 0;
 }
@@ -716,9 +704,14 @@ void bthandle_reset(struct bthandle *handle)
  * Move inactive data from binary tree to linked list
  * and free up memory. Works best with low thread counts.
  */
-void bthandle_cleanup(struct bthandle *handle, vamp_t number, struct llhandle *ll)
+void bthandle_cleanup(
+	struct bthandle *handle,
+	vamp_t number,
+	struct llhandle *lhandle)
 {
-	handle->tree = ullbtree_cleanup(handle->tree, number, ll, &(handle->size));
+	struct btree *tree = handle->tree;
+	vamp_t *size = &(handle->size);
+	handle->tree = btree_cleanup(tree, number, lhandle, size);
 }
 
 /*----------------------------------- arr -----------------------------------*/
@@ -769,19 +762,21 @@ struct matrix
 	thread_t column;	// Current column to help iteration.
 };
 
-struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
+struct matrix *matrix_init(vamp_t min, vamp_t max)
 {
-	assert(lmin <= lmax);
+	assert(min <= max);
 	struct matrix *new = malloc(sizeof(struct matrix));
 	assert(new != NULL);
 
 #if (AUTO_TILE_SIZE && THREADS > 1)
-		vamp_t tile = lmax / (THREADS * 8);
+		vamp_t tile = div_roof(max-min, 6 * THREADS - 3);
+		//vamp_t tile = div_roof(max-min, 45);
+		//vamp_t tile = div_roof(max-min, 9);
 #else
 		vamp_t tile = TILE_SIZE;
 #endif
 
-	new->size = div_roof((lmax - lmin + 1), tile + (tile < vamp_max));
+	new->size = div_roof((max - min + 1), tile + (tile < vamp_max));
 	new->row = 0;
 	new->row_cleanup = 0;
 	new->column = 0;
@@ -791,18 +786,56 @@ struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 
 	vamp_t x = 0;
 	vamp_t iterator = tile;
+	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
+		vamp_t tmp = min;
+		vamp_t actual_max;
+		if (length(max) == length(vamp_max))
+			actual_max = vamp_max;
+		else
+			actual_max = pow10v(length(max))-1;
+	#endif
+	for (vamp_t i = min; i <= max; i += iterator + 1) {
+		if (max - i < tile)
+			iterator = max - i;
 
-	for (vamp_t i = lmin; i <= lmax; i += iterator + 1) {
-		if (lmax - i < tile)
-			iterator = lmax - i;
 
-		new->arr[x++] = tile_init(i, i + iterator);
+		vamp_t lmin = i;
+		vamp_t lmax = i + iterator;
 
-		if (i == lmax)
+	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
+		long double area = ((long double)(i + iterator - min)) / ((long double)(actual_max - min));
+		vamp_t temp = (double)max * distribution_inverted_integral(area);
+		lmin = tmp;
+		if(temp >= tmp && temp <= lmax) {
+			lmax = temp;
+		}
+		tmp = lmax + 1;
+	#endif
+
+		new->arr[x++] = tile_init(lmin, lmax);
+
+		if (i == max)
 			break;
 		if (i + iterator == vamp_max)
 			break;
 	}
+
+/*
+	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
+		for (vamp_t i = 0; i < x; i++) {
+			long double area = ((long double)(i + 1)) / ((long double)(x));
+			vamp_t temp = (double)max * distribution_inverted_integral(area);
+			//printf("%llu %llu\n",i , temp);
+			if(temp >= new->arr[i]->lmin && temp <= max) {
+				new->arr[i]->lmax = temp;
+				if (x > 0 && i < x - 1) {
+					new->arr[i+1]->lmin = temp + 1;
+				}
+			}
+		}
+	#endif
+*/
+
 	return new;
 }
 
@@ -1263,20 +1296,6 @@ int main(int argc, char* argv[])
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
 
-
-#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
-		vamp_t maxtmp;
-		if(length(lmin) < length(max))
-			maxtmp = pow10v(length(lmin)) - 1.0;
-		else
-			maxtmp = max;
-
-		double area = ((double)(lmin - pow10v(length(lmin) - 1)) + 1.0) / ((double)maxtmp);
-		vamp_t temp = ((double)max) * distribution_inverted_integral(area);
-		if (temp > lmin && temp < maxtmp)
-			lmax = temp;
-#endif
-
 		struct matrix *mat = matrix_init(lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++){
 			input[thread]->mat = mat;
@@ -1312,7 +1331,7 @@ int main(int argc, char* argv[])
 	double total_time = 0.0;
 	fprintf(stderr, "Thread  Runtime Count\n");
 	for (thread_t thread = 0; thread<THREADS; thread++) {
-		fprintf(stderr, "%lu\t%.2lfs\t%llu\t[%llu\t%llu]\n", thread, input[thread]->runtime, input[thread]->count, input[thread]->min, input[thread]->max);
+		fprintf(stderr, "%u\t%.2lfs\t%llu\t[%llu\t%llu]\n", thread, input[thread]->runtime, input[thread]->count, input[thread]->min, input[thread]->max);
 		total_time += input[thread]->runtime;
 	}
 	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
