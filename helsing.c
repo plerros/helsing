@@ -92,14 +92,17 @@
  *
  * Source: http://primerecords.dk/vampires/index.htm
  *
- * 	The code allocates an array, where each element is n bits long.
+ * 	 When performing a vampirism check for a given product and it's
+ * factors, the order of the digits is irrelevant. Each number is a particular
+ * concatenation of digits, but the digits themselves, as well as any subset of
+ * digits, are not special at all. In fact they can be encountered inside many
+ * other numbers too, and if we store the total count of each digit in memory
+ * we won't have to recompute it for each number. 
  *
- * 	Each element has a position, an array key; for example in the array
- * "array[]" the element "array[1]" has the array key 1.
+ *	This is achieved with an array. To save memory, a single unsigned n-bit
+ * integer is used to store the amount of each digit. Each element is treated
+ * as 8 or 9 segments.
  *
- * 	The value of each element is a concatenation of n/(10 - DIGSKIP)-bit
- * unsigned integers that hold the total count of each digit (except 0s & 1s)
- * of its array key.
  * 	For example a 32-bit sized element gets split into 8 * 4-bit segments
  * and a 64-bit sized element gets split into 9 * 7-bit segments:
  *                                     [99998888|77776666|55554444|33332222]
@@ -109,14 +112,11 @@
  * 	We can choose any digit and ignore it, I chose not to store the 0s.
  * I think I can get away with not storing 1s too; Only a fang with more than
  * 8 * 1s could fool the modulo 9 congruence and such numbers are pretty rare.
+ * In the code, DIGSKIP defines the amount of positive whole numbers, that can
+ * be ignored.
  *
- * 	This way the code doesn't perform expensive operations such as modulo,
- * multiplication, division, for values that are already stored in the array.
- *
- * 	If the array gets too big, the memory latency penalty to access it
- * might hinder performance. Also the dig[] array will experience overflow
- * above (10 ^ (2 ^ n/8) - 1) - 1. To check numbers above 10^15 - 1 set
- * DIG_ELEMENT_BITS to 64.
+ * To check numbers above 10^16 - 1 make sure DIG_ELEMENT_BITS is set to 64, as
+ * the dig[] array may experience overflow.
  */
 
 #define JENS_K_A_OPTIMIZATION true
@@ -126,10 +126,10 @@
  * VERBOSE_LEVEL:
  *
  * 0 - COUNT_RAW
- * 	Count vampire numbers as they are being discovered.
+ * 	Count fang pairs as they are being discovered.
  *
  * 1 - PRINT RAW
- * 	Print vampire numbers as they are being discovered.
+ * 	Print fang pairs as they are being discovered.
  *
  * 2 - COUNT
  *	Order vampire numbers & filter out duplicates
@@ -239,12 +239,17 @@ bool length_isodd(vamp_t x) // bugfree
 	return (length(x) % 2);
 }
 
+void sanitycheck([[maybe_unused]] bool exp)
+{
+#if SANITY_CHECK
+	assert(exp);
+#endif
+}
+
 // pow10 for vampire type.
 vamp_t pow10v(length_t exponent) // bugfree
 {
-#if SANITY_CHECK
-	assert(exponent <= length(vamp_max) - 1);
-#endif
+	sanitycheck(exponent <= length(vamp_max) - 1);
 	vamp_t base = 1;
 	for (; exponent > 0; exponent--)
 		base *= 10;
@@ -254,9 +259,7 @@ vamp_t pow10v(length_t exponent) // bugfree
 // willoverflow: Checks if (10 * x + digit) will overflow.
 bool willoverflow(vamp_t x, digit_t digit) // bugfree
 {
-#if SANITY_CHECK
-	assert(digit < 10);
-#endif
+	sanitycheck(digit < 10);
 	if (x > vamp_max / 10)
 		return true;
 	if (x == vamp_max / 10 && digit > vamp_max % 10)
@@ -267,10 +270,8 @@ bool willoverflow(vamp_t x, digit_t digit) // bugfree
 // ASCII to vampire type
 vamp_t atov(const char *str, bool *err) // bugfree
 {
-#if SANITY_CHECK
-	assert(str != NULL);
-	assert(err != NULL);
-#endif
+	sanitycheck(str != NULL);
+	sanitycheck(err != NULL);
 	vamp_t number = 0;
 	for (length_t i = 0; isdigit(str[i]); i++) {
 		digit_t digit = str[i] - '0';
@@ -388,7 +389,7 @@ long double distribution_inverted_integral(long double area)
 	#endif
 	// These are hand made approximations.
 }
-#endif
+#endif /* DIST_COMPENSATION */
 /*------------------------------- linked list -------------------------------*/
 
 struct llist	/* Linked list of unsigned short digits*/
@@ -439,11 +440,10 @@ struct llhandle *llhandle_init()
 	struct llhandle *new = malloc(sizeof(struct llhandle));
 	assert(new != NULL);
 
-	new->size = 0;
-
 #ifdef STORE_RESULTS
 	new->head = NULL;
 #endif
+	new->size = 0;
 	return new;
 }
 
@@ -532,9 +532,7 @@ int is_balanced(struct btree *tree)
 
 void btree_reset_height(struct btree *tree)
 {
-#if SANITY_CHECK
-	assert(tree != NULL);
-#endif
+	sanitycheck(tree != NULL);
 	tree->height = 0;
 	if (tree->left != NULL && tree->left->height >= tree->height)
 		tree->height = tree->left->height + 1;
@@ -594,9 +592,7 @@ struct btree *btree_rotate_r(struct btree *tree)
 
 struct btree *btree_balance(struct btree *tree)
 {
-#if SANITY_CHECK
-	assert(tree != NULL);
-#endif
+	sanitycheck(tree != NULL);
 	int isbalanced = is_balanced(tree);
 	if (isbalanced > 1) {
 		if (is_balanced(tree->left) < 0) {
@@ -649,9 +645,9 @@ struct btree *btree_cleanup(
 
 	if (tree->value >= number) {
 		#ifdef STORE_RESULTS
-		llhandle_add(lhandle, tree->value);
+			llhandle_add(lhandle, tree->value);
 		#else
-		llhandle_add(lhandle);
+			llhandle_add(lhandle);
 		#endif
 
 		struct btree *tmp = tree->left;
@@ -698,9 +694,7 @@ void bthandle_free(struct bthandle *handle)
 
 void bthandle_add(struct bthandle *handle, vamp_t number)
 {
-#if SANITY_CHECK
-	assert(handle != NULL);
-#endif
+	sanitycheck(handle != NULL);
 	handle->tree = btree_add(handle->tree, number, &(handle->size));
 }
 
@@ -777,9 +771,7 @@ struct matrix
 
 struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 {
-	#if SANITY_CHECK
-		assert(lmin <= lmax);
-	#endif
+	sanitycheck(lmin <= lmax);
 	struct matrix *new = malloc(sizeof(struct matrix));
 	if (new == NULL)
 		abort();
@@ -867,7 +859,11 @@ struct vargs	/* Vampire arguments */
 {
 	vamp_t min;
 	vamp_t max;
-	vamp_t count;
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+	vamp_t fang_count;
+#else
+	vamp_t *count;
+#endif
 	double	runtime;
 	pthread_mutex_t *mutex;
 	struct matrix *mat;
@@ -881,10 +877,13 @@ struct vargs	/* Vampire arguments */
 	digits_t *dig;
 	fang_t digsize;
 #endif
-	vamp_t *total_count;
 };
 
-struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct matrix *mat, vamp_t *total_count)
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct matrix *mat)
+#else
+struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct matrix *mat, vamp_t *count)
+#endif
 {
 	struct vargs *new = malloc(sizeof(struct vargs));
 	if (new == NULL)
@@ -892,11 +891,15 @@ struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct 
 
 	new->min = min;
 	new->max = max;
-	new->count = 0;
 	new->runtime = 0.0;
 	new->mutex = mutex;
 	new->mat = mat;
-	new->total_count = total_count;
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+	new->fang_count = 0;
+#else
+	new->count = count;
+#endif
+
 
 #ifdef PROCESS_RESULTS
 	new->lhandle = llhandle_init();
@@ -993,13 +996,14 @@ void *vampire(struct vargs *args)
 						goto vampire_exit;
 
 				if (mult_zero || notrailingzero(multiplicand)) {
+					#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+						args->fang_count += 1;
+					#endif
+					#ifdef DUMP_RESULTS
+						printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
+					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
-					#endif
-
-					#ifdef DUMP_RESULTS
-						args->count += 1;
-						//printf("%llu = %llu %llu\n", product, multiplier, multiplicand);
 					#endif
 				}
 vampire_exit:
@@ -1022,7 +1026,7 @@ vampire_exit:
 	return 0;
 }
 
-#else
+#else /* !JENS_K_A_OPTIMIZATION */
 
 void *vampire(struct vargs *args)
 {
@@ -1124,11 +1128,11 @@ void *vampire(struct vargs *args)
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
 					if (mult_zero || notrailingzero(multiplicand)) {
-					#ifdef COUNT_RESULTS
-						args->count += 1;
+					#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+						args->fang_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
-						printf("%llu = %llu %llu\n", product, multiplier, multiplicand);
+						printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
 					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
@@ -1172,7 +1176,7 @@ void *vampire(struct vargs *args)
 	return 0;
 }
 
-#endif
+#endif  /* !JENS_K_A_OPTIMIZATION */
 
 void *thread_worker(void *void_args)
 {
@@ -1202,38 +1206,34 @@ void *thread_worker(void *void_args)
 			vampire(args);
 
 			#ifdef PROCESS_RESULTS
-				args->count += args->lhandle->size;
 				bool row_complete = false;
-				vamp_t tmp_count;
-				struct tile *tmp = NULL;
 
 // Critical section start
 				pthread_mutex_lock(args->mutex);
 
 				current->result = args->lhandle;
 				current->complete = true;
+				do {
+					row_complete = false;
+					if (args->mat->row_cleanup < args->mat->size)
+						row_complete = args->mat->arr[args->mat->row_cleanup]->complete;
 
-				if (args->mat->row_cleanup < args->mat->size)
-					row_complete = args->mat->arr[args->mat->row_cleanup]->complete;
+					if (row_complete == true) {
+						*(args->count) += args->mat->arr[args->mat->row_cleanup]->result->size;
 
-				if (row_complete == true) {
-					tmp_count = *(args->total_count);
-					tmp = args->mat->arr[args->mat->row_cleanup];
-					args->mat->arr[args->mat->row_cleanup] = NULL;
-					*(args->total_count) += tmp->result->size;
-					args->mat->row_cleanup += 1;
-				}
+						#ifdef PRINT_RESULTS
+							llist_print(args->mat->arr[args->mat->row_cleanup]->result->head, *(args->count));
+						#endif
+
+						tile_free(args->mat->arr[args->mat->row_cleanup]);
+						args->mat->arr[args->mat->row_cleanup] = NULL;
+						args->mat->row_cleanup += 1;
+					}
+
+				} while (row_complete == true);
+
 				pthread_mutex_unlock(args->mutex);
 // Critical section end
-
-				if (row_complete == true) {
-					#ifdef PRINT_RESULTS
-						llist_print(tmp->result->head, tmp_count);
-					#endif
-					tmp_count += tmp->result->size;
-
-					tile_free(tmp);
-				}
 
 				args->lhandle = llhandle_init();
 				llhandle_reset(args->lhandle);
@@ -1292,7 +1292,12 @@ int main(int argc, char* argv[])
 	vamp_t counter = 0;
 	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		input[thread] = vargs_init(0, 0, &mutex, NULL, &counter);
+		#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+			input[thread] = vargs_init(0, 0, &mutex, NULL);
+		#else
+			input[thread] = vargs_init(0, 0, &mutex, NULL, &counter);
+		#endif
+			
 
 #if JENS_K_A_OPTIMIZATION
 	fang_t digsize = pow10v(length(max) - 2 * (length(max) / 3));
@@ -1348,7 +1353,7 @@ int main(int argc, char* argv[])
 	double total_time = 0.0;
 	fprintf(stderr, "Thread  Runtime Count\n");
 	for (thread_t thread = 0; thread<THREADS; thread++) {
-		fprintf(stderr, "%u\t%.2lfs\t%llu\t[%llu\t%llu]\n", thread, input[thread]->runtime, input[thread]->count, input[thread]->min, input[thread]->max);
+		fprintf(stderr, "%u\t%.2lfs\t%llu\t[%llu\t%llu]\n", thread, input[thread]->runtime, input[thread]->fang_pairs, input[thread]->min, input[thread]->max);
 		total_time += input[thread]->runtime;
 	}
 	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
@@ -1357,18 +1362,23 @@ int main(int argc, char* argv[])
 	#if (defined PROCESS_RESULTS) && (PRINT_DIST_MATRIX) && (THREADS > 8)
 		double distrubution = 0.0;
 		for (thread_t thread = 0; thread < THREADS; thread++) {
-			distrubution += ((double)input[thread]->count) / ((double)(counter));
+			distrubution += ((double)input[thread]->fang_pairs) / ((double)(counter));
 			fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread+1, 10*THREADS/9);
 			if ((thread+1) % 10 == 0)
 				fprintf(stderr, "\n");
 		}
 	#endif
 
-	vamp_t tmp = 0;
-	for (thread_t thread = 0; thread<THREADS; thread++)
-		tmp += input[thread]->count;
 
-	fprintf(stderr, "Found: %llu vampire numbers.\n", tmp);
+
+
+	#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+		for (thread_t thread = 0; thread<THREADS; thread++)
+			counter += input[thread]->fang_count;
+		fprintf(stderr, "Found: %llu valid fang pairs.\n", counter);
+	#else
+		fprintf(stderr, "Found: %llu vampire numbers.\n", counter);
+	#endif
 
 	for (thread_t thread = 0; thread<THREADS; thread++)
 		vargs_free(input[thread]);
