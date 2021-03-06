@@ -42,6 +42,7 @@
 
 // Compile with: gcc -O3 -Wall -Wextra -pthread -lm -o helsing helsing.c
 // Check memory with valgrind --tool=massif
+// Check threads with thread sanitizer -fsanitize=thread
 
 /*--------------------------- COMPILATION OPTIONS ---------------------------*/
 #define THREADS 1
@@ -97,7 +98,7 @@
  * concatenation of digits, but the digits themselves, as well as any subset of
  * digits, are not special at all. In fact they can be encountered inside many
  * other numbers too, and if we store the total count of each digit in memory
- * we won't have to recompute it for each number. 
+ * we won't have to recompute it for each number.
  *
  *	This is achieved with an array. To save memory, a single unsigned n-bit
  * integer is used to store the amount of each digit. Each element is treated
@@ -125,20 +126,10 @@
 /*
  * VERBOSE_LEVEL:
  *
- * 0 - COUNT_RAW
- * 	Count fang pairs as they are being discovered.
- *
- * 1 - PRINT RAW
- * 	Print fang pairs as they are being discovered.
- *
- * 2 - COUNT
- *	Order vampire numbers & filter out duplicates
- *	Print the total count
- *
+ * 0 - Count fang pairs
+ * 1 - Print fang pairs
+ * 2 - Count vampire numbers
  * 3 - OEIS
- *	Order vampire numbers & filter out duplicates
- *	Print all vampire numbers
- *	Print the total count
  */
 
 #define VERBOSE_LEVEL 2
@@ -363,27 +354,29 @@ vamp_t div_roof (vamp_t x, vamp_t y)
 #if DIST_COMPENSATION
 long double distribution_inverted_integral(long double area)
 {
+	long double exponent;
 	#if (DIST_COMPENSATION == 1)
-		return (1.0 - 0.9 * powl(1.0-area, 1.0/(3.0-(0.7*area))));
+		exponent = 1.0/(3.0-(0.7*area));
+		return (1.0 - 0.9 * powl(1.0-area, exponent));
 
 	#elif (DIST_COMPENSATION == 2)
-		long double exponent = 1.0/(3.0 -(0.3 * area * area) -(0.7 * area) + 0.3);
+		exponent = 1.0/(3.0 -(0.3 * area * area) -(0.7 * area) + 0.3);
 		return (1.0 - 0.9 * powl(1.0-area, exponent));
 
 	#elif (DIST_COMPENSATION == 3)
-		long double exponent = 1.0/(3.0 -(0.1 * area * area) -(1.05 * area) + 0.4);
+		exponent = 1.0/(3.0 -(0.1 * area * area) -(1.05 * area) + 0.4);
 		return (1.0 - 0.9 * powl(1.0-area, exponent));
 
 	#elif (DIST_COMPENSATION == 4)
-		long double exponent = 1.0/(3.0 -0.1 * pow(area, 3.0) + 0.27 * pow(area, 2.0) -1.4 * area + 0.5);
+		exponent = 1.0/(3.0 -0.1 * powl(area, 3.0) + 0.27 * powl(area, 2.0) -1.4 * area + 0.5);
 		return (1.0 - 0.9 * powl(1.0-area, exponent));
 
 	#elif (DIST_COMPENSATION == 5)
-		long double exponent = 1.0/(3.0 -0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) -1.7 * area + 0.59);
+		exponent = 1.0/(3.0 -0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) -1.7 * area + 0.59);
 		return (1.0 - 0.899999999999999999L * powl(1.0-area, exponent));
 
 	#elif (DIST_COMPENSATION == 6)
-		long double exponent = 1.0/(3.0 -0.27 * powl(area, 3.0) + 0.64 * powl(area, 2.0) -1.7 * area + 0.59);
+		exponent = 1.0/(3.0 -0.27 * powl(area, 3.0) + 0.64 * powl(area, 2.0) -1.7 * area + 0.59);
 		return (1.0 - 0.899999999999999999L * powl(1.0-area, exponent));
 
 	#endif
@@ -438,7 +431,8 @@ struct llhandle
 struct llhandle *llhandle_init()
 {
 	struct llhandle *new = malloc(sizeof(struct llhandle));
-	assert(new != NULL);
+	if (new == NULL)
+		abort();
 
 #ifdef STORE_RESULTS
 	new->head = NULL;
@@ -456,11 +450,7 @@ void llhandle_free(struct llhandle *handle)
 	free(handle);
 }
 
-#ifdef STORE_RESULTS
-void llhandle_add(struct llhandle *handle, vamp_t value)
-#else
-void llhandle_add(struct llhandle *handle)
-#endif
+void llhandle_add(struct llhandle *handle, [[maybe_unused]] vamp_t value)
 {
 	if (handle == NULL)
 		return;
@@ -644,12 +634,7 @@ struct btree *btree_cleanup(
 	tree->right = btree_cleanup(tree->right, number, lhandle, btree_size);
 
 	if (tree->value >= number) {
-		#ifdef STORE_RESULTS
-			llhandle_add(lhandle, tree->value);
-		#else
-			llhandle_add(lhandle);
-		#endif
-
+		llhandle_add(lhandle, tree->value);
 		struct btree *tmp = tree->left;
 		tree->left = NULL;
 		btree_free(tree);
@@ -710,13 +695,15 @@ void bthandle_reset(struct bthandle *handle)
  * and free up memory. Works best with low thread counts.
  */
 void bthandle_cleanup(
-	struct bthandle *handle,
-	vamp_t number,
-	struct llhandle *lhandle)
+	[[maybe_unused]] struct bthandle *handle,
+	[[maybe_unused]] vamp_t number,
+	[[maybe_unused]] struct llhandle *lhandle)
 {
+#ifdef PROCESS_RESULTS
 	struct btree *tree = handle->tree;
 	vamp_t *size = &(handle->size);
 	handle->tree = btree_cleanup(tree, number, lhandle, size);
+#endif
 }
 
 /*----------------------------------- arr -----------------------------------*/
@@ -731,7 +718,6 @@ struct tile
 	bool complete;
 #endif
 };
-
 
 struct tile *tile_init(vamp_t min, vamp_t max)
 {
@@ -827,7 +813,6 @@ struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 		if (i + iterator == vamp_max)
 			break;
 	}
-
 	return new;
 }
 
@@ -842,69 +827,92 @@ void matrix_free(struct matrix *ptr)
 	free(ptr);
 }
 
-#ifdef PRINT_RESULTS
-void matrix_print(struct matrix *ptr, vamp_t *count)
+void matrix_print([[maybe_unused]] struct matrix *ptr, [[maybe_unused]] vamp_t *count)
 {
+#ifdef PRINT_RESULTS
 	for (vamp_t x = ptr->row_cleanup; x < ptr->size; x++)
 		if (ptr->arr[x] != NULL) {
 			llist_print(ptr->arr[x]->result->head, *count);
 			*count += ptr->arr[x]->result->size;
 		}
+#endif
 }
-#endif
 
-/*---------------------------------------------------------------------------*/
 
-struct vargs	/* Vampire arguments */
+/*-------------------------------- dig_count --------------------------------*/
+struct dig_count
 {
-	vamp_t min;
-	vamp_t max;
-#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-	vamp_t fang_count;
-#else
-	vamp_t *count;
-#endif
-	double	runtime;
-	pthread_mutex_t *mutex;
-	struct matrix *mat;
-
-#ifdef PROCESS_RESULTS
-	struct bthandle *thandle;
-	struct llhandle *lhandle;
-#endif
-
 #if JENS_K_A_OPTIMIZATION
 	digits_t *dig;
 	fang_t digsize;
 #endif
 };
 
-#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct matrix *mat)
-#else
-struct vargs *vargs_init(vamp_t min, vamp_t max, pthread_mutex_t *mutex, struct matrix *mat, vamp_t *count)
+struct dig_count *dig_count_init([[maybe_unused]] vamp_t max)
+{
+	struct dig_count *new = malloc(sizeof(struct dig_count));
+	if (new == NULL)
+		abort();
+
+#if JENS_K_A_OPTIMIZATION
+	new->digsize = pow10v(length(max) - 2 * (length(max) / 3));
+	new->dig = malloc(sizeof(digits_t) * new->digsize);
+	if (new->dig == NULL)
+		abort();
+
+	for (fang_t d = 0; d < new->digsize; d++) {
+		new->dig[d] = 0;
+		for (fang_t i = d; i > 0; i /= 10) {
+			digit_t digit = i % 10;
+			if (digit > 1)
+				new->dig[d] += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
+		}
+	}
 #endif
+	return new;
+}
+
+void dig_count_free(struct dig_count *ptr)
+{
+#if JENS_K_A_OPTIMIZATION
+	free(ptr->dig);
+#endif
+	free(ptr);
+}
+
+/*---------------------------------------------------------------------------*/
+
+struct vargs	/* Vampire arguments */
+{
+	vamp_t local_count;
+	double runtime;
+	struct dig_count *digptr;
+
+#ifdef PROCESS_RESULTS
+	struct bthandle *thandle;
+	struct llhandle *lhandle;
+#endif
+
+#ifdef SPDT_CLK_MODE
+	struct timespec start;
+#endif
+};
+
+struct vargs *vargs_init(struct dig_count *digptr)
 {
 	struct vargs *new = malloc(sizeof(struct vargs));
 	if (new == NULL)
 		abort();
 
-	new->min = min;
-	new->max = max;
 	new->runtime = 0.0;
-	new->mutex = mutex;
-	new->mat = mat;
-#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-	new->fang_count = 0;
-#else
-	new->count = count;
-#endif
-
+	new->local_count = 0;
 
 #ifdef PROCESS_RESULTS
 	new->lhandle = llhandle_init();
 	new->thandle = bthandle_init();
 #endif
+
+	new->digptr = digptr;
 	return new;
 }
 
@@ -917,22 +925,52 @@ void vargs_free(struct vargs *args)
 	free (args);
 }
 
+void vargs_reset(struct vargs *args)
+{
+	args->local_count = 0;
+	args->runtime = 0.0;
+
+#ifdef PROCESS_RESULTS
+	sanitycheck(args->lhandle == NULL);
+	args->lhandle = llhandle_init();
+	llhandle_reset(args->lhandle);
+	bthandle_reset(args->thandle);
+#endif
+}
+
+void vargs_timer_start([[maybe_unused]] struct vargs *args)
+{
+#ifdef SPDT_CLK_MODE
+	clock_gettime(SPDT_CLK_MODE, &(args->start));
+#endif
+}
+
+void vargs_timer_stop([[maybe_unused]] struct vargs *args)
+{
+#ifdef SPDT_CLK_MODE
+	struct timespec finish;
+	clock_gettime(SPDT_CLK_MODE, &(finish));
+	double elapsed = (finish.tv_sec - args->start.tv_sec);
+	elapsed += (finish.tv_nsec - args->start.tv_nsec) / 1000000000.0;
+	args->runtime += elapsed;
+#endif
+}
+
+void vargs_btree_cleanup([[maybe_unused]] struct vargs *args, [[maybe_unused]] vamp_t number)
+{
+#ifdef PROCESS_RESULTS
+	args->thandle->tree = btree_cleanup(args->thandle->tree, number, args->lhandle, &(args->thandle->size));
+#endif
+}
+
 /*---------------------------------------------------------------------------*/
 
 #if !JENS_K_A_OPTIMIZATION
 
-void *vampire(struct vargs *args)
+void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 {
-#ifdef SPDT_CLK_MODE
-	struct timespec start, finish;
-	double elapsed;
-	clock_gettime(SPDT_CLK_MODE, &start);
-#endif
-
-	vamp_t min = args->min;
-	vamp_t max = args->max;
+	vargs_timer_start(args);
 	vamp_t fmax = pow10v(length(max) / 2); // Max factor value.
-
 	vamp_t fmaxsquare = fmax * fmax;
 
 	if (max > fmaxsquare && min <= fmaxsquare)
@@ -956,11 +994,8 @@ void *vampire(struct vargs *args)
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
-
-			#ifdef PROCESS_RESULTS
-				if (mult_zero)
-					bthandle_cleanup(args->thandle, (multiplier + 1) *  multiplier, args->lhandle);
-			#endif
+			if (mult_zero)
+				vargs_btree_cleanup(args, (multiplier + 1) *  multiplier);
 		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
@@ -997,7 +1032,7 @@ void *vampire(struct vargs *args)
 
 				if (mult_zero || notrailingzero(multiplicand)) {
 					#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-						args->fang_count += 1;
+						args->local_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
 						printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
@@ -1011,33 +1046,17 @@ vampire_exit:
 			}
 		}
 	}
-
-#ifdef PROCESS_RESULTS
-	bthandle_cleanup(args->thandle, 0, args->lhandle);
-#endif
-
-#ifdef SPDT_CLK_MODE
-	clock_gettime(SPDT_CLK_MODE, &finish);
-	elapsed = (finish.tv_sec - start.tv_sec);
-	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-	args->runtime += elapsed;
-#endif
-
+	vargs_btree_cleanup(args, 0);
+	vargs_timer_stop(args);
 	return 0;
 }
 
 #else /* !JENS_K_A_OPTIMIZATION */
 
-void *vampire(struct vargs *args)
+void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 {
-#ifdef SPDT_CLK_MODE
-	struct timespec start, finish;
-	double elapsed;
-	clock_gettime(SPDT_CLK_MODE, &start);
-#endif
+	vargs_timer_start(args);
 
-	vamp_t min = args->min;
-	vamp_t max = args->max;
 	length_t fang_length = length(min) / 2;
 
 	vamp_t fmax;
@@ -1065,7 +1084,7 @@ void *vampire(struct vargs *args)
 	if (power_a < 900)
 		power_a = power_b;
 
-	digits_t *dig = args->dig;
+	digits_t *dig = args->digptr->dig;
 
 	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
@@ -1083,10 +1102,9 @@ void *vampire(struct vargs *args)
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
 
-			#ifdef PROCESS_RESULTS
-				if (mult_zero)
-					bthandle_cleanup(args->thandle, (multiplier + 1) *  multiplier, args->lhandle);
-			#endif
+			if (mult_zero)
+				vargs_btree_cleanup(args, (multiplier + 1) *  multiplier);
+
 		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
@@ -1110,7 +1128,7 @@ void *vampire(struct vargs *args)
 
 			digits_t digd;
 
-			if (min_sqrt >= args->digsize) {
+			if (min_sqrt >= args->digptr->digsize) {
 				digd = 0;
 				for (fang_t i = multiplier; i > 0; i /= 10) {
 					digit_t digit = i % 10;
@@ -1129,10 +1147,11 @@ void *vampire(struct vargs *args)
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
 					if (mult_zero || notrailingzero(multiplicand)) {
 					#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-						args->fang_count += 1;
+						args->local_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
-						printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
+						//printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
+						printf("%llu\n", product);
 					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
@@ -1155,90 +1174,108 @@ void *vampire(struct vargs *args)
 				}
 				product += product_iterator;
 			}
-			#ifdef PROCESS_RESULTS
 			if (multiplier < max_sqrt && mult_zero)
-				bthandle_cleanup(args->thandle, product, args->lhandle);
-			#endif
-			}
+				vargs_btree_cleanup(args, product);
+		}
 	}
-
-#ifdef PROCESS_RESULTS
-	bthandle_cleanup(args->thandle, 0, args->lhandle);
-#endif
-
-#ifdef SPDT_CLK_MODE
-	clock_gettime(SPDT_CLK_MODE, &finish);
-	elapsed = (finish.tv_sec - start.tv_sec);
-	elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-	args->runtime += elapsed;
-#endif
-
+	vargs_btree_cleanup(args, 0);
+	vargs_timer_stop(args);
 	return 0;
 }
-
 #endif  /* !JENS_K_A_OPTIMIZATION */
+
+/*--------------------------------- Threads ---------------------------------*/
+struct thread_args
+{
+	pthread_mutex_t *mutex;
+	struct matrix *mat;
+	vamp_t *count;
+	vamp_t local_count;
+	double	runtime;
+	struct dig_count *digptr;
+};
+
+struct thread_args *thread_args_init(
+	pthread_mutex_t *mutex,
+	struct matrix *mat,
+	vamp_t *count,
+	struct dig_count *digptr)
+{
+	struct thread_args *new = malloc(sizeof(struct thread_args));
+	if (new == NULL)
+		abort();
+
+	new->mutex = mutex;
+	new->mat = mat;
+	new->count = count;
+	new->local_count = 0;
+	new->runtime = 0.0;
+	new->digptr = digptr;
+	return new;
+}
+
+void thread_args_free(struct thread_args *ptr)
+{
+	free(ptr);
+}
 
 void *thread_worker(void *void_args)
 {
-	struct vargs *args = (struct vargs *)void_args;
+	struct thread_args *args = (struct thread_args *)void_args;
+	struct vargs *vamp_args = vargs_init(args->digptr);
+
+	struct tile *current;
 	bool active = true;
 
 	while (active) {
 		active = false;
-		vamp_t row;
 
 // Critical section start
 		pthread_mutex_lock(args->mutex);
 
 		if (args->mat->row < args->mat->size) {
-			row = args->mat->row;
+			current = args->mat->arr[args->mat->row];
 			active = true;
-
-			args->mat->row++;
+			args->mat->row += 1;
 		}
 		pthread_mutex_unlock(args->mutex);
 // Critical section end
 
 		if (active) {
-			struct tile *current = args->mat->arr[row];
-			args->min = current->lmin;
-			args->max = current->lmax;
-			vampire(args);
-
-			#ifdef PROCESS_RESULTS
-				bool row_complete = false;
+			vampire(current->lmin, current->lmax, vamp_args);
 
 // Critical section start
-				pthread_mutex_lock(args->mutex);
+			pthread_mutex_lock(args->mutex);
+				#ifdef PROCESS_RESULTS
+					bool row_complete = false;
+					current->result = vamp_args->lhandle;
+					current->complete = true;
+					do {
+						row_complete = false;
+						if (args->mat->row_cleanup < args->mat->size)
+							row_complete = args->mat->arr[args->mat->row_cleanup]->complete;
 
-				current->result = args->lhandle;
-				current->complete = true;
-				do {
-					row_complete = false;
-					if (args->mat->row_cleanup < args->mat->size)
-						row_complete = args->mat->arr[args->mat->row_cleanup]->complete;
+						if (row_complete == true) {
+							#ifdef PRINT_RESULTS
+								llist_print(args->mat->arr[args->mat->row_cleanup]->result->head, *(args->count));
+							#endif
+							*(args->count) += args->mat->arr[args->mat->row_cleanup]->result->size;
 
-					if (row_complete == true) {
-						*(args->count) += args->mat->arr[args->mat->row_cleanup]->result->size;
+							tile_free(args->mat->arr[args->mat->row_cleanup]);
+							args->mat->arr[args->mat->row_cleanup] = NULL;
+							args->mat->row_cleanup += 1;
+						}
 
-						#ifdef PRINT_RESULTS
-							llist_print(args->mat->arr[args->mat->row_cleanup]->result->head, *(args->count));
-						#endif
-
-						tile_free(args->mat->arr[args->mat->row_cleanup]);
-						args->mat->arr[args->mat->row_cleanup] = NULL;
-						args->mat->row_cleanup += 1;
-					}
-
-				} while (row_complete == true);
-
-				pthread_mutex_unlock(args->mutex);
+					} while (row_complete == true);
+				#else
+					*(args->count) += vamp_args->local_count;
+				#endif
+			pthread_mutex_unlock(args->mutex);
 // Critical section end
 
-				args->lhandle = llhandle_init();
-				llhandle_reset(args->lhandle);
-				bthandle_reset(args->thandle);
-			#endif
+			args->local_count += vamp_args->local_count;
+			args->runtime += vamp_args->runtime;
+			vargs_reset(vamp_args);
 		}
 	}
 	return 0;
@@ -1274,10 +1311,13 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Max out of range: [0, %llu]\n", vamp_max);
 		return 1;
 	}
-
 	if (min > max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		return 1;
+	}
+	if (max > 9999999999999999) {
+		fprintf(stderr, "WARNING: the code might experience overflow,");
+		fprintf(stderr, " set DIG_ELEMENT_BITS to 64\n");
 	}
 
 	min = get_min(min, max);
@@ -1287,55 +1327,29 @@ int main(int argc, char* argv[])
 	vamp_t lmin = min;
 	vamp_t lmax = get_lmax(lmin, max);
 
-	struct vargs *input[THREADS];
+	struct thread_args *tinput[THREADS];
+
 	pthread_t threads[THREADS];
 	vamp_t counter = 0;
 	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+	struct dig_count *digptr = dig_count_init(max);
+
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-			input[thread] = vargs_init(0, 0, &mutex, NULL);
-		#else
-			input[thread] = vargs_init(0, 0, &mutex, NULL, &counter);
-		#endif
-			
-
-#if JENS_K_A_OPTIMIZATION
-	fang_t digsize = pow10v(length(max) - 2 * (length(max) / 3));
-	digits_t *dig = malloc(sizeof(digits_t) * digsize);
-	if (dig == NULL)
-		abort();
-
-	for (fang_t d = 0; d < digsize; d++) {
-		dig[d] = 0;
-		for (fang_t i = d; i > 0; i /= 10) {
-			digit_t digit = i % 10;
-			if (digit > 1)
-				dig[d] += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
-		}
-	}
-#endif
+		tinput[thread] = thread_args_init(&mutex, NULL, &counter, digptr);
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
 
 		struct matrix *mat = matrix_init(lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++) {
-			input[thread]->mat = mat;
-#if JENS_K_A_OPTIMIZATION
-			input[thread]->dig = dig;
-			input[thread]->digsize = digsize;
-#endif
+			tinput[thread]->mat = mat;
+			assert(pthread_create(&threads[thread], NULL, thread_worker, (void *)tinput[thread]) == 0);
 		}
-
-		for (thread_t thread = 0; thread < THREADS; thread++)
-			assert(pthread_create(&threads[thread], NULL, thread_worker, (void *)input[thread]) == 0);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
-		#ifdef PRINT_RESULTS
-			matrix_print(mat, &counter);
-		#endif
-
+		matrix_print(mat, &counter);
 		matrix_free(mat);
 
 		if (lmax == max)
@@ -1345,43 +1359,36 @@ int main(int argc, char* argv[])
 		lmax = get_lmax(lmin, max);
 	}
 
-#if JENS_K_A_OPTIMIZATION
-	free(dig);
-#endif
+	dig_count_free(digptr);
 
-#ifdef SPDT_CLK_MODE
-	double total_time = 0.0;
-	fprintf(stderr, "Thread  Runtime Count\n");
-	for (thread_t thread = 0; thread<THREADS; thread++) {
-		fprintf(stderr, "%u\t%.2lfs\t%llu\t[%llu\t%llu]\n", thread, input[thread]->runtime, input[thread]->fang_pairs, input[thread]->min, input[thread]->max);
-		total_time += input[thread]->runtime;
-	}
-	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
-#endif
+	#ifdef SPDT_CLK_MODE
+		double total_time = 0.0;
+		fprintf(stderr, "Thread  Runtime Count\n");
+		for (thread_t thread = 0; thread<THREADS; thread++) {
+			fprintf(stderr, "%u\t%.2lfs\t%llu\n", thread, tinput[thread]->runtime, tinput[thread]->local_count);
+			total_time += tinput[thread]->runtime;
+		}
+		fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
+	#endif
 
 	#if (defined PROCESS_RESULTS) && (PRINT_DIST_MATRIX) && (THREADS > 8)
 		double distrubution = 0.0;
 		for (thread_t thread = 0; thread < THREADS; thread++) {
-			distrubution += ((double)input[thread]->fang_pairs) / ((double)(counter));
-			fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread+1, 10*THREADS/9);
+			distrubution += ((double)tinput[thread]->count) / ((double)(counter));
+			fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread+1, (10 * THREADS) / 9);
 			if ((thread+1) % 10 == 0)
 				fprintf(stderr, "\n");
 		}
 	#endif
 
-
-
-
 	#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-		for (thread_t thread = 0; thread<THREADS; thread++)
-			counter += input[thread]->fang_count;
 		fprintf(stderr, "Found: %llu valid fang pairs.\n", counter);
 	#else
 		fprintf(stderr, "Found: %llu vampire numbers.\n", counter);
 	#endif
 
 	for (thread_t thread = 0; thread<THREADS; thread++)
-		vargs_free(input[thread]);
+		thread_args_free(tinput[thread]);
 
 	return 0;
 }
