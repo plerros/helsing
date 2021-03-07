@@ -88,36 +88,51 @@
  * JENS_K_A_OPTIMIZATION:
  *
  * 	This code was originally written by Jens Kruse Andersen, and is
- * included with their permission. Adjustments were made to accomodate
- * features such as multithreading.
+ * included with their permission. Adjustments were made to reduce 
+ * computational complexity and memory usage, to improve memory access patterns
+ * and to accomodate features such as multithreading.
  *
  * Source: http://primerecords.dk/vampires/index.htm
  *
- * 	 When performing a vampirism check for a given product and it's
- * factors, the order of the digits is irrelevant. Each number is a particular
- * concatenation of digits, but the digits themselves, as well as any subset of
- * digits, are not special at all. In fact they can be encountered inside many
- * other numbers too, and if we store the total count of each digit in memory
- * we won't have to recompute it for each number.
+ * There are two things that this optimization does:
  *
- *	This is achieved with an array. To save memory, a single unsigned n-bit
- * integer is used to store the amount of each digit. Each element is treated
- * as 8 or 9 segments.
+ * 1) A trick that can reduce computational complexity. Here is an example
+ * 	that illustrates that:
+ *
+ * 	Given a set of numbers {123456, 125634, 345612}, in order to convert
+ * 	them to arrays of digits, 3 * 6 = 18 modulo and division operations are
+ * 	required. However if we calculate and store the {12, 34, 56}, we can
+ * 	reconstruct the original numbers {[12][34][56], [12][56][34],
+ * 	[34][56][12]} and their arrays of digits, with only 3 * 2 = 6 modulo
+ *	and division operations.
+ *
+ * 2) Minimize memory usage by storing less elements of smaller size.
+ *
+ * 	Given a product A and its fangs B & C, in order to store the sum of
+ *	each digit, we can use an array of 10 elements.
+ *
+ *	Because B & C are both fangs it will be always true that arr_A and
+ *	arr_B + arr_C have the same total sum of digits and therefore we can
+ *	avoid storing one of the elements. I chose not to store the 0s.
+ *
+ *	The minimum size of each element is roof(log2(roof(log10(2 ^ n)))), where n
+ * 	are the bits used to represent the number A. For a 64-bit unsigned integer
+ *	that would be 5 bits.
+ *
+ *	To avoid memory alignment issues, we are going to use a single 32 or 64
+ *	bit unsigned integer, which we are going to treat as the aforementioned
+ *	array with some adjustments to minimize padding overhead.
+ *
+ *	Last but not least I think I can get away with not storing 1s too; Only
+ *	a fang with more than 8 * 1s could fool the modulo 9 congruence, so to
+ *	check numbers above 10^16 - 1 make sure DIG_ELEMENT_BITS is set to 64
  *
  * 	For example a 32-bit sized element gets split into 8 * 4-bit segments
- * and a 64-bit sized element gets split into 9 * 7-bit segments:
- *                                     [99998888|77776666|55554444|33332222]
- * [X9999999|88888887|77777766|66666555|55554444|44433333|33222222|21111111]
- * 64       56       48       40       32       24       16       8        0
- *
- * 	We can choose any digit and ignore it, I chose not to store the 0s.
- * I think I can get away with not storing 1s too; Only a fang with more than
- * 8 * 1s could fool the modulo 9 congruence and such numbers are pretty rare.
- * In the code, DIGSKIP defines the amount of positive whole numbers, that can
- * be ignored.
- *
- * To check numbers above 10^16 - 1 make sure DIG_ELEMENT_BITS is set to 64, as
- * the dig[] array may experience overflow.
+ * 	and a 64-bit sized element gets split into 9 * 7-bit segments:
+ * 	                                99998888777766665555444433332222
+ * 	X999999988888887777777666666655555554444444333333322222221111111
+ * 	|       |       |       |       |       |       |       |      |
+ * 	63      55      47      39      31      23      15      7      0
  */
 
 #define JENS_K_A_OPTIMIZATION true
@@ -132,7 +147,7 @@
  * 3 - OEIS
  */
 
-#define VERBOSE_LEVEL 2
+#define VERBOSE_LEVEL 0
 
 /*
  * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size
@@ -752,33 +767,26 @@ struct matrix
 	vamp_t size;
 	vamp_t row;	// Current row to help iteration.
 	vamp_t row_cleanup;
-	thread_t column;	// Current column to help iteration.
 };
 
-struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
+void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 {
-	sanitycheck(lmin <= lmax);
-	struct matrix *new = malloc(sizeof(struct matrix));
-	if (new == NULL)
-		abort();
-
 	#if (AUTO_TILE_SIZE && THREADS > 1)
 		vamp_t tile_size = (lmax - lmin) / (4 * THREADS + 2);
 	#else
 		vamp_t tile_size = TILE_SIZE;
 	#endif
 
-	new->size = div_roof((lmax - lmin + 1), tile_size + (tile_size < vamp_max));
-	new->row = 0;
-	new->row_cleanup = 0;
-	new->column = 0;
+	for (vamp_t i = 0; i < ptr->size; i++)
+		tile_free(ptr->arr[i]);
+	free(ptr->arr);
 
-	new->arr = malloc(sizeof(struct tile *) * new->size);
-	if (new->arr == NULL)
+	ptr->row = 0;
+	ptr->row_cleanup = 0;
+	ptr->size = div_roof((lmax - lmin + 1), tile_size + (tile_size < vamp_max));
+	ptr->arr = malloc(sizeof(struct tile *) * ptr->size);
+	if (ptr->arr == NULL)
 		abort();
-
-	vamp_t x = 0;
-	vamp_t iterator = tile_size;
 
 	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
 		vamp_t current = lmin;
@@ -790,6 +798,8 @@ struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 		long double total_area = max - lmin + 1;
 	#endif
 
+	vamp_t x = 0;
+	vamp_t iterator = tile_size;
 	for (vamp_t i = lmin; i <= lmax; i += iterator + 1) {
 		if (lmax - i < tile_size)
 			iterator = lmax - i;
@@ -806,13 +816,24 @@ struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
 			current = last + 1;
 		#endif
 
-		new->arr[x++] = tile_init(first, last);
+		ptr->arr[x++] = tile_init(first, last);
 
 		if (i == lmax)
 			break;
 		if (i + iterator == vamp_max)
 			break;
 	}
+}
+
+struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
+{
+	sanitycheck(lmin <= lmax);
+	struct matrix *new = malloc(sizeof(struct matrix));
+	if (new == NULL)
+		abort();
+
+	new->arr = NULL;
+	matrix_set(new, lmin, lmax);
 	return new;
 }
 
@@ -864,7 +885,7 @@ struct dig_count *dig_count_init([[maybe_unused]] vamp_t max)
 		new->dig[d] = 0;
 		for (fang_t i = d; i > 0; i /= 10) {
 			digit_t digit = i % 10;
-			if (digit > 1)
+			if (digit > DIGSKIP - 1)
 				new->dig[d] += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
 		}
 	}
@@ -885,16 +906,11 @@ void dig_count_free(struct dig_count *ptr)
 struct vargs	/* Vampire arguments */
 {
 	vamp_t local_count;
-	double runtime;
 	struct dig_count *digptr;
 
 #ifdef PROCESS_RESULTS
 	struct bthandle *thandle;
 	struct llhandle *lhandle;
-#endif
-
-#ifdef SPDT_CLK_MODE
-	struct timespec start;
 #endif
 };
 
@@ -904,7 +920,6 @@ struct vargs *vargs_init(struct dig_count *digptr)
 	if (new == NULL)
 		abort();
 
-	new->runtime = 0.0;
 	new->local_count = 0;
 
 #ifdef PROCESS_RESULTS
@@ -928,31 +943,12 @@ void vargs_free(struct vargs *args)
 void vargs_reset(struct vargs *args)
 {
 	args->local_count = 0;
-	args->runtime = 0.0;
 
 #ifdef PROCESS_RESULTS
 	sanitycheck(args->lhandle == NULL);
 	args->lhandle = llhandle_init();
 	llhandle_reset(args->lhandle);
 	bthandle_reset(args->thandle);
-#endif
-}
-
-void vargs_timer_start([[maybe_unused]] struct vargs *args)
-{
-#ifdef SPDT_CLK_MODE
-	clock_gettime(SPDT_CLK_MODE, &(args->start));
-#endif
-}
-
-void vargs_timer_stop([[maybe_unused]] struct vargs *args)
-{
-#ifdef SPDT_CLK_MODE
-	struct timespec finish;
-	clock_gettime(SPDT_CLK_MODE, &(finish));
-	double elapsed = (finish.tv_sec - args->start.tv_sec);
-	elapsed += (finish.tv_nsec - args->start.tv_nsec) / 1000000000.0;
-	args->runtime += elapsed;
 #endif
 }
 
@@ -969,7 +965,6 @@ void vargs_btree_cleanup([[maybe_unused]] struct vargs *args, [[maybe_unused]] v
 
 void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 {
-	vargs_timer_start(args);
 	vamp_t fmax = pow10v(length(max) / 2); // Max factor value.
 	vamp_t fmaxsquare = fmax * fmax;
 
@@ -1047,7 +1042,6 @@ vampire_exit:
 		}
 	}
 	vargs_btree_cleanup(args, 0);
-	vargs_timer_stop(args);
 	return 0;
 }
 
@@ -1055,7 +1049,6 @@ vampire_exit:
 
 void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 {
-	vargs_timer_start(args);
 
 	length_t fang_length = length(min) / 2;
 
@@ -1073,7 +1066,6 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 		if (max > fmaxsquare && min <= fmaxsquare)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
 	}
-
 
 	fang_t length_a = (2 * fang_length) / 3;
 	fang_t length_b = 2 * (fang_length - length_a);
@@ -1132,7 +1124,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 				digd = 0;
 				for (fang_t i = multiplier; i > 0; i /= 10) {
 					digit_t digit = i % 10;
-					if (digit > 1)
+					if (digit > DIGSKIP - 1)
 						digd += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
 				}
 			} else {
@@ -1179,7 +1171,6 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 		}
 	}
 	vargs_btree_cleanup(args, 0);
-	vargs_timer_stop(args);
 	return 0;
 }
 #endif  /* !JENS_K_A_OPTIMIZATION */
@@ -1193,6 +1184,10 @@ struct thread_args
 	vamp_t local_count;
 	double	runtime;
 	struct dig_count *digptr;
+
+#ifdef SPDT_CLK_MODE
+	struct timespec start;
+#endif
 };
 
 struct thread_args *thread_args_init(
@@ -1219,10 +1214,29 @@ void thread_args_free(struct thread_args *ptr)
 	free(ptr);
 }
 
+void thread_timer_start([[maybe_unused]] struct thread_args *ptr)
+{
+#ifdef SPDT_CLK_MODE
+	clock_gettime(SPDT_CLK_MODE, &(ptr->start));
+#endif
+}
+
+void thread_timer_stop([[maybe_unused]] struct thread_args *ptr)
+{
+#ifdef SPDT_CLK_MODE
+	struct timespec finish;
+	clock_gettime(SPDT_CLK_MODE, &(finish));
+	double elapsed = (finish.tv_sec - ptr->start.tv_sec);
+	elapsed += (finish.tv_nsec - ptr->start.tv_nsec) / 1000000000.0;
+	ptr->runtime = elapsed;
+#endif
+}
+
 void *thread_worker(void *void_args)
 {
 	struct thread_args *args = (struct thread_args *)void_args;
 	struct vargs *vamp_args = vargs_init(args->digptr);
+	//thread_timer_start(args);
 
 	struct tile *current;
 	bool active = true;
@@ -1274,10 +1288,10 @@ void *thread_worker(void *void_args)
 // Critical section end
 
 			args->local_count += vamp_args->local_count;
-			args->runtime += vamp_args->runtime;
 			vargs_reset(vamp_args);
 		}
 	}
+	//thread_timer_stop(args);
 	return 0;
 }
 
@@ -1327,6 +1341,7 @@ int main(int argc, char* argv[])
 	vamp_t lmin = min;
 	vamp_t lmax = get_lmax(lmin, max);
 
+	struct matrix *mat = matrix_init(0, 0);
 	struct thread_args *tinput[THREADS];
 
 	pthread_t threads[THREADS];
@@ -1336,30 +1351,25 @@ int main(int argc, char* argv[])
 	struct dig_count *digptr = dig_count_init(max);
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		tinput[thread] = thread_args_init(&mutex, NULL, &counter, digptr);
+		tinput[thread] = thread_args_init(&mutex, mat, &counter, digptr);
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
-
-		struct matrix *mat = matrix_init(lmin, lmax);
-		for (thread_t thread = 0; thread < THREADS; thread++) {
-			tinput[thread]->mat = mat;
+		matrix_set(mat, lmin, lmax);
+		for (thread_t thread = 0; thread < THREADS; thread++)
 			assert(pthread_create(&threads[thread], NULL, thread_worker, (void *)tinput[thread]) == 0);
-		}
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
 		matrix_print(mat, &counter);
-		matrix_free(mat);
-
 		if (lmax == max)
 			break;
 
 		lmin = get_min(lmax + 1, max);
 		lmax = get_lmax(lmin, max);
 	}
-
 	dig_count_free(digptr);
+	matrix_free(mat);
 
 	#ifdef SPDT_CLK_MODE
 		double total_time = 0.0;
@@ -1371,7 +1381,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
 	#endif
 
-	#if (defined PROCESS_RESULTS) && (PRINT_DIST_MATRIX) && (THREADS > 8)
+	#if (defined PROCESS_RESULTS) && PRINT_DIST_MATRIX && (THREADS > 8)
 		double distrubution = 0.0;
 		for (thread_t thread = 0; thread < THREADS; thread++) {
 			distrubution += ((double)tinput[thread]->count) / ((double)(counter));
