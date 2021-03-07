@@ -115,17 +115,18 @@
  *	arr_B + arr_C have the same total sum of digits and therefore we can
  *	avoid storing one of the elements. I chose not to store the 0s.
  *
- *	The minimum size of each element is roof(log2(roof(log10(2 ^ n)))), where n
- * 	are the bits used to represent the number A. For a 64-bit unsigned integer
- *	that would be 5 bits.
+ *	The minimum size of each element is roof(log2(roof(log10(2 ^ n)))),
+ * 	where n are the bits used to represent the number A. For a 64-bit
+ *	unsigned integer that would be 5 bits.
  *
  *	To avoid memory alignment issues, we are going to use a single 32 or 64
  *	bit unsigned integer, which we are going to treat as the aforementioned
  *	array with some adjustments to minimize padding overhead.
  *
- *	Last but not least I think I can get away with not storing 1s too; Only
- *	a fang with more than 8 * 1s could fool the modulo 9 congruence, so to
- *	check numbers above 10^16 - 1 make sure DIG_ELEMENT_BITS is set to 64
+ *	Last but not least I think in some cases it might be possible to get
+ *	away with not storing 1s too. So far I haven't noticed any false
+ *	positives for values below 10^16, but because there is no proof,
+ *	DIG_ELEMENT_BITS is set by default to 64.
  *
  * 	For example a 32-bit sized element gets split into 8 * 4-bit segments
  * 	and a 64-bit sized element gets split into 9 * 7-bit segments:
@@ -161,7 +162,7 @@ typedef unsigned long long vamp_t;
 #define vamp_max ULLONG_MAX
 
 typedef unsigned long fang_t;
-#define fang_max UINT_MAX
+#define fang_max ULONG_MAX
 
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
@@ -765,12 +766,13 @@ struct matrix
 {
 	struct tile **arr;
 	vamp_t size;
-	vamp_t row;	// Current row to help iteration.
-	vamp_t row_cleanup;
+	vamp_t unfinished;	// Current row to help iteration.
+	vamp_t cleanup;
 };
 
 void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 {
+	sanitycheck(lmin <= lmax);
 	#if (AUTO_TILE_SIZE && THREADS > 1)
 		vamp_t tile_size = (lmax - lmin) / (4 * THREADS + 2);
 	#else
@@ -781,8 +783,8 @@ void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 		tile_free(ptr->arr[i]);
 	free(ptr->arr);
 
-	ptr->row = 0;
-	ptr->row_cleanup = 0;
+	ptr->unfinished = 0;
+	ptr->cleanup = 0;
 	ptr->size = div_roof((lmax - lmin + 1), tile_size + (tile_size < vamp_max));
 	ptr->arr = malloc(sizeof(struct tile *) * ptr->size);
 	if (ptr->arr == NULL)
@@ -825,15 +827,16 @@ void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 	}
 }
 
-struct matrix *matrix_init(vamp_t lmin, vamp_t lmax)
+struct matrix *matrix_init()
 {
-	sanitycheck(lmin <= lmax);
 	struct matrix *new = malloc(sizeof(struct matrix));
 	if (new == NULL)
 		abort();
 
 	new->arr = NULL;
-	matrix_set(new, lmin, lmax);
+	new->unfinished = 0;
+	new->cleanup = 0;
+	new->size = 0;
 	return new;
 }
 
@@ -851,7 +854,7 @@ void matrix_free(struct matrix *ptr)
 void matrix_print([[maybe_unused]] struct matrix *ptr, [[maybe_unused]] vamp_t *count)
 {
 #ifdef PRINT_RESULTS
-	for (vamp_t x = ptr->row_cleanup; x < ptr->size; x++)
+	for (vamp_t x = ptr->cleanup; x < ptr->size; x++)
 		if (ptr->arr[x] != NULL) {
 			llist_print(ptr->arr[x]->result->head, *count);
 			*count += ptr->arr[x]->result->size;
@@ -866,30 +869,46 @@ struct dig_count
 #if JENS_K_A_OPTIMIZATION
 	digits_t *dig;
 	fang_t digsize;
+	fang_t power_a;
 #endif
 };
 
+digits_t set_dig(fang_t number)
+{
+	digits_t ret = 0;
+	for (fang_t i = number; i > 0; i /= 10) {
+		digit_t digit = i % 10;
+		if (digit >= DIGSKIP)
+			ret += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
+	}
+	return ret;
+}
+
 struct dig_count *dig_count_init([[maybe_unused]] vamp_t max)
 {
-	struct dig_count *new = malloc(sizeof(struct dig_count));
-	if (new == NULL)
-		abort();
+	struct dig_count *new = NULL;
+	#if JENS_K_A_OPTIMIZATION
+		new = malloc(sizeof(struct dig_count));
+		if (new == NULL)
+			abort();
 
-#if JENS_K_A_OPTIMIZATION
-	new->digsize = pow10v(length(max) - 2 * (length(max) / 3));
-	new->dig = malloc(sizeof(digits_t) * new->digsize);
-	if (new->dig == NULL)
-		abort();
+		fang_t length_a = length(max) / 3;
+		fang_t length_b = length(max) - (2 * length_a);
+		new->digsize = pow10v(length_b);
 
-	for (fang_t d = 0; d < new->digsize; d++) {
-		new->dig[d] = 0;
-		for (fang_t i = d; i > 0; i /= 10) {
-			digit_t digit = i % 10;
-			if (digit > DIGSKIP - 1)
-				new->dig[d] += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
+		if (length_a < 3)
+			new->power_a = new->digsize;
+		else
+			new->power_a = pow10v(length_a);
+
+		new->dig = malloc(sizeof(digits_t) * new->digsize);
+		if (new->dig == NULL)
+			abort();
+
+		for (fang_t d = 0; d < new->digsize; d++) {
+			new->dig[d] = set_dig(d);
 		}
-	}
-#endif
+	#endif
 	return new;
 }
 
@@ -897,8 +916,8 @@ void dig_count_free(struct dig_count *ptr)
 {
 #if JENS_K_A_OPTIMIZATION
 	free(ptr->dig);
-#endif
 	free(ptr);
+#endif
 }
 
 /*---------------------------------------------------------------------------*/
@@ -965,14 +984,22 @@ void vargs_btree_cleanup([[maybe_unused]] struct vargs *args, [[maybe_unused]] v
 
 void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 {
-	vamp_t fmax = pow10v(length(max) / 2); // Max factor value.
-	vamp_t fmaxsquare = fmax * fmax;
+	length_t fang_length = length(min) / 2;
 
-	if (max > fmaxsquare && min <= fmaxsquare)
-		max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
+	vamp_t fmax;
+	if (fang_length == length(fang_max))
+		fmax = fang_max;
+	else
+		fmax = pow10v(fang_length); // Max factor value.
 
-	fang_t min_sqrt = min / sqrtv_floor(min);
-	fang_t max_sqrt = max / sqrtv_floor(max);
+	fang_t min_sqrt = sqrtv_roof(min);
+	fang_t max_sqrt = sqrtv_floor(max);
+
+	if (fmax < fang_max) {
+		vamp_t fmaxsquare = fmax * fmax;
+		if (max > fmaxsquare && min <= fmaxsquare)
+			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
+	}
 
 	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
@@ -1049,7 +1076,6 @@ vampire_exit:
 
 void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 {
-
 	length_t fang_length = length(min) / 2;
 
 	vamp_t fmax;
@@ -1067,15 +1093,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
 	}
 
-	fang_t length_a = (2 * fang_length) / 3;
-	fang_t length_b = 2 * (fang_length - length_a);
-
-	fang_t power_a = pow10v(length_a);
-	fang_t power_b = pow10v(length_b);
-
-	if (power_a < 900)
-		power_a = power_b;
-
+	fang_t power_a = args->digptr->power_a;
 	digits_t *dig = args->digptr->dig;
 
 	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
@@ -1120,16 +1138,10 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 
 			digits_t digd;
 
-			if (min_sqrt >= args->digptr->digsize) {
-				digd = 0;
-				for (fang_t i = multiplier; i > 0; i /= 10) {
-					digit_t digit = i % 10;
-					if (digit > DIGSKIP - 1)
-						digd += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
-				}
-			} else {
+			if (min_sqrt >= args->digptr->digsize)
+				digd = set_dig(multiplier);
+			else
 				digd = dig[multiplier];
-			}
 
 			fang_t de0 = product % power_a;
 			fang_t de1 = (product / power_a) % power_a;
@@ -1247,10 +1259,10 @@ void *thread_worker(void *void_args)
 // Critical section start
 		pthread_mutex_lock(args->mutex);
 
-		if (args->mat->row < args->mat->size) {
-			current = args->mat->arr[args->mat->row];
+		if (args->mat->unfinished < args->mat->size) {
+			current = args->mat->arr[args->mat->unfinished];
 			active = true;
-			args->mat->row += 1;
+			args->mat->unfinished += 1;
 		}
 		pthread_mutex_unlock(args->mutex);
 // Critical section end
@@ -1266,18 +1278,18 @@ void *thread_worker(void *void_args)
 					current->complete = true;
 					do {
 						row_complete = false;
-						if (args->mat->row_cleanup < args->mat->size)
-							row_complete = args->mat->arr[args->mat->row_cleanup]->complete;
+						if (args->mat->cleanup < args->mat->size)
+							row_complete = args->mat->arr[args->mat->cleanup]->complete;
 
 						if (row_complete == true) {
 							#ifdef PRINT_RESULTS
-								llist_print(args->mat->arr[args->mat->row_cleanup]->result->head, *(args->count));
+								llist_print(args->mat->arr[args->mat->cleanup]->result->head, *(args->count));
 							#endif
-							*(args->count) += args->mat->arr[args->mat->row_cleanup]->result->size;
+							*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
 
-							tile_free(args->mat->arr[args->mat->row_cleanup]);
-							args->mat->arr[args->mat->row_cleanup] = NULL;
-							args->mat->row_cleanup += 1;
+							tile_free(args->mat->arr[args->mat->cleanup]);
+							args->mat->arr[args->mat->cleanup] = NULL;
+							args->mat->cleanup += 1;
 						}
 
 					} while (row_complete == true);
@@ -1291,6 +1303,7 @@ void *thread_worker(void *void_args)
 			vargs_reset(vamp_args);
 		}
 	}
+	vargs_free(vamp_args);
 	//thread_timer_stop(args);
 	return 0;
 }
@@ -1341,7 +1354,7 @@ int main(int argc, char* argv[])
 	vamp_t lmin = min;
 	vamp_t lmax = get_lmax(lmin, max);
 
-	struct matrix *mat = matrix_init(0, 0);
+	struct matrix *mat = matrix_init();
 	struct thread_args *tinput[THREADS];
 
 	pthread_t threads[THREADS];
