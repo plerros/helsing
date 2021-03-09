@@ -45,11 +45,13 @@
 // Check threads with thread sanitizer -fsanitize=thread
 
 /*--------------------------- COMPILATION OPTIONS ---------------------------*/
-#define THREADS 1
+#define THREADS 16
 #define thread_t uint16_t
 
 #define MEASURE_RUNTIME false
 #define SANITY_CHECK false
+#define LINK_SIZE 10
+#define MIN_FANG_PAIRS 1
 
 /*
  * DIST_COMPENSATION:
@@ -104,29 +106,29 @@
  * 	required. However if we calculate and store the {12, 34, 56}, we can
  * 	reconstruct the original numbers {[12][34][56], [12][56][34],
  * 	[34][56][12]} and their arrays of digits, with only 3 * 2 = 6 modulo
- *	and division operations.
+ * 	and division operations.
  *
  * 2) Minimize memory usage by storing less elements of smaller size.
  *
  * 	Given a product A and its fangs B & C, in order to store the sum of
- *	each digit, we can use an array of 10 elements.
+ * 	each digit, we can use an array of 10 elements.
  *
- *	Because B & C are both fangs it will be always true that arr_A and
- *	arr_B + arr_C have the same total sum of digits and therefore we can
- *	avoid storing one of the elements. I chose not to store the 0s.
+ * 	Because B & C are both fangs it will be always true that arr_A and
+ * 	arr_B + arr_C have the same total sum of digits and therefore we can
+ * 	avoid storing one of the elements. I chose not to store the 0s.
  *
- *	The minimum size of each element is roof(log2(roof(log10(2 ^ n)))),
+ * 	The minimum size of each element is roof(log2(roof(log10(2 ^ n)))),
  * 	where n are the bits used to represent the number A. For a 64-bit
- *	unsigned integer that would be 5 bits.
+ * 	unsigned integer that would be 5 bits.
  *
- *	To avoid memory alignment issues, we are going to use a single 32 or 64
- *	bit unsigned integer, which we are going to treat as the aforementioned
- *	array with some adjustments to minimize padding overhead.
+ * 	To avoid memory alignment issues, we are going to use a single 32 or 64
+ * 	bit unsigned integer, which we are going to treat as the aforementioned
+ * 	array with some adjustments to minimize padding overhead.
  *
- *	Last but not least I think in some cases it might be possible to get
- *	away with not storing 1s too. So far I haven't noticed any false
- *	positives for values below 10^16, but because there is no proof,
- *	DIG_ELEMENT_BITS is set by default to 64.
+ * 	Last but not least I think in some cases it might be possible to get
+ * 	away with not storing 1s too. So far I haven't noticed any false
+ * 	positives for values below 10^16, but because there is no proof,
+ * 	DIG_ELEMENT_BITS is set by default to 64.
  *
  * 	For example a 32-bit sized element gets split into 8 * 4-bit segments
  * 	and a 64-bit sized element gets split into 9 * 7-bit segments:
@@ -148,7 +150,7 @@
  * 3 - OEIS
  */
 
-#define VERBOSE_LEVEL 0
+#define VERBOSE_LEVEL 1
 
 /*
  * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size
@@ -399,22 +401,34 @@ long double distribution_inverted_integral(long double area)
 	// These are hand made approximations.
 }
 #endif /* DIST_COMPENSATION */
+
 /*------------------------------- linked list -------------------------------*/
 
 struct llist	/* Linked list of unsigned short digits*/
 {
-	vamp_t value;
+	vamp_t value[LINK_SIZE];
+	uint16_t current;
 	struct llist *next;
 };
 
 struct llist *llist_init(vamp_t value , struct llist *next)
 {
-	struct llist *new = malloc(sizeof(struct llist));
-	if (new == NULL)
-		abort();
 
-	new->value = value;
-	new->next = next;
+	struct llist *new;
+	if (next != NULL && next->current < LINK_SIZE){
+		new = next;
+		new->value[new->current] = value;
+		new->current += 1;
+	} else {
+
+		new = malloc(sizeof(struct llist));
+		if (new == NULL)
+			abort();
+
+		new->value[0] = value;
+		new->current = 1;
+		new->next = next;
+	}
 	return new;
 }
 
@@ -431,7 +445,8 @@ void llist_free(struct llist *list)
 void llist_print(struct llist *list, vamp_t count)
 {
 	for (struct llist *i = list; i != NULL ; i = i->next)
-		printf("%llu %llu\n", ++count, i->value);
+		for (uint16_t j = i->current; j > 0 ; j--)
+			printf("%llu %llu\n", ++count, i->value[j - 1]);
 }
 #endif
 /*--------------------------- linked list handle  ---------------------------*/
@@ -494,6 +509,7 @@ struct btree
 	struct btree *right;
 	vamp_t value;
 	length_t height; //Should probably be less than 32
+	uint8_t fang_pairs;
 };
 
 struct btree *btree_init(vamp_t value)
@@ -506,6 +522,7 @@ struct btree *btree_init(vamp_t value)
 	new->right = NULL;
 	new->height = 0;
 	new->value = value;
+	new->fang_pairs = 1;
 	return new;
 }
 
@@ -627,8 +644,10 @@ struct btree *btree_add(
 		*count += 1;
 		return btree_init(node);
 	}
-	if (node == tree->value)
+	if (node == tree->value){
+		tree->fang_pairs += 1;
 		return tree;
+	}
 	else if (node < tree->value)
 		tree->left = btree_add(tree->left, node, count);
 	else
@@ -647,10 +666,13 @@ struct btree *btree_cleanup(
 {
 	if (tree == NULL)
 		return NULL;
+
 	tree->right = btree_cleanup(tree->right, number, lhandle, btree_size);
 
 	if (tree->value >= number) {
-		llhandle_add(lhandle, tree->value);
+		if (tree->fang_pairs >= MIN_FANG_PAIRS){
+			llhandle_add(lhandle, tree->value);
+		}
 		struct btree *tmp = tree->left;
 		tree->left = NULL;
 		btree_free(tree);
@@ -755,7 +777,7 @@ void tile_free(struct tile *ptr)
 {
 #ifdef PROCESS_RESULTS
 	if (ptr != NULL)
-		free(ptr->result);
+		llhandle_free(ptr->result);
 #endif
 	free(ptr);
 }
@@ -915,7 +937,8 @@ struct dig_count *dig_count_init([[maybe_unused]] vamp_t max)
 void dig_count_free(struct dig_count *ptr)
 {
 #if JENS_K_A_OPTIMIZATION
-	free(ptr->dig);
+	if (ptr != NULL)
+		free(ptr->dig);
 	free(ptr);
 #endif
 }
@@ -966,7 +989,6 @@ void vargs_reset(struct vargs *args)
 #ifdef PROCESS_RESULTS
 	sanitycheck(args->lhandle == NULL);
 	args->lhandle = llhandle_init();
-	llhandle_reset(args->lhandle);
 	bthandle_reset(args->thandle);
 #endif
 }
@@ -1009,16 +1031,13 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt) {
+		if (multiplier >= max_sqrt)
 			multiplicand_max = max / multiplier;
 			// max can be less than (10^(n+1) -1)^2
-		} else {
+		else
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
-			if (mult_zero)
-				vargs_btree_cleanup(args, (multiplier + 1) *  multiplier);
-		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
 
@@ -1066,6 +1085,8 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 vampire_exit:
 				product += product_iterator;
 			}
+			if (multiplier < max_sqrt && mult_zero)
+				vargs_btree_cleanup(args, product);
 		}
 	}
 	vargs_btree_cleanup(args, 0);
@@ -1104,18 +1125,13 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt) {
+		if (multiplier >= max_sqrt)
 			multiplicand_max = max / multiplier;
 			// max can be less than (10^(n+1) -1)^2
-		} else {
+		else
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
-
-			if (mult_zero)
-				vargs_btree_cleanup(args, (multiplier + 1) *  multiplier);
-
-		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
 
@@ -1154,8 +1170,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 						args->local_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
-						//printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
-						printf("%llu\n", product);
+						printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
 					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
@@ -1223,6 +1238,10 @@ struct thread_args *thread_args_init(
 
 void thread_args_free(struct thread_args *ptr)
 {
+	free(ptr->mutex);
+	matrix_free(ptr->mat);
+	free(ptr->count);
+	dig_count_free(ptr->digptr);
 	free(ptr);
 }
 
@@ -1247,10 +1266,9 @@ void thread_timer_stop([[maybe_unused]] struct thread_args *ptr)
 void *thread_worker(void *void_args)
 {
 	struct thread_args *args = (struct thread_args *)void_args;
+	thread_timer_start(args);
 	struct vargs *vamp_args = vargs_init(args->digptr);
-	//thread_timer_start(args);
-
-	struct tile *current;
+	struct tile *current = NULL;
 	bool active = true;
 
 	while (active) {
@@ -1275,6 +1293,7 @@ void *thread_worker(void *void_args)
 				#ifdef PROCESS_RESULTS
 					bool row_complete = false;
 					current->result = vamp_args->lhandle;
+					vamp_args->lhandle = NULL;
 					current->complete = true;
 					do {
 						row_complete = false;
@@ -1304,7 +1323,7 @@ void *thread_worker(void *void_args)
 		}
 	}
 	vargs_free(vamp_args);
-	//thread_timer_stop(args);
+	thread_timer_stop(args);
 	return 0;
 }
 
@@ -1342,7 +1361,7 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		return 1;
 	}
-	if (max > 9999999999999999) {
+	if (max > 9999999999999999 && DIG_ELEMENT_BITS == 32) {
 		fprintf(stderr, "WARNING: the code might experience overflow,");
 		fprintf(stderr, " set DIG_ELEMENT_BITS to 64\n");
 	}
@@ -1382,7 +1401,18 @@ int main(int argc, char* argv[])
 		lmax = get_lmax(lmin, max);
 	}
 	dig_count_free(digptr);
+	for (thread_t thread = 0; thread<THREADS; thread++)
+		tinput[thread]->digptr = NULL;
+
 	matrix_free(mat);
+	for (thread_t thread = 0; thread<THREADS; thread++)
+		tinput[thread]->mat = NULL;
+
+	for (thread_t thread = 0; thread<THREADS; thread++)
+		tinput[thread]->mutex = NULL;
+
+	for (thread_t thread = 0; thread<THREADS; thread++)
+		tinput[thread]->count = NULL;
 
 	#ifdef SPDT_CLK_MODE
 		double total_time = 0.0;
