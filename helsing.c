@@ -45,7 +45,7 @@
 // Check threads with thread sanitizer -fsanitize=thread
 
 /*--------------------------- COMPILATION OPTIONS ---------------------------*/
-#define THREADS 16
+#define THREADS 1
 #define thread_t uint16_t
 
 #define MEASURE_RUNTIME false
@@ -150,7 +150,7 @@
  * 3 - OEIS
  */
 
-#define VERBOSE_LEVEL 1
+#define VERBOSE_LEVEL 2
 
 /*
  * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size
