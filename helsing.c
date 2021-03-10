@@ -50,8 +50,7 @@
 
 #define MEASURE_RUNTIME false
 #define SANITY_CHECK false
-#define LINK_SIZE 10
-#define MIN_FANG_PAIRS 1
+#define LINK_SIZE 100
 
 /*
  * DIST_COMPENSATION:
@@ -69,22 +68,20 @@
 #define PRINT_DIST_MATRIX false
 
 /*
- * TILE_SIZE:
+ * MAX_TILE_SIZE:
  *
  * Maximum value: 18446744073709551615ULL (2^64 -1)
  *
- * 	Threads will pick and complete available tiles and then optionally
- * store the results. Later, the results get processed, optionally printed and
- * freed in order, so that they don't get mixed up.
+ * 	Because there is no simple way to predict the amount of vampire numbers
+ * for a given range, MAX_TILE_SIZE can be used to limit the memory usage of
+ * heapsort.
  *
- * TILE_SIZE should be set as unsigned long long (ULL extension at the end).
- *
- * 	You can manually optimize the code for specific [min,max] runs, to use
- * less memory by setting AUTO_TILE_SIZE to false and adjusting TILE_SIZE.
+ * Heapsort shouldn't use more memory than:
+ * THREADS * (sizeof(bthandle) + MAX_TILE_SIZE * sizeof(btree))
  */
 
-#define AUTO_TILE_SIZE true
-#define TILE_SIZE 18446744073709551615ULL
+#define AUTO_TILE_SIZE false
+#define MAX_TILE_SIZE 999999999999ULL
 
 /*
  * JENS_K_A_OPTIMIZATION:
@@ -147,10 +144,12 @@
  * 0 - Count fang pairs
  * 1 - Print fang pairs
  * 2 - Count vampire numbers
- * 3 - OEIS
+ * 3 - Print vampire numbers in OEIS format
  */
 
 #define VERBOSE_LEVEL 2
+#define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL 3
+#define DISPLAY_PROGRESS false
 
 /*
  * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size
@@ -401,6 +400,21 @@ long double distribution_inverted_integral(long double area)
 	// These are hand made approximations.
 }
 #endif /* DIST_COMPENSATION */
+
+vamp_t get_tilesize([[maybe_unused]] vamp_t lmin, [[maybe_unused]] vamp_t lmax)
+{
+	vamp_t tile_size = vamp_max;
+
+	#if AUTO_TILE_SIZE
+		tile_size = (lmax - lmin) / (4 * THREADS + 2);
+		//vamp_t tile_size = (lmax - lmin) / (480);
+	#endif
+
+	if(tile_size > MAX_TILE_SIZE)
+		tile_size = MAX_TILE_SIZE;
+
+	return tile_size;
+}
 
 /*------------------------------- linked list -------------------------------*/
 
@@ -744,12 +758,12 @@ void bthandle_cleanup(
 #endif
 }
 
-/*----------------------------------- arr -----------------------------------*/
+/*---------------------------------- tile  ----------------------------------*/
 
 struct tile
 {
-	vamp_t lmin;
-	vamp_t lmax;
+	vamp_t lmin; // local minimum
+	vamp_t lmax; // local maximum
 
 #ifdef PROCESS_RESULTS
 	struct llhandle *result;
@@ -788,38 +802,61 @@ struct matrix
 {
 	struct tile **arr;
 	vamp_t size;
-	vamp_t unfinished;	// Current row to help iteration.
-	vamp_t cleanup;
+	vamp_t unfinished; // First tile that hasn't been accepted.
+	vamp_t cleanup;    // Last tile that hasn't been processed.
 };
+
+struct matrix *matrix_init()
+{
+	struct matrix *new = malloc(sizeof(struct matrix));
+	if (new == NULL)
+		abort();
+
+	new->arr = NULL;
+	new->size = 0;
+	new->unfinished = 0;
+
+	#ifdef PROCESS_RESULTS
+		new->cleanup = 0;
+	#endif
+
+	return new;
+}
+
+void matrix_free(struct matrix *ptr)
+{
+	if (ptr == NULL)
+		return;
+
+	if (ptr->arr != NULL){
+		for (vamp_t i = 0; i < ptr->size; i++)
+			tile_free(ptr->arr[i]);
+		free(ptr->arr);
+	}
+
+	free(ptr);
+}
 
 void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 {
 	sanitycheck(lmin <= lmax);
-	#if (AUTO_TILE_SIZE && THREADS > 1)
-		vamp_t tile_size = (lmax - lmin) / (4 * THREADS + 2);
-	#else
-		vamp_t tile_size = TILE_SIZE;
-	#endif
-
-	for (vamp_t i = 0; i < ptr->size; i++)
-		tile_free(ptr->arr[i]);
-	free(ptr->arr);
+	sanitycheck(ptr->arr != NULL);
 
 	ptr->unfinished = 0;
-	ptr->cleanup = 0;
+	#ifdef PROCESS_RESULTS
+		ptr->cleanup = 0;
+	#endif
+
+	vamp_t tile_size = get_tilesize(lmin, lmax);
+
 	ptr->size = div_roof((lmax - lmin + 1), tile_size + (tile_size < vamp_max));
 	ptr->arr = malloc(sizeof(struct tile *) * ptr->size);
 	if (ptr->arr == NULL)
 		abort();
 
-	#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
+	#if DIST_COMPENSATION
 		vamp_t current = lmin;
-		long double max;
-		if (length(lmax) == length(vamp_max))
-			max = vamp_max;
-		else
-			max = pow10v(length(lmax))-1;
-		long double total_area = max - lmin + 1;
+		vamp_t min = pow10v(length(lmin) - 1);
 	#endif
 
 	vamp_t x = 0;
@@ -831,9 +868,9 @@ void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 		vamp_t first = i;
 		vamp_t last = i + iterator;
 
-		#if DIST_COMPENSATION && (TILE_SIZE >= THREADS) && (THREADS > 1)
-			long double area = ((long double)(last - lmin)) / total_area;
-			vamp_t tmp = max * distribution_inverted_integral(area);
+		#if DIST_COMPENSATION
+			long double area = ((long double)(last - min)) / ((long double)(min * 9.0));
+			vamp_t tmp = min * 10.0 * distribution_inverted_integral(area);
 			first = current;
 			if (tmp >= current && tmp <= last)
 				last = tmp;
@@ -847,35 +884,20 @@ void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 		if (i + iterator == vamp_max)
 			break;
 	}
+	ptr->arr[ptr->size - 1]->lmax = lmax;
 }
 
-struct matrix *matrix_init()
+void matrix_reset(struct matrix *ptr)
 {
-	struct matrix *new = malloc(sizeof(struct matrix));
-	if (new == NULL)
-		abort();
-
-	new->arr = NULL;
-	new->unfinished = 0;
-	new->cleanup = 0;
-	new->size = 0;
-	return new;
-}
-
-void matrix_free(struct matrix *ptr)
-{
-	if (ptr == NULL)
-		return;
-
 	for (vamp_t i = 0; i < ptr->size; i++)
 		tile_free(ptr->arr[i]);
 	free(ptr->arr);
-	free(ptr);
+	ptr->arr = NULL;
 }
 
 void matrix_print([[maybe_unused]] struct matrix *ptr, [[maybe_unused]] vamp_t *count)
 {
-#ifdef PRINT_RESULTS
+#if (defined PROCESS_RESULTS && defined PRINT_RESULTS)
 	for (vamp_t x = ptr->cleanup; x < ptr->size; x++)
 		if (ptr->arr[x] != NULL) {
 			llist_print(ptr->arr[x]->result->head, *count);
@@ -883,7 +905,6 @@ void matrix_print([[maybe_unused]] struct matrix *ptr, [[maybe_unused]] vamp_t *
 		}
 #endif
 }
-
 
 /*-------------------------------- dig_count --------------------------------*/
 struct dig_count
@@ -1203,7 +1224,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 #endif  /* !JENS_K_A_OPTIMIZATION */
 
 /*--------------------------------- Threads ---------------------------------*/
-struct thread_args
+struct targs_t
 {
 	pthread_mutex_t *mutex;
 	struct matrix *mat;
@@ -1217,13 +1238,13 @@ struct thread_args
 #endif
 };
 
-struct thread_args *thread_args_init(
+struct targs_t *targs_t_init(
 	pthread_mutex_t *mutex,
 	struct matrix *mat,
 	vamp_t *count,
 	struct dig_count *digptr)
 {
-	struct thread_args *new = malloc(sizeof(struct thread_args));
+	struct targs_t *new = malloc(sizeof(struct targs_t));
 	if (new == NULL)
 		abort();
 
@@ -1236,23 +1257,19 @@ struct thread_args *thread_args_init(
 	return new;
 }
 
-void thread_args_free(struct thread_args *ptr)
+void targs_t_free(struct targs_t *ptr)
 {
-	free(ptr->mutex);
-	matrix_free(ptr->mat);
-	free(ptr->count);
-	dig_count_free(ptr->digptr);
 	free(ptr);
 }
 
-void thread_timer_start([[maybe_unused]] struct thread_args *ptr)
+void thread_timer_start([[maybe_unused]] struct targs_t *ptr)
 {
 #ifdef SPDT_CLK_MODE
 	clock_gettime(SPDT_CLK_MODE, &(ptr->start));
 #endif
 }
 
-void thread_timer_stop([[maybe_unused]] struct thread_args *ptr)
+void thread_timer_stop([[maybe_unused]] struct targs_t *ptr)
 {
 #ifdef SPDT_CLK_MODE
 	struct timespec finish;
@@ -1263,9 +1280,84 @@ void thread_timer_stop([[maybe_unused]] struct thread_args *ptr)
 #endif
 }
 
+/*---------------------------------------------------------------------------*/
+
+struct targs_handle
+{
+	struct targs_t *targs[THREADS];
+	struct matrix *mat;
+	struct dig_count *digptr;
+	vamp_t counter;
+	pthread_mutex_t *mutex;
+};
+
+struct targs_handle *targs_handle_init(vamp_t max)
+{
+	struct targs_handle *new = malloc(sizeof(struct targs_handle));
+	if (new == NULL)
+		abort();
+	
+	new->mat = matrix_init();
+	new->digptr = dig_count_init(max);
+	new->counter = 0;
+	new->mutex = malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(new->mutex, NULL);
+
+	for (thread_t thread = 0; thread < THREADS; thread++)
+		new->targs[thread] = targs_t_init(new->mutex, new->mat, &(new->counter), new->digptr);
+	return new;
+}
+
+void targs_handle_free(struct targs_handle *ptr)
+{
+	if(ptr == NULL)
+		return;
+
+	pthread_mutex_destroy(ptr->mutex);
+	free(ptr->mutex);
+	matrix_free(ptr->mat);
+	dig_count_free(ptr->digptr);
+
+	for (thread_t thread = 0; thread < THREADS; thread++)
+		targs_t_free(ptr->targs[thread]);
+	
+	free(ptr);
+}
+
+void targs_handle_print(struct targs_handle *ptr)
+{
+#ifdef SPDT_CLK_MODE
+	double total_time = 0.0;
+	fprintf(stderr, "Thread  Runtime Count\n");
+	for (thread_t thread = 0; thread<THREADS; thread++) {
+		fprintf(stderr, "%u\t%.2lfs\t%llu\n", thread, ptr->targs[thread]->runtime, ptr->targs[thread]->local_count);
+		total_time += ptr->targs[thread]->runtime;
+	}
+	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
+#endif
+
+#if (defined PROCESS_RESULTS) && PRINT_DIST_MATRIX && (THREADS > 8)
+	double distrubution = 0.0;
+	for (thread_t thread = 0; thread < THREADS; thread++) {
+		distrubution += ((double)ptr->targs[thread]->count) / ((double)(ptr->counter));
+		fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread+1, (10 * THREADS) / 9);
+		if ((thread+1) % 10 == 0)
+			fprintf(stderr, "\n");
+	}
+#endif
+
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+	fprintf(stderr, "Found: %llu valid fang pairs.\n", ptr->counter);
+#else
+	fprintf(stderr, "Found: %llu vampire numbers.\n", ptr->counter);
+#endif
+}
+
+/*---------------------------------------------------------------------------*/
+
 void *thread_worker(void *void_args)
 {
-	struct thread_args *args = (struct thread_args *)void_args;
+	struct targs_t *args = (struct targs_t *)void_args;
 	thread_timer_start(args);
 	struct vargs *vamp_args = vargs_init(args->digptr);
 	struct tile *current = NULL;
@@ -1305,6 +1397,9 @@ void *thread_worker(void *void_args)
 								llist_print(args->mat->arr[args->mat->cleanup]->result->head, *(args->count));
 							#endif
 							*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
+							#if DISPLAY_PROGRESS
+								fprintf(stderr, "%llu\t%llu/%llu\t\n", args->mat->arr[args->mat->cleanup]->lmax, args->mat->cleanup, args->mat->size);
+							#endif
 
 							tile_free(args->mat->arr[args->mat->cleanup]);
 							args->mat->arr[args->mat->cleanup] = NULL;
@@ -1369,79 +1464,29 @@ int main(int argc, char* argv[])
 	min = get_min(min, max);
 	max = get_max(min, max);
 
-	// local min, max for use inside loop
 	vamp_t lmin = min;
 	vamp_t lmax = get_lmax(lmin, max);
 
-	struct matrix *mat = matrix_init();
-	struct thread_args *tinput[THREADS];
-
 	pthread_t threads[THREADS];
-	vamp_t counter = 0;
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-	struct dig_count *digptr = dig_count_init(max);
-
-	for (thread_t thread = 0; thread < THREADS; thread++)
-		tinput[thread] = thread_args_init(&mutex, mat, &counter, digptr);
+	struct targs_handle *thhandle = targs_handle_init(max);
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
-		matrix_set(mat, lmin, lmax);
+		matrix_set(thhandle->mat, lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++)
-			assert(pthread_create(&threads[thread], NULL, thread_worker, (void *)tinput[thread]) == 0);
+			assert(pthread_create(&threads[thread], NULL, thread_worker, (void *)(thhandle->targs[thread])) == 0);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
-		matrix_print(mat, &counter);
+		matrix_print(thhandle->mat, &(thhandle->counter));
+		matrix_reset(thhandle->mat);
 		if (lmax == max)
 			break;
 
 		lmin = get_min(lmax + 1, max);
 		lmax = get_lmax(lmin, max);
 	}
-	dig_count_free(digptr);
-	for (thread_t thread = 0; thread<THREADS; thread++)
-		tinput[thread]->digptr = NULL;
-
-	matrix_free(mat);
-	for (thread_t thread = 0; thread<THREADS; thread++)
-		tinput[thread]->mat = NULL;
-
-	for (thread_t thread = 0; thread<THREADS; thread++)
-		tinput[thread]->mutex = NULL;
-
-	for (thread_t thread = 0; thread<THREADS; thread++)
-		tinput[thread]->count = NULL;
-
-	#ifdef SPDT_CLK_MODE
-		double total_time = 0.0;
-		fprintf(stderr, "Thread  Runtime Count\n");
-		for (thread_t thread = 0; thread<THREADS; thread++) {
-			fprintf(stderr, "%u\t%.2lfs\t%llu\n", thread, tinput[thread]->runtime, tinput[thread]->local_count);
-			total_time += tinput[thread]->runtime;
-		}
-		fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
-	#endif
-
-	#if (defined PROCESS_RESULTS) && PRINT_DIST_MATRIX && (THREADS > 8)
-		double distrubution = 0.0;
-		for (thread_t thread = 0; thread < THREADS; thread++) {
-			distrubution += ((double)tinput[thread]->count) / ((double)(counter));
-			fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread+1, (10 * THREADS) / 9);
-			if ((thread+1) % 10 == 0)
-				fprintf(stderr, "\n");
-		}
-	#endif
-
-	#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-		fprintf(stderr, "Found: %llu valid fang pairs.\n", counter);
-	#else
-		fprintf(stderr, "Found: %llu vampire numbers.\n", counter);
-	#endif
-
-	for (thread_t thread = 0; thread<THREADS; thread++)
-		thread_args_free(tinput[thread]);
-
+	targs_handle_print(thhandle);
+	targs_handle_free(thhandle);
 	return 0;
 }
