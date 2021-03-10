@@ -80,8 +80,8 @@
  * THREADS * (sizeof(bthandle) + MAX_TILE_SIZE * sizeof(btree))
  */
 
-#define AUTO_TILE_SIZE false
-#define MAX_TILE_SIZE 999999999999ULL
+#define AUTO_TILE_SIZE true
+#define MAX_TILE_SIZE 99999999999ULL
 
 /*
  * JENS_K_A_OPTIMIZATION:
@@ -247,7 +247,7 @@ bool length_isodd(vamp_t x) // bugfree
 	return (length(x) % 2);
 }
 
-void sanitycheck([[maybe_unused]] bool exp)
+void sanitycheck(__attribute__((unused)) bool exp)
 {
 #if SANITY_CHECK
 	assert(exp);
@@ -373,44 +373,43 @@ long double distribution_inverted_integral(long double area)
 {
 	long double exponent;
 	#if (DIST_COMPENSATION == 1)
-		exponent = 1.0/(3.0-(0.7*area));
-		return (1.0 - 0.9 * powl(1.0-area, exponent));
+		exponent = 1.0 / (3.0 - (0.7 * area));
+		return (1.0 - 0.9 * powl(1.0 - area, exponent));
 
 	#elif (DIST_COMPENSATION == 2)
-		exponent = 1.0/(3.0 -(0.3 * area * area) -(0.7 * area) + 0.3);
-		return (1.0 - 0.9 * powl(1.0-area, exponent));
+		exponent = 1.0 / (3.0 -(0.3 * area * area) -(0.7 * area) + 0.3);
+		return (1.0 - 0.9 * powl(1.0 - area, exponent));
 
 	#elif (DIST_COMPENSATION == 3)
-		exponent = 1.0/(3.0 -(0.1 * area * area) -(1.05 * area) + 0.4);
-		return (1.0 - 0.9 * powl(1.0-area, exponent));
+		exponent = 1.0 / (3.0 -(0.1 * area * area) -(1.05 * area) + 0.4);
+		return (1.0 - 0.9 * powl(1.0 - area, exponent));
 
 	#elif (DIST_COMPENSATION == 4)
-		exponent = 1.0/(3.0 -0.1 * powl(area, 3.0) + 0.27 * powl(area, 2.0) -1.4 * area + 0.5);
-		return (1.0 - 0.9 * powl(1.0-area, exponent));
+		exponent = 1.0 / (3.0 - 0.1 * powl(area, 3.0) + 0.27 * powl(area, 2.0) - 1.4 * area + 0.5);
+		return (1.0 - 0.9 * powl(1.0  -area, exponent));
 
 	#elif (DIST_COMPENSATION == 5)
-		exponent = 1.0/(3.0 -0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) -1.7 * area + 0.59);
-		return (1.0 - 0.899999999999999999L * powl(1.0-area, exponent));
+		exponent = 1.0 / (3.0 - 0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) - 1.7 * area + 0.59);
+		return (1.0 - 0.899999999999999999L * powl(1.0 - area, exponent));
 
 	#elif (DIST_COMPENSATION == 6)
-		exponent = 1.0/(3.0 -0.27 * powl(area, 3.0) + 0.64 * powl(area, 2.0) -1.7 * area + 0.59);
-		return (1.0 - 0.899999999999999999L * powl(1.0-area, exponent));
+		exponent = 1.0 / (3.0 - 0.27 * powl(area, 3.0) + 0.64 * powl(area, 2.0) - 1.7 * area + 0.59);
+		return (1.0 - 0.899999999999999999L * powl(1.0 - area, exponent));
 
 	#endif
 	// These are hand made approximations.
 }
 #endif /* DIST_COMPENSATION */
 
-vamp_t get_tilesize([[maybe_unused]] vamp_t lmin, [[maybe_unused]] vamp_t lmax)
+vamp_t get_tilesize(__attribute__((unused)) vamp_t lmin, __attribute__((unused)) vamp_t lmax)
 {
 	vamp_t tile_size = vamp_max;
 
 	#if AUTO_TILE_SIZE
 		tile_size = (lmax - lmin) / (4 * THREADS + 2);
-		//vamp_t tile_size = (lmax - lmin) / (480);
 	#endif
 
-	if(tile_size > MAX_TILE_SIZE)
+	if (tile_size > MAX_TILE_SIZE)
 		tile_size = MAX_TILE_SIZE;
 
 	return tile_size;
@@ -429,7 +428,7 @@ struct llist *llist_init(vamp_t value , struct llist *next)
 {
 
 	struct llist *new;
-	if (next != NULL && next->current < LINK_SIZE){
+	if (next != NULL && next->current < LINK_SIZE) {
 		new = next;
 		new->value[new->current] = value;
 		new->current += 1;
@@ -495,7 +494,7 @@ void llhandle_free(struct llhandle *handle)
 	free(handle);
 }
 
-void llhandle_add(struct llhandle *handle, [[maybe_unused]] vamp_t value)
+void llhandle_add(struct llhandle *handle, __attribute__((unused)) vamp_t value)
 {
 	if (handle == NULL)
 		return;
@@ -638,7 +637,7 @@ struct btree *btree_balance(struct btree *tree)
 		}
 		tree = btree_rotate_r(tree);
 	}
-	else if (isbalanced < -1) {
+	else if (isbalanced < - 1) {
 		if (is_balanced(tree->right) > 0) {
 			tree->right = btree_rotate_r(tree->right);
 			btree_reset_height(tree); //maybe optional?
@@ -658,7 +657,7 @@ struct btree *btree_add(
 		*count += 1;
 		return btree_init(node);
 	}
-	if (node == tree->value){
+	if (node == tree->value) {
 		tree->fang_pairs += 1;
 		return tree;
 	}
@@ -684,7 +683,7 @@ struct btree *btree_cleanup(
 	tree->right = btree_cleanup(tree->right, number, lhandle, btree_size);
 
 	if (tree->value >= number) {
-		if (tree->fang_pairs >= MIN_FANG_PAIRS){
+		if (tree->fang_pairs >= MIN_FANG_PAIRS) {
 			llhandle_add(lhandle, tree->value);
 		}
 		struct btree *tmp = tree->left;
@@ -747,9 +746,9 @@ void bthandle_reset(struct bthandle *handle)
  * and free up memory. Works best with low thread counts.
  */
 void bthandle_cleanup(
-	[[maybe_unused]] struct bthandle *handle,
-	[[maybe_unused]] vamp_t number,
-	[[maybe_unused]] struct llhandle *lhandle)
+	__attribute__((unused)) struct bthandle *handle,
+	__attribute__((unused)) vamp_t number,
+	__attribute__((unused)) struct llhandle *lhandle)
 {
 #ifdef PROCESS_RESULTS
 	struct btree *tree = handle->tree;
@@ -828,7 +827,7 @@ void matrix_free(struct matrix *ptr)
 	if (ptr == NULL)
 		return;
 
-	if (ptr->arr != NULL){
+	if (ptr->arr != NULL) {
 		for (vamp_t i = 0; i < ptr->size; i++)
 			tile_free(ptr->arr[i]);
 		free(ptr->arr);
@@ -895,7 +894,7 @@ void matrix_reset(struct matrix *ptr)
 	ptr->arr = NULL;
 }
 
-void matrix_print([[maybe_unused]] struct matrix *ptr, [[maybe_unused]] vamp_t *count)
+void matrix_print(__attribute__((unused)) struct matrix *ptr, __attribute__((unused)) vamp_t *count)
 {
 #if (defined PROCESS_RESULTS && defined PRINT_RESULTS)
 	for (vamp_t x = ptr->cleanup; x < ptr->size; x++)
@@ -927,7 +926,7 @@ digits_t set_dig(fang_t number)
 	return ret;
 }
 
-struct dig_count *dig_count_init([[maybe_unused]] vamp_t max)
+struct dig_count *dig_count_init(__attribute__((unused)) vamp_t max)
 {
 	struct dig_count *new = NULL;
 	#if JENS_K_A_OPTIMIZATION
@@ -1014,7 +1013,7 @@ void vargs_reset(struct vargs *args)
 #endif
 }
 
-void vargs_btree_cleanup([[maybe_unused]] struct vargs *args, [[maybe_unused]] vamp_t number)
+void vargs_btree_cleanup(__attribute__((unused)) struct vargs *args, __attribute__((unused)) vamp_t number)
 {
 #ifdef PROCESS_RESULTS
 	args->thandle->tree = btree_cleanup(args->thandle->tree, number, args->lhandle, &(args->thandle->size));
@@ -1262,14 +1261,14 @@ void targs_t_free(struct targs_t *ptr)
 	free(ptr);
 }
 
-void thread_timer_start([[maybe_unused]] struct targs_t *ptr)
+void thread_timer_start(__attribute__((unused)) struct targs_t *ptr)
 {
 #ifdef SPDT_CLK_MODE
 	clock_gettime(SPDT_CLK_MODE, &(ptr->start));
 #endif
 }
 
-void thread_timer_stop([[maybe_unused]] struct targs_t *ptr)
+void thread_timer_stop(__attribute__((unused)) struct targs_t *ptr)
 {
 #ifdef SPDT_CLK_MODE
 	struct timespec finish;
@@ -1310,7 +1309,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 
 void targs_handle_free(struct targs_handle *ptr)
 {
-	if(ptr == NULL)
+	if (ptr == NULL)
 		return;
 
 	pthread_mutex_destroy(ptr->mutex);
@@ -1340,8 +1339,8 @@ void targs_handle_print(struct targs_handle *ptr)
 	double distrubution = 0.0;
 	for (thread_t thread = 0; thread < THREADS; thread++) {
 		distrubution += ((double)ptr->targs[thread]->count) / ((double)(ptr->counter));
-		fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread+1, (10 * THREADS) / 9);
-		if ((thread+1) % 10 == 0)
+		fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread + 1, (10 * THREADS) / 9);
+		if ((thread + 1) % 10 == 0)
 			fprintf(stderr, "\n");
 	}
 #endif
