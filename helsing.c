@@ -457,9 +457,12 @@ void llist_free(struct llist *list)
 #ifdef PRINT_RESULTS
 void llist_print(struct llist *list, vamp_t count)
 {
-	for (struct llist *i = list; i != NULL ; i = i->next)
-		for (uint16_t j = i->current; j > 0 ; j--)
-			printf("%llu %llu\n", ++count, i->value[j - 1]);
+	for (struct llist *i = list; i != NULL ; i = i->next){
+		for (uint16_t j = i->current; j > 0 ; j--){
+			fprintf(stdout, "%llu %llu\n", ++count, i->value[j - 1]);
+			fflush(stdout);
+		}
+	}
 }
 #endif
 /*--------------------------- linked list handle  ---------------------------*/
@@ -1397,7 +1400,7 @@ void *thread_worker(void *void_args)
 							#endif
 							*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
 							#if DISPLAY_PROGRESS
-								fprintf(stderr, "%llu\t%llu/%llu\t\n", args->mat->arr[args->mat->cleanup]->lmax, args->mat->cleanup, args->mat->size);
+								fprintf(stderr, "%llu\t%llu/%llu\t\n", args->mat->arr[args->mat->cleanup]->lmax, args->mat->cleanup + 1, args->mat->size);
 							#endif
 
 							tile_free(args->mat->arr[args->mat->cleanup]);
