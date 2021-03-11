@@ -1077,8 +1077,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 				for (vamp_t p = product; p != 0; p /= 10)
 					product_array[p % 10] += 1;
 
-				for (digit_t i = 0; i < 10; i++)
-				// Yes, we want to check all 10, this runs faster than checking only 8.
+				for (digit_t i = 0; i < 9; i++)
 					if (product_array[i] < mult_array[i])
 						goto vampire_exit;
 
@@ -1090,7 +1089,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 					else
 						product_array[temp]--;
 				}
-				for (digit_t i = 0; i < 8; i++)
+				for (digit_t i = 0; i < 9; i++)
 					if (product_array[i] != mult_array[i])
 						goto vampire_exit;
 
@@ -1459,8 +1458,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	if (max > 9999999999999999 && DIG_ELEMENT_BITS == 32) {
-		fprintf(stderr, "WARNING: the code might experience overflow,");
-		fprintf(stderr, " set DIG_ELEMENT_BITS to 64\n");
+		fprintf(stderr, "WARNING: the code might produce false");
+		fprintf(stderr, "positives, set DIG_ELEMENT_BITS to 64\n");
 	}
 
 	min = get_min(min, max);
