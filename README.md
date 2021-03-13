@@ -10,11 +10,11 @@ Windows isn't posix compatible, you'll need to install WSL or WSL2.
 
 Compile with:
 ```
-gcc -O3 -Wall -Wextra -pthread -lm -o helsing helsing.c
+gcc -O2 -Wall -Wextra -pthread -lm -o helsing helsing.c
 ```
 If the compilation fails, try:
 ```
-gcc -O3 -Wall -Wextra -pthread -o helsing helsing.c -lm
+gcc -O2 -Wall -Wextra -pthread -o helsing helsing.c -lm
 ```
 Run with: 
 ```
@@ -24,5 +24,5 @@ Examples:
 ```
 ./helsing 1260 1260
 ./helsing 1 1172560176
-./helsing 1000000000000000 9999999999999999
+./helsing 18446744073709551615 18446744073709551615
 ```
