@@ -28,6 +28,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+// Compile with: gcc -O2 -Wall -Wextra -pthread -lm -o helsing helsing.c
+// Check memory with valgrind --tool=massif
+// Check threads with thread sanitizer -fsanitize=thread
+
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -39,10 +43,6 @@
 #include <math.h>	// pow
 #include <ctype.h>	// isdigit
 #include <string.h>
-
-// Compile with: gcc -O3 -Wall -Wextra -pthread -lm -o helsing helsing.c
-// Check memory with valgrind --tool=massif
-// Check threads with thread sanitizer -fsanitize=thread
 
 /*--------------------------- COMPILATION OPTIONS ---------------------------*/
 #define THREADS 1
@@ -122,14 +122,10 @@
  * 	bit unsigned integer, which we are going to treat as the aforementioned
  * 	array with some adjustments to minimize padding overhead.
  *
- * 	Last but not least I think in some cases it might be possible to get
- * 	away with not storing 1s too. So far I haven't noticed any false
- * 	positives for values below 10^16, but because there is no proof,
- * 	DIG_ELEMENT_BITS is set by default to 64.
  *
- * 	For example a 32-bit sized element gets split into 8 * 4-bit segments
+ * 	For example a 32-bit sized element gets split into 9 * 3-bit segments
  * 	and a 64-bit sized element gets split into 9 * 7-bit segments:
- * 	                                99998888777766665555444433332222
+ * 	                                XXXXX999888777666555444333222111
  * 	X999999988888887777777666666655555554444444333333322222221111111
  * 	|       |       |       |       |       |       |       |      |
  * 	63      55      47      39      31      23      15      7      0
@@ -172,11 +168,9 @@ typedef uint8_t length_t;
 //DIGMULT = DIG_ELEMENT_BITS/(10 - DIGSKIP)
 #if DIG_ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
-	#define DIGSKIP 2
-	#define DIGMULT 4
+	#define DIGMULT 3
 #elif DIG_ELEMENT_BITS == 64
 	typedef uint64_t digits_t;
-	#define DIGSKIP 1
 	#define DIGMULT 7
 #endif
 
@@ -201,39 +195,6 @@ typedef uint8_t length_t;
 #endif
 
 /*---------------------------- HELPER FUNCTIONS  ----------------------------*/
-
-void print_licence()
-{
-	printf("\n\
-Copyright (c) 2021, Pierro Zachareas, et al.\n\
-All rights reserved.\n\
-\n\
-Redistribution and use in source and binary forms, with or without\n\
-modification, are permitted provided that the following conditions are met:\n\
-1. Redistributions of source code must retain the above copyright notice, this\n\
-   list of conditions and the following disclaimer.\n\
-\n\
-2. Redistributions in binary form must reproduce the above copyright notice,\n\
-   this list of conditions and the following disclaimer in the documentation\n\
-   and/or other materials provided with the distribution.\n\
-\n\
-3. Neither the name of the copyright holder nor the names of its contributors\n\
-   may be used to endorse or promote products derived from this software\n\
-   without specific prior written permission.\n\
-\n\
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND\n\
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED\n\
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\n\
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\n\
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\n\
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\n\
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\n\
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n\
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT  OF THE USE\n\
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\
-	\n");
-}
-
 length_t length(vamp_t x) // bugfree
 {
 	length_t length = 0;
@@ -247,17 +208,12 @@ bool length_isodd(vamp_t x) // bugfree
 	return (length(x) % 2);
 }
 
-void sanitycheck(__attribute__((unused)) bool exp)
-{
-#if SANITY_CHECK
-	assert(exp);
-#endif
-}
-
 // pow10 for vampire type.
 vamp_t pow10v(length_t exponent) // bugfree
 {
-	sanitycheck(exponent <= length(vamp_max) - 1);
+	#if SANITY_CHECK
+		assert(exponent <= length(vamp_max) - 1);
+	#endif
 	vamp_t base = 1;
 	for (; exponent > 0; exponent--)
 		base *= 10;
@@ -267,7 +223,7 @@ vamp_t pow10v(length_t exponent) // bugfree
 // willoverflow: Checks if (10 * x + digit) will overflow.
 bool willoverflow(vamp_t x, digit_t digit) // bugfree
 {
-	sanitycheck(digit < 10);
+	assert(digit < 10);
 	if (x > vamp_max / 10)
 		return true;
 	if (x == vamp_max / 10 && digit > vamp_max % 10)
@@ -278,8 +234,8 @@ bool willoverflow(vamp_t x, digit_t digit) // bugfree
 // ASCII to vampire type
 vamp_t atov(const char *str, bool *err) // bugfree
 {
-	sanitycheck(str != NULL);
-	sanitycheck(err != NULL);
+	assert(str != NULL);
+	assert(err != NULL);
 	vamp_t number = 0;
 	for (length_t i = 0; isdigit(str[i]); i++) {
 		digit_t digit = str[i] - '0';
@@ -416,7 +372,6 @@ vamp_t get_tilesize(__attribute__((unused)) vamp_t lmin, __attribute__((unused))
 }
 
 /*------------------------------- linked list -------------------------------*/
-
 struct llist	/* Linked list of unsigned short digits*/
 {
 	vamp_t value[LINK_SIZE];
@@ -465,8 +420,8 @@ void llist_print(struct llist *list, vamp_t count)
 	}
 }
 #endif
-/*--------------------------- linked list handle  ---------------------------*/
 
+/*--------------------------- linked list handle  ---------------------------*/
 struct llhandle
 {
 #ifdef STORE_RESULTS
@@ -518,7 +473,6 @@ void llhandle_reset(struct llhandle *handle)
 }
 
 /*------------------------------- binary tree -------------------------------*/
-
 struct btree
 {
 	struct btree *left;
@@ -571,7 +525,9 @@ int is_balanced(struct btree *tree)
 
 void btree_reset_height(struct btree *tree)
 {
-	sanitycheck(tree != NULL);
+	#if SANITY_CHECK
+		assert(tree != NULL);
+	#endif
 	tree->height = 0;
 	if (tree->left != NULL && tree->left->height >= tree->height)
 		tree->height = tree->left->height + 1;
@@ -631,7 +587,9 @@ struct btree *btree_rotate_r(struct btree *tree)
 
 struct btree *btree_balance(struct btree *tree)
 {
-	sanitycheck(tree != NULL);
+	#if SANITY_CHECK
+		assert(tree != NULL);
+	#endif
 	int isbalanced = is_balanced(tree);
 	if (isbalanced > 1) {
 		if (is_balanced(tree->left) < 0) {
@@ -706,42 +664,56 @@ struct btree *btree_cleanup(
 }
 
 /*--------------------------- binary tree handle  ---------------------------*/
-
 struct bthandle
 {
-	struct btree *tree;
-	vamp_t size;
+	#ifdef PROCESS_RESULTS
+		struct btree *tree;
+		vamp_t size;
+	#endif
 };
 
 struct bthandle *bthandle_init()
 {
-	struct bthandle *new = malloc(sizeof(struct bthandle));
-	if (new == NULL)
-		abort();
+	struct bthandle *new = NULL;
+	#ifdef PROCESS_RESULTS
+		new = malloc(sizeof(struct bthandle));
+		if (new == NULL)
+			abort();
 
-	new->tree = NULL;
-	new->size = 0;
+		new->tree = NULL;
+		new->size = 0;
+	#endif
 	return new;
 }
 
-void bthandle_free(struct bthandle *handle)
+void bthandle_free(__attribute__((unused)) struct bthandle *handle)
 {
-	if (handle != NULL)
+	#ifdef PROCESS_RESULTS
+		if (handle != NULL)
+			btree_free(handle->tree);
+		free(handle);
+	#endif
+}
+
+void bthandle_add(
+	__attribute__((unused)) struct bthandle *handle,
+	__attribute__((unused)) vamp_t number)
+{
+	#ifdef PROCESS_RESULTS
+		#if SANITY_CHECK
+			assert(handle != NULL);
+		#endif
+		handle->tree = btree_add(handle->tree, number, &(handle->size));
+	#endif
+}
+
+void bthandle_reset(__attribute__((unused)) struct bthandle *handle)
+{
+	#ifdef PROCESS_RESULTS
 		btree_free(handle->tree);
-	free(handle);
-}
-
-void bthandle_add(struct bthandle *handle, vamp_t number)
-{
-	sanitycheck(handle != NULL);
-	handle->tree = btree_add(handle->tree, number, &(handle->size));
-}
-
-void bthandle_reset(struct bthandle *handle)
-{
-	btree_free(handle->tree);
-	handle->tree = NULL;
-	handle->size = 0;
+		handle->tree = NULL;
+		handle->size = 0;
+	#endif
 }
 
 /*
@@ -750,8 +722,8 @@ void bthandle_reset(struct bthandle *handle)
  */
 void bthandle_cleanup(
 	__attribute__((unused)) struct bthandle *handle,
-	__attribute__((unused)) vamp_t number,
-	__attribute__((unused)) struct llhandle *lhandle)
+	__attribute__((unused)) struct llhandle *lhandle,
+	__attribute__((unused)) vamp_t number)
 {
 #ifdef PROCESS_RESULTS
 	struct btree *tree = handle->tree;
@@ -761,7 +733,6 @@ void bthandle_cleanup(
 }
 
 /*---------------------------------- tile  ----------------------------------*/
-
 struct tile
 {
 	vamp_t lmin; // local minimum
@@ -799,13 +770,13 @@ void tile_free(struct tile *ptr)
 }
 
 /*--------------------------------- matrix  ---------------------------------*/
-
 struct matrix
 {
 	struct tile **arr;
 	vamp_t size;
 	vamp_t unfinished; // First tile that hasn't been accepted.
 	vamp_t cleanup;    // Last tile that hasn't been processed.
+	fang_t fmax;
 };
 
 struct matrix *matrix_init()
@@ -817,6 +788,7 @@ struct matrix *matrix_init()
 	new->arr = NULL;
 	new->size = 0;
 	new->unfinished = 0;
+	new->fmax = 0;
 
 	#ifdef PROCESS_RESULTS
 		new->cleanup = 0;
@@ -835,16 +807,22 @@ void matrix_free(struct matrix *ptr)
 			tile_free(ptr->arr[i]);
 		free(ptr->arr);
 	}
-
 	free(ptr);
 }
 
 void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 {
-	sanitycheck(lmin <= lmax);
-	sanitycheck(ptr->arr != NULL);
+	assert(lmin <= lmax);
+	assert(ptr->arr == NULL);
 
 	ptr->unfinished = 0;
+
+	length_t fang_length = length(lmin) / 2;
+	if (fang_length == length(fang_max))
+		ptr->fmax = fang_max;
+	else
+		ptr->fmax = pow10v(fang_length); // Max factor value.
+
 	#ifdef PROCESS_RESULTS
 		ptr->cleanup = 0;
 	#endif
@@ -908,6 +886,16 @@ void matrix_print(__attribute__((unused)) struct matrix *ptr, __attribute__((unu
 #endif
 }
 
+// matrix_progress requires mutex lock
+void matrix_progress(__attribute__((unused)) struct matrix *ptr)
+{
+	#if (defined PROCESS_RESULTS &&  DISPLAY_PROGRESS)
+		fprintf(stderr, "%llu, %llu", ptr->arr[ptr->cleanup]->lmin, ptr->arr[ptr->cleanup]->lmax);
+		fprintf(stderr, "  %llu/%llu\n", ptr->cleanup + 1, ptr->size);
+
+	#endif
+}
+
 /*-------------------------------- dig_count --------------------------------*/
 struct dig_count
 {
@@ -923,8 +911,8 @@ digits_t set_dig(fang_t number)
 	digits_t ret = 0;
 	for (fang_t i = number; i > 0; i /= 10) {
 		digit_t digit = i % 10;
-		if (digit >= DIGSKIP)
-			ret += (digits_t)1 << ((digit - DIGSKIP) * DIGMULT);
+		if (digit >= 1)
+			ret += (digits_t)1 << ((digit - 1) * DIGMULT);
 	}
 	return ret;
 }
@@ -950,14 +938,13 @@ struct dig_count *dig_count_init(__attribute__((unused)) vamp_t max)
 		if (new->dig == NULL)
 			abort();
 
-		for (fang_t d = 0; d < new->digsize; d++) {
+		for (fang_t d = 0; d < new->digsize; d++)
 			new->dig[d] = set_dig(d);
-		}
 	#endif
 	return new;
 }
 
-void dig_count_free(struct dig_count *ptr)
+void dig_count_free(__attribute__((unused)) struct dig_count *ptr)
 {
 #if JENS_K_A_OPTIMIZATION
 	if (ptr != NULL)
@@ -967,7 +954,6 @@ void dig_count_free(struct dig_count *ptr)
 }
 
 /*---------------------------------------------------------------------------*/
-
 struct vargs	/* Vampire arguments */
 {
 	vamp_t local_count;
@@ -976,6 +962,9 @@ struct vargs	/* Vampire arguments */
 #ifdef PROCESS_RESULTS
 	struct bthandle *thandle;
 	struct llhandle *lhandle;
+#endif
+#if MEASURE_RUNTIME
+	vamp_t total;
 #endif
 };
 
@@ -986,13 +975,15 @@ struct vargs *vargs_init(struct dig_count *digptr)
 		abort();
 
 	new->local_count = 0;
+	new->digptr = digptr;
 
 #ifdef PROCESS_RESULTS
 	new->lhandle = llhandle_init();
 	new->thandle = bthandle_init();
 #endif
-
-	new->digptr = digptr;
+#if MEASURE_RUNTIME
+	new->total = 0;
+#endif
 	return new;
 }
 
@@ -1010,10 +1001,19 @@ void vargs_reset(struct vargs *args)
 	args->local_count = 0;
 
 #ifdef PROCESS_RESULTS
-	sanitycheck(args->lhandle == NULL);
 	args->lhandle = llhandle_init();
 	bthandle_reset(args->thandle);
 #endif
+}
+
+struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
+{
+	struct llhandle *ret = NULL;
+#ifdef PROCESS_RESULTS
+	ret = args->lhandle;
+	args->lhandle = NULL;
+#endif
+	return ret;
 }
 
 void vargs_btree_cleanup(__attribute__((unused)) struct vargs *args, __attribute__((unused)) vamp_t number)
@@ -1024,19 +1024,10 @@ void vargs_btree_cleanup(__attribute__((unused)) struct vargs *args, __attribute
 }
 
 /*---------------------------------------------------------------------------*/
-
 #if !JENS_K_A_OPTIMIZATION
 
-void *vampire(vamp_t min, vamp_t max, struct vargs *args)
+void *vampire(vamp_t min, vamp_t max, struct vargs *args, vamp_t fmax)
 {
-	length_t fang_length = length(min) / 2;
-
-	vamp_t fmax;
-	if (fang_length == length(fang_max))
-		fmax = fang_max;
-	else
-		fmax = pow10v(fang_length); // Max factor value.
-
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
@@ -1046,45 +1037,49 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
 	}
 
-	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
+	for (fang_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
 			continue;
 
-		vamp_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
+		fang_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt)
-			multiplicand_max = max / multiplier;
-			// max can be less than (10^(n+1) -1)^2
-		else
+		if (multiplier >= max_sqrt){
+				vamp_t tmp = max / multiplier;
+				multiplicand_max = tmp;
+				// max can be less than (10^(n+1) -1)^2
+		} else {
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
+		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
 
 		if (multiplicand <= multiplicand_max) {
-			vamp_t product_iterator = multiplier * 9; // <= 9 * 2^32
-			vamp_t product = multiplier * multiplicand;
+			vamp_t product_iterator = multiplier;
+			product_iterator *= 9; // <= 9 * 2^32
+			vamp_t product = multiplier;
+			product *= multiplicand; // avoid overflow
 
 			length_t mult_array[10] = {0};
-			for (fang_t i = multiplier; i != 0; i /= 10)
+			for (fang_t i = multiplier; i > 0; i /= 10)
 				mult_array[i % 10] += 1;
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
 				uint16_t product_array[10] = {0};
-				for (vamp_t p = product; p != 0; p /= 10)
+				for (vamp_t p = product; p > 0; p /= 10)
 					product_array[p % 10] += 1;
 
-				for (digit_t i = 0; i < 9; i++)
+				for (digit_t i = 0; i < 10; i++)
 					if (product_array[i] < mult_array[i])
 						goto vampire_exit;
 
 				digit_t temp;
-				for (fang_t m = multiplicand; m != 0; m /= 10) {
+				for (fang_t m = multiplicand; m > 0; m /= 10) {
 					temp = m % 10;
-					if (product_array[temp] < 1)
+					if (product_array[temp] == 0)
 						goto vampire_exit;
 					else
 						product_array[temp]--;
@@ -1098,7 +1093,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 						args->local_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
-						printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
+						printf("%llu=%lu*%lu\n", product, multiplier, multiplicand);
 					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
@@ -1112,21 +1107,16 @@ vampire_exit:
 		}
 	}
 	vargs_btree_cleanup(args, 0);
+	#if MEASURE_RUNTIME
+		args->total += args->lhandle->size;
+	#endif
 	return 0;
 }
 
 #else /* !JENS_K_A_OPTIMIZATION */
 
-void *vampire(vamp_t min, vamp_t max, struct vargs *args)
+void *vampire(vamp_t min, vamp_t max, struct vargs *args, vamp_t fmax)
 {
-	length_t fang_length = length(min) / 2;
-
-	vamp_t fmax;
-	if (fang_length == length(fang_max))
-		fmax = fang_max;
-	else
-		fmax = pow10v(fang_length); // Max factor value.
-
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
@@ -1139,34 +1129,37 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 	fang_t power_a = args->digptr->power_a;
 	digits_t *dig = args->digptr->dig;
 
-	for (vamp_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
+	for (fang_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
 			continue;
 
-		vamp_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
+		fang_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt)
-			multiplicand_max = max / multiplier;
-			// max can be less than (10^(n+1) -1)^2
-		else
+		if (multiplier >= max_sqrt){
+				vamp_t tmp = max / multiplier;
+				multiplicand_max = tmp;
+				// max can be less than (10^(n+1) -1)^2
+		} else {
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
+		}
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
 
 		if (multiplicand <= multiplicand_max) {
-			vamp_t product_iterator = multiplier * 9; // <= 9 * 2^32
+			vamp_t product_iterator = multiplier;
+			product_iterator *= 9; // <= 9 * 2^32
 			vamp_t product = multiplier;
 			product *= multiplicand; // avoid overflow
 
 			fang_t step0 = product_iterator % power_a;
-			fang_t step1 = product_iterator / power_a; // 90 <= step1 < 900
+			fang_t step1 = product_iterator / power_a;
 
-			fang_t e0 = multiplicand % power_a; // e0 < 10 ^ (n - 1)
-			fang_t e1 = multiplicand / power_a; // e1 < 100
+			fang_t e0 = multiplicand % power_a;
+			fang_t e1 = multiplicand / power_a;
 
 			/*
 			 * digd = dig[multiplier];
@@ -1183,7 +1176,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 
 			fang_t de0 = product % power_a;
 			fang_t de1 = (product / power_a) % power_a;
-			fang_t de2 = ((product / power_a) / power_a); // 10^3 <= de2 < 10^4
+			fang_t de2 = ((product / power_a) / power_a);
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
@@ -1192,7 +1185,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 						args->local_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
-						printf("%llu=%llu*%llu\n", product, multiplier, multiplicand);
+						printf("%llu=%lu*%lu\n", product, multiplier, multiplicand);
 					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
@@ -1220,6 +1213,13 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 		}
 	}
 	vargs_btree_cleanup(args, 0);
+	#if MEASURE_RUNTIME
+		#ifdef PROCESS_RESULTS
+			args->total += args->lhandle->size;
+		#elif defined COUNT_RESULTS ||  defined DUMP_RESULTS
+			args->total += args->local_count;
+		#endif
+	#endif
 	return 0;
 }
 #endif  /* !JENS_K_A_OPTIMIZATION */
@@ -1227,20 +1227,22 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args)
 /*--------------------------------- Threads ---------------------------------*/
 struct targs_t
 {
-	pthread_mutex_t *mutex;
+	pthread_mutex_t *read;
+	pthread_mutex_t *write;
 	struct matrix *mat;
 	vamp_t *count;
-	vamp_t local_count;
 	double	runtime;
 	struct dig_count *digptr;
 
-#ifdef SPDT_CLK_MODE
+#if MEASURE_RUNTIME
 	struct timespec start;
+	vamp_t total; // total amount of numbers this thread has discovered
 #endif
 };
 
 struct targs_t *targs_t_init(
-	pthread_mutex_t *mutex,
+	pthread_mutex_t *read,
+	pthread_mutex_t *write,
 	struct matrix *mat,
 	vamp_t *count,
 	struct dig_count *digptr)
@@ -1249,12 +1251,16 @@ struct targs_t *targs_t_init(
 	if (new == NULL)
 		abort();
 
-	new->mutex = mutex;
+	new->read = read;
+	new->write = write;
 	new->mat = mat;
 	new->count = count;
-	new->local_count = 0;
 	new->runtime = 0.0;
 	new->digptr = digptr;
+
+#if MEASURE_RUNTIME
+	new->total = 0;
+#endif
 	return new;
 }
 
@@ -1265,14 +1271,14 @@ void targs_t_free(struct targs_t *ptr)
 
 void thread_timer_start(__attribute__((unused)) struct targs_t *ptr)
 {
-#ifdef SPDT_CLK_MODE
+#if MEASURE_RUNTIME
 	clock_gettime(SPDT_CLK_MODE, &(ptr->start));
 #endif
 }
 
 void thread_timer_stop(__attribute__((unused)) struct targs_t *ptr)
 {
-#ifdef SPDT_CLK_MODE
+#if MEASURE_RUNTIME
 	struct timespec finish;
 	clock_gettime(SPDT_CLK_MODE, &(finish));
 	double elapsed = (finish.tv_sec - ptr->start.tv_sec);
@@ -1282,14 +1288,14 @@ void thread_timer_stop(__attribute__((unused)) struct targs_t *ptr)
 }
 
 /*---------------------------------------------------------------------------*/
-
 struct targs_handle
 {
 	struct targs_t *targs[THREADS];
 	struct matrix *mat;
 	struct dig_count *digptr;
 	vamp_t counter;
-	pthread_mutex_t *mutex;
+	pthread_mutex_t *read;
+	pthread_mutex_t *write;
 };
 
 struct targs_handle *targs_handle_init(vamp_t max)
@@ -1301,11 +1307,13 @@ struct targs_handle *targs_handle_init(vamp_t max)
 	new->mat = matrix_init();
 	new->digptr = dig_count_init(max);
 	new->counter = 0;
-	new->mutex = malloc(sizeof(pthread_mutex_t));
-	pthread_mutex_init(new->mutex, NULL);
+	new->read = malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(new->read, NULL);
+	new->write = malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(new->write, NULL);
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		new->targs[thread] = targs_t_init(new->mutex, new->mat, &(new->counter), new->digptr);
+		new->targs[thread] = targs_t_init(new->read, new->write, new->mat, &(new->counter), new->digptr);
 	return new;
 }
 
@@ -1314,8 +1322,10 @@ void targs_handle_free(struct targs_handle *ptr)
 	if (ptr == NULL)
 		return;
 
-	pthread_mutex_destroy(ptr->mutex);
-	free(ptr->mutex);
+	pthread_mutex_destroy(ptr->read);
+	free(ptr->read);
+	pthread_mutex_destroy(ptr->write);
+	free(ptr->write);
 	matrix_free(ptr->mat);
 	dig_count_free(ptr->digptr);
 
@@ -1327,11 +1337,11 @@ void targs_handle_free(struct targs_handle *ptr)
 
 void targs_handle_print(struct targs_handle *ptr)
 {
-#ifdef SPDT_CLK_MODE
+#if MEASURE_RUNTIME
 	double total_time = 0.0;
 	fprintf(stderr, "Thread  Runtime Count\n");
 	for (thread_t thread = 0; thread<THREADS; thread++) {
-		fprintf(stderr, "%u\t%.2lfs\t%llu\n", thread, ptr->targs[thread]->runtime, ptr->targs[thread]->local_count);
+		fprintf(stderr, "%u\t%.2lfs\t%llu\n", thread, ptr->targs[thread]->runtime, ptr->targs[thread]->total);
 		total_time += ptr->targs[thread]->runtime;
 	}
 	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
@@ -1355,7 +1365,6 @@ void targs_handle_print(struct targs_handle *ptr)
 }
 
 /*---------------------------------------------------------------------------*/
-
 void *thread_worker(void *void_args)
 {
 	struct targs_t *args = (struct targs_t *)void_args;
@@ -1368,80 +1377,60 @@ void *thread_worker(void *void_args)
 		active = false;
 
 // Critical section start
-		pthread_mutex_lock(args->mutex);
-
+		pthread_mutex_lock(args->read);
 		if (args->mat->unfinished < args->mat->size) {
 			current = args->mat->arr[args->mat->unfinished];
 			active = true;
 			args->mat->unfinished += 1;
 		}
-		pthread_mutex_unlock(args->mutex);
+		pthread_mutex_unlock(args->read);
 // Critical section end
 
 		if (active) {
-			vampire(current->lmin, current->lmax, vamp_args);
+			vampire(current->lmin, current->lmax, vamp_args, args->mat->fmax);
 
 // Critical section start
-			pthread_mutex_lock(args->mutex);
-				#ifdef PROCESS_RESULTS
-					bool row_complete = false;
-					current->result = vamp_args->lhandle;
-					vamp_args->lhandle = NULL;
-					current->complete = true;
-					do {
-						row_complete = false;
-						if (args->mat->cleanup < args->mat->size)
-							row_complete = args->mat->arr[args->mat->cleanup]->complete;
+			pthread_mutex_lock(args->write);
+			#ifdef PROCESS_RESULTS
+				current->result = vargs_getlhandle(vamp_args);
+				current->complete = true;
+				while (
+					args->mat->cleanup < args->mat->size && 
+					args->mat->arr[args->mat->cleanup]->complete)
+				{
+					#ifdef PRINT_RESULTS
+						llist_print(args->mat->arr[args->mat->cleanup]->result->head, *(args->count));
+					#endif
+					*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
+					matrix_progress(args->mat);
 
-						if (row_complete == true) {
-							#ifdef PRINT_RESULTS
-								llist_print(args->mat->arr[args->mat->cleanup]->result->head, *(args->count));
-							#endif
-							*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
-							#if DISPLAY_PROGRESS
-								fprintf(stderr, "%llu\t%llu/%llu\t\n", args->mat->arr[args->mat->cleanup]->lmax, args->mat->cleanup + 1, args->mat->size);
-							#endif
-
-							tile_free(args->mat->arr[args->mat->cleanup]);
-							args->mat->arr[args->mat->cleanup] = NULL;
-							args->mat->cleanup += 1;
-						}
-
-					} while (row_complete == true);
-				#else
-					*(args->count) += vamp_args->local_count;
-				#endif
-			pthread_mutex_unlock(args->mutex);
+					tile_free(args->mat->arr[args->mat->cleanup]);
+					args->mat->arr[args->mat->cleanup] = NULL;
+					args->mat->cleanup += 1;
+				}
+			#else
+				*(args->count) += vamp_args->local_count;
+			#endif
+			pthread_mutex_unlock(args->write);
 // Critical section end
-
-			args->local_count += vamp_args->local_count;
 			vargs_reset(vamp_args);
 		}
 	}
+	#if MEASURE_RUNTIME
+		args->total += vamp_args->total;
+	#endif
 	vargs_free(vamp_args);
 	thread_timer_stop(args);
 	return 0;
 }
 
 /*---------------------------------------------------------------------------*/
-
 int main(int argc, char* argv[])
 {
 	if (argc != 3) {
-		if (argc == 2) {
-			if (strcmp(argv[1], "--version") == 0) {
-				printf("Helsing 1.0, a vampire number generator.\n");
-				print_licence();
-			}
-		} else {
-			printf("Usage: helsing [min] [max] | [OPTIONS]\n");
-			printf("\nArguments:\n");
-			printf("  --version                  \
-				output version information and exit\n");
-		}
+		printf("Usage: helsing [min] [max]\n");
 		return 0;
 	}
-
 	bool err = false;
 	vamp_t min = atov(argv[1], &err);
 	if (err) {
@@ -1457,9 +1446,10 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		return 1;
 	}
-	if (max > 9999999999999999 && DIG_ELEMENT_BITS == 32) {
-		fprintf(stderr, "WARNING: the code might produce false");
+	if (max > 9999999999 && DIG_ELEMENT_BITS == 32) {
+		fprintf(stderr, "WARNING: the code might produce false ");
 		fprintf(stderr, "positives, set DIG_ELEMENT_BITS to 64\n");
+		return 0;
 	}
 
 	min = get_min(min, max);
