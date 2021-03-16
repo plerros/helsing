@@ -87,7 +87,7 @@
  * JENS_K_A_OPTIMIZATION:
  *
  * 	This code was originally written by Jens Kruse Andersen, and is
- * included with their permission. Adjustments were made to reduce 
+ * included with their permission. Adjustments were made to reduce
  * computational complexity and memory usage, to improve memory access patterns
  * and to accomodate features such as multithreading.
  *
@@ -114,18 +114,16 @@
  * 	arr_B + arr_C have the same total sum of digits and therefore we can
  * 	avoid storing one of the elements. I chose not to store the 0s.
  *
- * 	The minimum size of each element is roof(log2(roof(log10(2 ^ n)))),
- * 	where n are the bits used to represent the number A. For a 64-bit
- * 	unsigned integer that would be 5 bits.
- *
  * 	To avoid memory alignment issues, we are going to use a single 32 or 64
  * 	bit unsigned integer, which we are going to treat as the aforementioned
- * 	array with some adjustments to minimize padding overhead.
+ * 	array. Traditionally this would be done by assigning specific bits to
+ * 	each element, but that wastes memory due to overhead. A more efficient
+ * 	solution would be to use a single base-m number to represent the array.
  *
+ * 	It just so happens that the base-m for a 64-bit element tops at 128
+ * 	(2^7). It's as if we had assigned dedicated bitfields and we get to use
+ * 	bitshift operations.
  *
- * 	For example a 32-bit sized element gets split into 9 * 3-bit segments
- * 	and a 64-bit sized element gets split into 9 * 7-bit segments:
- * 	                                XXXXX999888777666555444333222111
  * 	X999999988888887777777666666655555554444444333333322222221111111
  * 	|       |       |       |       |       |       |       |      |
  * 	63      55      47      39      31      23      15      7      0
@@ -169,9 +167,11 @@ typedef uint8_t length_t;
 #if DIG_ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
 	#define DIGMULT 3
+	#define DIG_BASE 11
 #elif DIG_ELEMENT_BITS == 64
 	typedef uint64_t digits_t;
 	#define DIGMULT 7
+	#define DIG_BASE 128
 #endif
 
 #if MEASURE_RUNTIME
@@ -909,11 +909,20 @@ struct dig_count
 digits_t set_dig(fang_t number)
 {
 	digits_t ret = 0;
-	for (fang_t i = number; i > 0; i /= 10) {
-		digit_t digit = i % 10;
-		if (digit >= 1)
-			ret += (digits_t)1 << ((digit - 1) * DIGMULT);
-	}
+	#if DIG_ELEMENT_BITS == 64
+		for (fang_t i = number; i > 0; i /= 10) {
+			digit_t digit = i % 10;
+			if (digit >= 1)
+				ret += (digits_t)1 << ((digit - 1) * DIGMULT);
+		}
+	#else
+		digits_t tmp[10] = {0};
+		for (; number > 0; number /= 10)
+			tmp[number % 10] += 1;
+
+		for(uint8_t i = 1; i < 10; i++)
+			ret = ret * DIG_BASE + tmp[i];
+	#endif
 	return ret;
 }
 
@@ -1026,13 +1035,14 @@ void vargs_btree_cleanup(__attribute__((unused)) struct vargs *args, __attribute
 /*---------------------------------------------------------------------------*/
 #if !JENS_K_A_OPTIMIZATION
 
-void *vampire(vamp_t min, vamp_t max, struct vargs *args, vamp_t fmax)
+void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
 	if (fmax < fang_max) {
-		vamp_t fmaxsquare = fmax * fmax;
+		fang_t fmaxsquare = fmax;
+		fmaxsquare *= fmax;
 		if (max > fmaxsquare && min <= fmaxsquare)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
 	}
@@ -1115,13 +1125,14 @@ vampire_exit:
 
 #else /* !JENS_K_A_OPTIMIZATION */
 
-void *vampire(vamp_t min, vamp_t max, struct vargs *args, vamp_t fmax)
+void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
 	if (fmax < fang_max) {
-		vamp_t fmaxsquare = fmax * fmax;
+		fang_t fmaxsquare = fmax;
+		fmaxsquare *= fmax;
 		if (max > fmaxsquare && min <= fmaxsquare)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
 	}
