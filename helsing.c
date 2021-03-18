@@ -1041,7 +1041,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	fang_t max_sqrt = sqrtv_floor(max);
 
 	if (fmax < fang_max) {
-		fang_t fmaxsquare = fmax;
+		vamp_t fmaxsquare = fmax;
 		fmaxsquare *= fmax;
 		if (max > fmaxsquare && min <= fmaxsquare)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
@@ -1131,7 +1131,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	fang_t max_sqrt = sqrtv_floor(max);
 
 	if (fmax < fang_max) {
-		fang_t fmaxsquare = fmax;
+		vamp_t fmaxsquare = fmax;
 		fmaxsquare *= fmax;
 		if (max > fmaxsquare && min <= fmaxsquare)
 			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
@@ -1314,7 +1314,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
 	if (new == NULL)
 		abort();
-	
+
 	new->mat = matrix_init();
 	new->digptr = dig_count_init(max);
 	new->counter = 0;
@@ -1342,7 +1342,7 @@ void targs_handle_free(struct targs_handle *ptr)
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
 		targs_t_free(ptr->targs[thread]);
-	
+
 	free(ptr);
 }
 
@@ -1406,7 +1406,7 @@ void *thread_worker(void *void_args)
 				current->result = vargs_getlhandle(vamp_args);
 				current->complete = true;
 				while (
-					args->mat->cleanup < args->mat->size && 
+					args->mat->cleanup < args->mat->size &&
 					args->mat->arr[args->mat->cleanup]->complete)
 				{
 					#ifdef PRINT_RESULTS
