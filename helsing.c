@@ -827,6 +827,13 @@ void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 		ptr->cleanup = 0;
 	#endif
 
+	if (ptr->fmax < fang_max) {
+		vamp_t fmaxsquare = ptr->fmax;
+		fmaxsquare *= ptr->fmax;
+		if (lmax > fmaxsquare && lmin <= fmaxsquare)
+			lmax = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
+	}
+
 	vamp_t tile_size = get_tilesize(lmin, lmax);
 
 	ptr->size = div_roof((lmax - lmin + 1), tile_size + (tile_size < vamp_max));
@@ -1040,13 +1047,6 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
-	if (fmax < fang_max) {
-		vamp_t fmaxsquare = fmax;
-		fmaxsquare *= fmax;
-		if (max > fmaxsquare && min <= fmaxsquare)
-			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
-	}
-
 	for (fang_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
 			continue;
@@ -1129,13 +1129,6 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
-
-	if (fmax < fang_max) {
-		vamp_t fmaxsquare = fmax;
-		fmaxsquare *= fmax;
-		if (max > fmaxsquare && min <= fmaxsquare)
-			max = fmaxsquare; // Max can be bigger than fmax ^ 2: 9999 > 99 ^ 2.
-	}
 
 	fang_t power_a = args->digptr->power_a;
 	digits_t *dig = args->digptr->dig;
