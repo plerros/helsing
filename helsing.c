@@ -111,7 +111,7 @@
  */
 
 #define CACHE true
-#define ELEMENT_BITS 32
+#define ELEMENT_BITS 64
 
 /*
  * MAX_TILE_SIZE:
