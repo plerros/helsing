@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Compile with: gcc -O2 -Wall -Wextra -pthread -lm -o helsing helsing.c
+// Compile with: gcc -O2 -Wall -Wextra -pthread -o helsing helsing.c
 // Check memory with valgrind --tool=massif
 // Check threads with thread sanitizer -fsanitize=thread
 
@@ -40,32 +40,78 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <math.h>	// pow
 #include <ctype.h>	// isdigit
-#include <string.h>
 
 /*--------------------------- COMPILATION OPTIONS ---------------------------*/
 #define THREADS 1
 #define thread_t uint16_t
 
-#define MEASURE_RUNTIME false
-#define SANITY_CHECK false
-#define LINK_SIZE 100
-
 /*
- * DIST_COMPENSATION:
- *
- * 	Based on results, I produced 6 functions that try to estimate the
- * distribution of vampire numbers. The integral of the inverse can help with
- * load distribution between threads, minimizing the need for load balancing
- * and its overhead. In practice I haven't noticed any performance increase.
- *
- * 	You can set DIST_COMPENSATION to false to disable it, or any value
- * between 1 and 6 to select a specific version.
+ * VERBOSE_LEVEL:
+ * 0 - Count fang pairs
+ * 1 - Print fang pairs
+ * 2 - Count vampire numbers
+ * 3 - Print vampire numbers in OEIS format
  */
 
-#define DIST_COMPENSATION false
-#define PRINT_DIST_MATRIX false
+#define VERBOSE_LEVEL 2
+
+#define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL > 1
+#define DISPLAY_PROGRESS false
+#define MEASURE_RUNTIME false
+
+/*
+ * CACHE:
+ *
+ * 	This code was originally written by Jens Kruse Andersen and is included
+ * with their permission. Adjustments were made to improve runtime, memory
+ * usage and access patterns, and accomodate features such as multithreading.
+ * Source: http://primerecords.dk/vampires/index.htm
+ *
+ * There are two things that this optimization does:
+ *
+ * 1) Reduce computations by caching & minimize cache size
+ * 	Given a set of numbers {123456, 125634, 345612}, in order to convert
+ * 	them to arrays of digits, 3 * 6 = 18 modulo & division operations are
+ * 	required. However if we calculate and store the {12, 34, 56}, we can
+ * 	reconstruct the original numbers {[12][34][56], [12][56][34],
+ * 	[34][56][12]} and their arrays of digits, with only 3 * 2 = 6 modulo &
+ * 	division + 3~9 load operations.
+ *
+ * 	Given a product A and its fangs B & C, in order to store the sum of
+ * 	each digit, we can use an array of 10 elements.	Because B & C are both
+ * 	fangs it will be always true that arr_A and arr_B + arr_C have the same
+ * 	total sum of digits and therefore we can avoid storing one of the
+ * 	elements. I chose not to store the 0s.
+ *
+ * 	In this specific case an array of elements would waste memory due to
+ * 	overhead. A more efficient solution would be to represent the array
+ * 	with a single base-m number.
+ *
+ * 2) Data parallelism
+ * 	Because each element requires very little space, we can use a single
+ * 	32/64 bit unsigned integer in place of the aforementioned array.
+ *
+ * 	It just so happens that all the elements get processed at once (in
+ * 	parallel), memory alignment issues are avoided and the base-m for a 64
+ * 	bit element tops at 128	(2^7). It's as if we had assigned dedicated 
+ * 	bitfields and we get to use bitshift operations.
+ *
+ * Note to future developers; it's possible to make the array even smaller:
+ * 	1. By using 32-bit elements and then expanding them to 64 bits.
+ * 	   That would result in 50% array size and 247% runtime*.
+ *
+ * 	2. By performing extra division and modulo operations.
+ * 	   That would result in 10% array size and 188% runtime*.
+ *
+ * 	3. By using 3 * 16-bits instead of 64-bits.
+ * 	   That would result in 75% array size and 121% runtime*.
+ *
+ * 	*Based on some of my testing. Your mileage may vary.
+ */
+
+#define CACHE true
+#define ELEMENT_BITS 32
 
 /*
  * MAX_TILE_SIZE:
@@ -83,67 +129,8 @@
 #define AUTO_TILE_SIZE true
 #define MAX_TILE_SIZE 99999999999ULL
 
-/*
- * JENS_K_A_OPTIMIZATION:
- *
- * 	This code was originally written by Jens Kruse Andersen, and is
- * included with their permission. Adjustments were made to reduce
- * computational complexity and memory usage, to improve memory access patterns
- * and to accomodate features such as multithreading.
- *
- * Source: http://primerecords.dk/vampires/index.htm
- *
- * There are two things that this optimization does:
- *
- * 1) A trick that can reduce computational complexity. Here is an example
- * 	that illustrates that:
- *
- * 	Given a set of numbers {123456, 125634, 345612}, in order to convert
- * 	them to arrays of digits, 3 * 6 = 18 modulo and division operations are
- * 	required. However if we calculate and store the {12, 34, 56}, we can
- * 	reconstruct the original numbers {[12][34][56], [12][56][34],
- * 	[34][56][12]} and their arrays of digits, with only 3 * 2 = 6 modulo
- * 	and division operations.
- *
- * 2) Minimize memory usage by storing less elements of smaller size.
- *
- * 	Given a product A and its fangs B & C, in order to store the sum of
- * 	each digit, we can use an array of 10 elements.
- *
- * 	Because B & C are both fangs it will be always true that arr_A and
- * 	arr_B + arr_C have the same total sum of digits and therefore we can
- * 	avoid storing one of the elements. I chose not to store the 0s.
- *
- * 	To avoid memory alignment issues, we are going to use a single 32 or 64
- * 	bit unsigned integer, which we are going to treat as the aforementioned
- * 	array. Traditionally this would be done by assigning specific bits to
- * 	each element, but that wastes memory due to overhead. A more efficient
- * 	solution would be to use a single base-m number to represent the array.
- *
- * 	It just so happens that the base-m for a 64-bit element tops at 128
- * 	(2^7). It's as if we had assigned dedicated bitfields and we get to use
- * 	bitshift operations.
- *
- * 	X999999988888887777777666666655555554444444333333322222221111111
- * 	|       |       |       |       |       |       |       |      |
- * 	63      55      47      39      31      23      15      7      0
- */
-
-#define JENS_K_A_OPTIMIZATION true
-#define DIG_ELEMENT_BITS 64
-
-/*
- * VERBOSE_LEVEL:
- *
- * 0 - Count fang pairs
- * 1 - Print fang pairs
- * 2 - Count vampire numbers
- * 3 - Print vampire numbers in OEIS format
- */
-
-#define VERBOSE_LEVEL 2
-#define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL 3
-#define DISPLAY_PROGRESS false
+#define LINK_SIZE 100
+#define SANITY_CHECK false
 
 /*
  * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size
@@ -163,12 +150,12 @@ typedef uint8_t digit_t;
 typedef uint8_t length_t;
 
 /*--------------------------- PREPROCESSOR STUFF  ---------------------------*/
-//DIGMULT = DIG_ELEMENT_BITS/(10 - DIGSKIP)
-#if DIG_ELEMENT_BITS == 32
+// DIGMULT = ELEMENT_BITS/(10 - DIGSKIP)
+#if ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
 	#define DIGMULT 3
 	#define DIG_BASE 11
-#elif DIG_ELEMENT_BITS == 64
+#elif ELEMENT_BITS == 64
 	typedef uint64_t digits_t;
 	#define DIGMULT 7
 	#define DIG_BASE 128
@@ -195,7 +182,7 @@ typedef uint8_t length_t;
 #endif
 
 /*---------------------------- HELPER FUNCTIONS  ----------------------------*/
-length_t length(vamp_t x) // bugfree
+length_t length(vamp_t x)
 {
 	length_t length = 0;
 	for (; x > 0; x /= 10)
@@ -203,13 +190,12 @@ length_t length(vamp_t x) // bugfree
 	return length;
 }
 
-bool length_isodd(vamp_t x) // bugfree
+bool length_isodd(vamp_t x)
 {
 	return (length(x) % 2);
 }
 
-// pow10 for vampire type.
-vamp_t pow10v(length_t exponent) // bugfree
+vamp_t pow10v(length_t exponent) // pow10 for vamp_t.
 {
 	#if SANITY_CHECK
 		assert(exponent <= length(vamp_max) - 1);
@@ -221,7 +207,7 @@ vamp_t pow10v(length_t exponent) // bugfree
 }
 
 // willoverflow: Checks if (10 * x + digit) will overflow.
-bool willoverflow(vamp_t x, digit_t digit) // bugfree
+bool willoverflow(vamp_t x, digit_t digit)
 {
 	assert(digit < 10);
 	if (x > vamp_max / 10)
@@ -231,21 +217,19 @@ bool willoverflow(vamp_t x, digit_t digit) // bugfree
 	return false;
 }
 
-// ASCII to vampire type
-vamp_t atov(const char *str, bool *err) // bugfree
+int atov(const char *str, vamp_t *number) // ASCII to vamp_t
 {
 	assert(str != NULL);
-	assert(err != NULL);
-	vamp_t number = 0;
+	assert(number != NULL);
+	vamp_t ret = 0;
 	for (length_t i = 0; isdigit(str[i]); i++) {
 		digit_t digit = str[i] - '0';
-		if (willoverflow(number, digit)) {
-			*err = true;
+		if (willoverflow(ret, digit))
 			return 1;
-		}
-		number = 10 * number + digit;
+		ret = 10 * ret + digit;
 	}
-	return number;
+	*number = ret;
+	return 0;
 }
 
 bool notrailingzero(fang_t x) // bugfree
@@ -288,8 +272,7 @@ vamp_t get_lmax(vamp_t lmin, vamp_t max)
 	return max;
 }
 
-// Vampire square root to fang.
-fang_t sqrtv_floor(vamp_t x)
+fang_t sqrtv_floor(vamp_t x) // vamp_t sqrt to fang_t.
 {
 	vamp_t x2 = x / 2;
 	vamp_t root = x2; // Initial estimate
@@ -324,39 +307,6 @@ vamp_t div_roof (vamp_t x, vamp_t y)
 	return (x/y + !!(x%y));
 }
 
-#if DIST_COMPENSATION
-long double distribution_inverted_integral(long double area)
-{
-	long double exponent;
-	#if (DIST_COMPENSATION == 1)
-		exponent = 1.0 / (3.0 - (0.7 * area));
-		return (1.0 - 0.9 * powl(1.0 - area, exponent));
-
-	#elif (DIST_COMPENSATION == 2)
-		exponent = 1.0 / (3.0 -(0.3 * area * area) -(0.7 * area) + 0.3);
-		return (1.0 - 0.9 * powl(1.0 - area, exponent));
-
-	#elif (DIST_COMPENSATION == 3)
-		exponent = 1.0 / (3.0 -(0.1 * area * area) -(1.05 * area) + 0.4);
-		return (1.0 - 0.9 * powl(1.0 - area, exponent));
-
-	#elif (DIST_COMPENSATION == 4)
-		exponent = 1.0 / (3.0 - 0.1 * powl(area, 3.0) + 0.27 * powl(area, 2.0) - 1.4 * area + 0.5);
-		return (1.0 - 0.9 * powl(1.0  -area, exponent));
-
-	#elif (DIST_COMPENSATION == 5)
-		exponent = 1.0 / (3.0 - 0.26 * pow(area, 3.0) + 0.64 * pow(area, 2.0) - 1.7 * area + 0.59);
-		return (1.0 - 0.899999999999999999L * powl(1.0 - area, exponent));
-
-	#elif (DIST_COMPENSATION == 6)
-		exponent = 1.0 / (3.0 - 0.27 * powl(area, 3.0) + 0.64 * powl(area, 2.0) - 1.7 * area + 0.59);
-		return (1.0 - 0.899999999999999999L * powl(1.0 - area, exponent));
-
-	#endif
-	// These are hand made approximations.
-}
-#endif /* DIST_COMPENSATION */
-
 vamp_t get_tilesize(__attribute__((unused)) vamp_t lmin, __attribute__((unused)) vamp_t lmax)
 {
 	vamp_t tile_size = vamp_max;
@@ -372,7 +322,7 @@ vamp_t get_tilesize(__attribute__((unused)) vamp_t lmin, __attribute__((unused))
 }
 
 /*------------------------------- linked list -------------------------------*/
-struct llist	/* Linked list of unsigned short digits*/
+struct llist
 {
 	vamp_t value[LINK_SIZE];
 	uint16_t current;
@@ -412,8 +362,8 @@ void llist_free(struct llist *list)
 #ifdef PRINT_RESULTS
 void llist_print(struct llist *list, vamp_t count)
 {
-	for (struct llist *i = list; i != NULL ; i = i->next){
-		for (uint16_t j = i->current; j > 0 ; j--){
+	for (struct llist *i = list; i != NULL ; i = i->next) {
+		for (uint16_t j = i->current; j > 0 ; j--) {
 			fprintf(stdout, "%llu %llu\n", ++count, i->value[j - 1]);
 			fflush(stdout);
 		}
@@ -841,30 +791,13 @@ void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 	if (ptr->arr == NULL)
 		abort();
 
-	#if DIST_COMPENSATION
-		vamp_t current = lmin;
-		vamp_t min = pow10v(length(lmin) - 1);
-	#endif
-
 	vamp_t x = 0;
 	vamp_t iterator = tile_size;
 	for (vamp_t i = lmin; i <= lmax; i += iterator + 1) {
 		if (lmax - i < tile_size)
 			iterator = lmax - i;
 
-		vamp_t first = i;
-		vamp_t last = i + iterator;
-
-		#if DIST_COMPENSATION
-			long double area = ((long double)(last - min)) / ((long double)(min * 9.0));
-			vamp_t tmp = min * 10.0 * distribution_inverted_integral(area);
-			first = current;
-			if (tmp >= current && tmp <= last)
-				last = tmp;
-			current = last + 1;
-		#endif
-
-		ptr->arr[x++] = tile_init(first, last);
+		ptr->arr[x++] = tile_init(i, i + iterator);
 
 		if (i == lmax)
 			break;
@@ -904,11 +837,11 @@ void matrix_progress(__attribute__((unused)) struct matrix *ptr)
 }
 
 /*-------------------------------- dig_count --------------------------------*/
-struct dig_count
+struct cache
 {
-#if JENS_K_A_OPTIMIZATION
+#if CACHE
 	digits_t *dig;
-	fang_t digsize;
+	fang_t size;
 	fang_t power_a;
 #endif
 };
@@ -916,7 +849,7 @@ struct dig_count
 digits_t set_dig(fang_t number)
 {
 	digits_t ret = 0;
-	#if DIG_ELEMENT_BITS == 64
+	#if ELEMENT_BITS == 64
 		for (fang_t i = number; i > 0; i /= 10) {
 			digit_t digit = i % 10;
 			if (digit >= 1)
@@ -927,42 +860,42 @@ digits_t set_dig(fang_t number)
 		for (; number > 0; number /= 10)
 			tmp[number % 10] += 1;
 
-		for(uint8_t i = 1; i < 10; i++)
+		for (digit_t i = 1; i < 10; i++)
 			ret = ret * DIG_BASE + tmp[i];
 	#endif
 	return ret;
 }
 
-struct dig_count *dig_count_init(__attribute__((unused)) vamp_t max)
+struct cache *cache_init(__attribute__((unused)) vamp_t max)
 {
-	struct dig_count *new = NULL;
-	#if JENS_K_A_OPTIMIZATION
-		new = malloc(sizeof(struct dig_count));
+	struct cache *new = NULL;
+	#if CACHE
+		new = malloc(sizeof(struct cache));
 		if (new == NULL)
 			abort();
 
 		fang_t length_a = length(max) / 3;
 		fang_t length_b = length(max) - (2 * length_a);
-		new->digsize = pow10v(length_b);
+		new->size = pow10v(length_b);
 
 		if (length_a < 3)
-			new->power_a = new->digsize;
+			new->power_a = new->size;
 		else
 			new->power_a = pow10v(length_a);
 
-		new->dig = malloc(sizeof(digits_t) * new->digsize);
+		new->dig = malloc(sizeof(digits_t) * new->size);
 		if (new->dig == NULL)
 			abort();
 
-		for (fang_t d = 0; d < new->digsize; d++)
+		for (fang_t d = 0; d < new->size; d++)
 			new->dig[d] = set_dig(d);
 	#endif
 	return new;
 }
 
-void dig_count_free(__attribute__((unused)) struct dig_count *ptr)
+void cache_free(__attribute__((unused)) struct cache *ptr)
 {
-#if JENS_K_A_OPTIMIZATION
+#if CACHE
 	if (ptr != NULL)
 		free(ptr->dig);
 	free(ptr);
@@ -973,7 +906,7 @@ void dig_count_free(__attribute__((unused)) struct dig_count *ptr)
 struct vargs	/* Vampire arguments */
 {
 	vamp_t local_count;
-	struct dig_count *digptr;
+	struct cache *digptr;
 
 #ifdef PROCESS_RESULTS
 	struct bthandle *thandle;
@@ -984,7 +917,7 @@ struct vargs	/* Vampire arguments */
 #endif
 };
 
-struct vargs *vargs_init(struct dig_count *digptr)
+struct vargs *vargs_init(struct cache *digptr)
 {
 	struct vargs *new = malloc(sizeof(struct vargs));
 	if (new == NULL)
@@ -1040,7 +973,7 @@ void vargs_btree_cleanup(__attribute__((unused)) struct vargs *args, __attribute
 }
 
 /*---------------------------------------------------------------------------*/
-#if !JENS_K_A_OPTIMIZATION
+#if !CACHE
 
 void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
@@ -1123,7 +1056,7 @@ vampire_exit:
 	return 0;
 }
 
-#else /* !JENS_K_A_OPTIMIZATION */
+#else /* !CACHE */
 
 void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
@@ -1173,7 +1106,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 
 			digits_t digd;
 
-			if (min_sqrt >= args->digptr->digsize)
+			if (min_sqrt >= args->digptr->size)
 				digd = set_dig(multiplier);
 			else
 				digd = dig[multiplier];
@@ -1226,7 +1159,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	#endif
 	return 0;
 }
-#endif  /* !JENS_K_A_OPTIMIZATION */
+#endif  /* !CACHE */
 
 /*--------------------------------- Threads ---------------------------------*/
 struct targs_t
@@ -1236,7 +1169,7 @@ struct targs_t
 	struct matrix *mat;
 	vamp_t *count;
 	double	runtime;
-	struct dig_count *digptr;
+	struct cache *digptr;
 
 #if MEASURE_RUNTIME
 	struct timespec start;
@@ -1249,7 +1182,7 @@ struct targs_t *targs_t_init(
 	pthread_mutex_t *write,
 	struct matrix *mat,
 	vamp_t *count,
-	struct dig_count *digptr)
+	struct cache *digptr)
 {
 	struct targs_t *new = malloc(sizeof(struct targs_t));
 	if (new == NULL)
@@ -1296,7 +1229,7 @@ struct targs_handle
 {
 	struct targs_t *targs[THREADS];
 	struct matrix *mat;
-	struct dig_count *digptr;
+	struct cache *digptr;
 	vamp_t counter;
 	pthread_mutex_t *read;
 	pthread_mutex_t *write;
@@ -1309,7 +1242,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 		abort();
 
 	new->mat = matrix_init();
-	new->digptr = dig_count_init(max);
+	new->digptr = cache_init(max);
 	new->counter = 0;
 	new->read = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(new->read, NULL);
@@ -1331,7 +1264,7 @@ void targs_handle_free(struct targs_handle *ptr)
 	pthread_mutex_destroy(ptr->write);
 	free(ptr->write);
 	matrix_free(ptr->mat);
-	dig_count_free(ptr->digptr);
+	cache_free(ptr->digptr);
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
 		targs_t_free(ptr->targs[thread]);
@@ -1349,16 +1282,6 @@ void targs_handle_print(struct targs_handle *ptr)
 		total_time += ptr->targs[thread]->runtime;
 	}
 	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
-#endif
-
-#if (defined PROCESS_RESULTS) && PRINT_DIST_MATRIX && (THREADS > 8)
-	double distrubution = 0.0;
-	for (thread_t thread = 0; thread < THREADS; thread++) {
-		distrubution += ((double)ptr->targs[thread]->count) / ((double)(ptr->counter));
-		fprintf(stderr, "(%lf,0.1+%lu/%lu),", distrubution, thread + 1, (10 * THREADS) / 9);
-		if ((thread + 1) % 10 == 0)
-			fprintf(stderr, "\n");
-	}
 #endif
 
 #if defined COUNT_RESULTS ||  defined DUMP_RESULTS
@@ -1435,14 +1358,13 @@ int main(int argc, char* argv[])
 		printf("Usage: helsing [min] [max]\n");
 		return 0;
 	}
-	bool err = false;
-	vamp_t min = atov(argv[1], &err);
-	if (err) {
+	vamp_t min;
+	if (atov(argv[1], &min)) {
 		fprintf(stderr, "Min out of range: [0, %llu]\n", vamp_max);
 		return 1;
 	}
-	vamp_t max = atov(argv[2], &err);
-	if (err) {
+	vamp_t max;
+	if (atov(argv[2], &max)) {
 		fprintf(stderr, "Max out of range: [0, %llu]\n", vamp_max);
 		return 1;
 	}
@@ -1450,9 +1372,9 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		return 1;
 	}
-	if (max > 9999999999 && DIG_ELEMENT_BITS == 32) {
+	if (max > 9999999999 && ELEMENT_BITS == 32) {
 		fprintf(stderr, "WARNING: the code might produce false ");
-		fprintf(stderr, "positives, set DIG_ELEMENT_BITS to 64\n");
+		fprintf(stderr, "positives, please set ELEMENT_BITS to 64.\n");
 		return 0;
 	}
 
