@@ -307,7 +307,9 @@ vamp_t div_roof (vamp_t x, vamp_t y)
 	return (x/y + !!(x%y));
 }
 
-vamp_t get_tilesize(__attribute__((unused)) vamp_t lmin, __attribute__((unused)) vamp_t lmax)
+vamp_t get_tilesize(
+	__attribute__((unused)) vamp_t lmin,
+	__attribute__((unused)) vamp_t lmax)
 {
 	vamp_t tile_size = vamp_max;
 
@@ -815,7 +817,9 @@ void matrix_reset(struct matrix *ptr)
 	ptr->arr = NULL;
 }
 
-void matrix_print(__attribute__((unused)) struct matrix *ptr, __attribute__((unused)) vamp_t *count)
+void matrix_print(
+	__attribute__((unused)) struct matrix *ptr,
+	__attribute__((unused)) vamp_t *count)
 {
 #if (defined PROCESS_RESULTS && defined PRINT_RESULTS)
 	for (vamp_t x = ptr->cleanup; x < ptr->size; x++)
@@ -832,7 +836,6 @@ void matrix_progress(__attribute__((unused)) struct matrix *ptr)
 	#if (defined PROCESS_RESULTS &&  DISPLAY_PROGRESS)
 		fprintf(stderr, "%llu, %llu", ptr->arr[ptr->cleanup]->lmin, ptr->arr[ptr->cleanup]->lmax);
 		fprintf(stderr, "  %llu/%llu\n", ptr->cleanup + 1, ptr->size);
-
 	#endif
 }
 
@@ -965,7 +968,9 @@ struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
 	return ret;
 }
 
-void vargs_btree_cleanup(__attribute__((unused)) struct vargs *args, __attribute__((unused)) vamp_t number)
+void vargs_btree_cleanup(
+	__attribute__((unused)) struct vargs *args,
+	__attribute__((unused)) vamp_t number)
 {
 #ifdef PROCESS_RESULTS
 	args->thandle->tree = btree_cleanup(args->thandle->tree, number, args->lhandle, &(args->thandle->size));
@@ -975,7 +980,7 @@ void vargs_btree_cleanup(__attribute__((unused)) struct vargs *args, __attribute
 /*---------------------------------------------------------------------------*/
 #if !CACHE
 
-void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
+void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
@@ -988,15 +993,13 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt){
-				vamp_t tmp = max / multiplier;
-				multiplicand_max = tmp;
-				// max can be less than (10^(n+1) -1)^2
-		} else {
+		if (multiplier >= max_sqrt)
+			multiplicand_max = max / multiplier;
+		else
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
-		}
+
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
 
@@ -1036,7 +1039,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 						args->local_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
-						printf("%llu=%lu*%lu\n", product, multiplier, multiplicand);
+						printf("%llu = %lu x %lu\n", product, multiplier, multiplicand);
 					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
@@ -1051,14 +1054,18 @@ vampire_exit:
 	}
 	vargs_btree_cleanup(args, 0);
 	#if MEASURE_RUNTIME
-		args->total += args->lhandle->size;
+		#ifdef PROCESS_RESULTS
+			args->total += args->lhandle->size;
+		#elif defined COUNT_RESULTS ||  defined DUMP_RESULTS
+			args->total += args->local_count;
+		#endif
 	#endif
-	return 0;
+	return;
 }
 
 #else /* !CACHE */
 
-void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
+void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
@@ -1074,15 +1081,13 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt){
-				vamp_t tmp = max / multiplier;
-				multiplicand_max = tmp;
-				// max can be less than (10^(n+1) -1)^2
-		} else {
+		if (multiplier >= max_sqrt)
+			multiplicand_max = max / multiplier;
+		else
 			multiplicand_max = multiplier;
 			// multiplicand can be equal to multiplier:
 			// 5267275776 = 72576 * 72576.
-		}
+
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
 
@@ -1122,7 +1127,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 						args->local_count += 1;
 					#endif
 					#ifdef DUMP_RESULTS
-						printf("%llu=%lu*%lu\n", product, multiplier, multiplicand);
+						printf("%llu = %lu x %lu\n", product, multiplier, multiplicand);
 					#endif
 					#ifdef PROCESS_RESULTS
 						bthandle_add(args->thandle, product);
@@ -1157,7 +1162,7 @@ void *vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			args->total += args->local_count;
 		#endif
 	#endif
-	return 0;
+	return;
 }
 #endif  /* !CACHE */
 
@@ -1281,7 +1286,7 @@ void targs_handle_print(struct targs_handle *ptr)
 		fprintf(stderr, "%u\t%.2lfs\t%llu\n", thread, ptr->targs[thread]->runtime, ptr->targs[thread]->total);
 		total_time += ptr->targs[thread]->runtime;
 	}
-	fprintf(stderr, "\nFang search took: %.2lfs, average: %.2lfs\n", total_time, total_time / THREADS);
+	fprintf(stderr, "\nFang search took: %.2lf s, average: %.2lf s\n", total_time, total_time / THREADS);
 #endif
 
 #if defined COUNT_RESULTS ||  defined DUMP_RESULTS
@@ -1358,14 +1363,9 @@ int main(int argc, char* argv[])
 		printf("Usage: helsing [min] [max]\n");
 		return 0;
 	}
-	vamp_t min;
-	if (atov(argv[1], &min)) {
-		fprintf(stderr, "Min out of range: [0, %llu]\n", vamp_max);
-		return 1;
-	}
-	vamp_t max;
-	if (atov(argv[2], &max)) {
-		fprintf(stderr, "Max out of range: [0, %llu]\n", vamp_max);
+	vamp_t min, max;
+	if (atov(argv[1], &min) || atov(argv[2], &max)) {
+		fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
 		return 1;
 	}
 	if (min > max) {
