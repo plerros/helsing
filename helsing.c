@@ -94,7 +94,7 @@
  *
  * 	It just so happens that all the elements get processed at once (in
  * 	parallel), memory alignment issues are avoided and the base-m for a 64
- * 	bit element tops at 128	(2^7). It's as if we had assigned dedicated 
+ * 	bit element tops at 128	(2^7). It's as if we had assigned dedicated
  * 	bitfields and we get to use bitshift operations.
  *
  * Note to future developers; it's possible to make the array even smaller:
@@ -184,8 +184,8 @@ typedef uint8_t length_t;
 /*---------------------------- HELPER FUNCTIONS  ----------------------------*/
 length_t length(vamp_t x)
 {
-	length_t length = 0;
-	for (; x > 0; x /= 10)
+	length_t length = 1;
+	for (; x > 9; x /= 10)
 		length++;
 	return length;
 }
