@@ -42,7 +42,7 @@
 #include <stdint.h>
 #include <ctype.h>	// isdigit
 
-/*--------------------------- COMPILATION OPTIONS ---------------------------*/
+/*--------------------------- COMPILATION OPTIONS  ---------------------------*/
 #define THREADS 1
 #define thread_t uint16_t
 
@@ -149,7 +149,7 @@ typedef unsigned long fang_t;
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
 
-/*--------------------------- PREPROCESSOR STUFF  ---------------------------*/
+/*---------------------------- PREPROCESSOR STUFF ----------------------------*/
 // DIGMULT = ELEMENT_BITS/(10 - DIGSKIP)
 #if ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
@@ -181,8 +181,8 @@ typedef uint8_t length_t;
 	#define PRINT_RESULTS
 #endif
 
-/*---------------------------- HELPER FUNCTIONS  ----------------------------*/
-length_t length(vamp_t x)
+/*----------------------------- HELPER FUNCTIONS -----------------------------*/
+static length_t length(vamp_t x)
 {
 	length_t length = 1;
 	for (; x > 9; x /= 10)
@@ -190,12 +190,12 @@ length_t length(vamp_t x)
 	return length;
 }
 
-bool length_isodd(vamp_t x)
+static bool length_isodd(vamp_t x)
 {
 	return (length(x) % 2);
 }
 
-vamp_t pow10v(length_t exponent) // pow10 for vamp_t.
+static vamp_t pow10v(length_t exponent) // pow10 for vamp_t.
 {
 	#if SANITY_CHECK
 		assert(exponent <= length(vamp_max) - 1);
@@ -206,8 +206,11 @@ vamp_t pow10v(length_t exponent) // pow10 for vamp_t.
 	return base;
 }
 
-// willoverflow: Checks if (10 * x + digit) will overflow.
-bool willoverflow(vamp_t x, digit_t digit)
+/*
+ * willoverflow:
+ * Checks if (10 * x + digit) will overflow, without causing and overflow.
+ */
+static bool willoverflow(vamp_t x, digit_t digit)
 {
 	assert(digit < 10);
 	if (x > vamp_max / 10)
@@ -217,7 +220,7 @@ bool willoverflow(vamp_t x, digit_t digit)
 	return false;
 }
 
-int atov(const char *str, vamp_t *number) // ASCII to vamp_t
+static int atov(const char *str, vamp_t *number) // ASCII to vamp_t
 {
 	assert(str != NULL);
 	assert(number != NULL);
@@ -232,12 +235,12 @@ int atov(const char *str, vamp_t *number) // ASCII to vamp_t
 	return 0;
 }
 
-bool notrailingzero(fang_t x) // bugfree
+static bool notrailingzero(fang_t x)
 {
 	return ((x % 10) != 0);
 }
 
-vamp_t get_min(vamp_t min, vamp_t max)
+static vamp_t get_min(vamp_t min, vamp_t max)
 {
 	if (length_isodd(min)) {
 		length_t min_length = length(min);
@@ -249,7 +252,7 @@ vamp_t get_min(vamp_t min, vamp_t max)
 	return min;
 }
 
-vamp_t get_max(vamp_t min, vamp_t max)
+static vamp_t get_max(vamp_t min, vamp_t max)
 {
 	if (length_isodd(max)) {
 		length_t max_length = length(max);
@@ -261,7 +264,7 @@ vamp_t get_max(vamp_t min, vamp_t max)
 	return max;
 }
 
-vamp_t get_lmax(vamp_t lmin, vamp_t max)
+static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
 	vamp_t lmax;
 	if (length(lmin) < length(vamp_max)) {
@@ -272,22 +275,22 @@ vamp_t get_lmax(vamp_t lmin, vamp_t max)
 	return max;
 }
 
-fang_t sqrtv_floor(vamp_t x) // vamp_t sqrt to fang_t.
+static fang_t sqrtv_floor(vamp_t x) // vamp_t sqrt to fang_t.
 {
 	vamp_t x2 = x / 2;
-	vamp_t root = x2; // Initial estimate
-	if (root > 0) { // Sanity check
-		vamp_t tmp = (root  + x / root) / 2; // Update
-		while (tmp < root) { // This also checks for cycle
+	vamp_t root = x2;
+	if (root > 0) {
+		vamp_t tmp = (root + x / root) / 2;
+		while (tmp < root) {
 			root = tmp;
-			tmp = (root  + x / root) / 2;
+			tmp = (root + x / root) / 2;
 		}
 		return root;
 	}
 	return x;
 }
 
-fang_t sqrtv_roof(vamp_t x)
+static fang_t sqrtv_roof(vamp_t x)
 {
 	fang_t root = sqrtv_floor(x);
 	if (root == fang_max)
@@ -297,17 +300,17 @@ fang_t sqrtv_roof(vamp_t x)
 }
 
 // Modulo 9 lack of congruence
-bool con9(vamp_t x, vamp_t y)
+static bool con9(vamp_t x, vamp_t y)
 {
 	return ((x + y) % 9 != (x * y) % 9);
 }
 
-vamp_t div_roof (vamp_t x, vamp_t y)
+static vamp_t div_roof (vamp_t x, vamp_t y)
 {
 	return (x/y + !!(x%y));
 }
 
-vamp_t get_tilesize(
+static vamp_t get_tilesize(
 	__attribute__((unused)) vamp_t lmin,
 	__attribute__((unused)) vamp_t lmax)
 {
@@ -323,7 +326,7 @@ vamp_t get_tilesize(
 	return tile_size;
 }
 
-/*------------------------------- linked list -------------------------------*/
+/*------------------------------- linked list  -------------------------------*/
 struct llist
 {
 	vamp_t value[LINK_SIZE];
@@ -331,7 +334,7 @@ struct llist
 	struct llist *next;
 };
 
-struct llist *llist_init(vamp_t value , struct llist *next)
+static struct llist *llist_init(vamp_t value , struct llist *next)
 {
 
 	struct llist *new;
@@ -340,7 +343,6 @@ struct llist *llist_init(vamp_t value , struct llist *next)
 		new->value[new->current] = value;
 		new->current += 1;
 	} else {
-
 		new = malloc(sizeof(struct llist));
 		if (new == NULL)
 			abort();
@@ -352,7 +354,7 @@ struct llist *llist_init(vamp_t value , struct llist *next)
 	return new;
 }
 
-void llist_free(struct llist *list)
+static void llist_free(struct llist *list)
 {
 	struct llist *tmp = list;
 	for (struct llist *i = tmp; tmp != NULL; i = tmp) {
@@ -362,7 +364,7 @@ void llist_free(struct llist *list)
 }
 
 #ifdef PRINT_RESULTS
-void llist_print(struct llist *list, vamp_t count)
+static void llist_print(struct llist *list, vamp_t count)
 {
 	for (struct llist *i = list; i != NULL ; i = i->next) {
 		for (uint16_t j = i->current; j > 0 ; j--) {
@@ -373,7 +375,7 @@ void llist_print(struct llist *list, vamp_t count)
 }
 #endif
 
-/*--------------------------- linked list handle  ---------------------------*/
+/*---------------------------- linked list handle ----------------------------*/
 struct llhandle
 {
 #ifdef STORE_RESULTS
@@ -382,7 +384,7 @@ struct llhandle
 	vamp_t size;
 };
 
-struct llhandle *llhandle_init()
+static struct llhandle *llhandle_init()
 {
 	struct llhandle *new = malloc(sizeof(struct llhandle));
 	if (new == NULL)
@@ -395,7 +397,7 @@ struct llhandle *llhandle_init()
 	return new;
 }
 
-void llhandle_free(struct llhandle *handle)
+static void llhandle_free(struct llhandle *handle)
 {
 #ifdef STORE_RESULTS
 	if (handle != NULL)
@@ -404,7 +406,7 @@ void llhandle_free(struct llhandle *handle)
 	free(handle);
 }
 
-void llhandle_add(struct llhandle *handle, __attribute__((unused)) vamp_t value)
+static void llhandle_add(struct llhandle *handle, __attribute__((unused)) vamp_t value)
 {
 	if (handle == NULL)
 		return;
@@ -415,16 +417,8 @@ void llhandle_add(struct llhandle *handle, __attribute__((unused)) vamp_t value)
 	handle->size += 1;
 }
 
-void llhandle_reset(struct llhandle *handle)
-{
-#ifdef STORE_RESULTS
-	llist_free(handle->head);
-	handle->head = NULL;
-#endif
-	handle->size = 0;
-}
+/*------------------------------- binary tree  -------------------------------*/
 
-/*------------------------------- binary tree -------------------------------*/
 struct btree
 {
 	struct btree *left;
@@ -434,7 +428,7 @@ struct btree
 	uint8_t fang_pairs;
 };
 
-struct btree *btree_init(vamp_t value)
+static struct btree *btree_init(vamp_t value)
 {
 	struct btree *new = malloc(sizeof(struct btree));
 	if (new == NULL)
@@ -448,7 +442,7 @@ struct btree *btree_init(vamp_t value)
 	return new;
 }
 
-void btree_free(struct btree *tree)
+static void btree_free(struct btree *tree)
 {
 	if (tree != NULL) {
 		if (tree->left != NULL)
@@ -459,7 +453,7 @@ void btree_free(struct btree *tree)
 	free(tree);
 }
 
-int is_balanced(struct btree *tree)
+static int is_balanced(struct btree *tree)
 {
 	if (tree == NULL)
 		return 0;
@@ -475,7 +469,7 @@ int is_balanced(struct btree *tree)
 	return (lheight - rheight);
 }
 
-void btree_reset_height(struct btree *tree)
+static void btree_reset_height(struct btree *tree)
 {
 	#if SANITY_CHECK
 		assert(tree != NULL);
@@ -485,6 +479,9 @@ void btree_reset_height(struct btree *tree)
 		tree->height = tree->left->height + 1;
 	if (tree->right != NULL && tree->right->height >= tree->height)
 		tree->height = tree->right->height + 1;
+	#if SANITY_CHECK
+		assert(tree->height <= 32);
+	#endif
 }
 
 /*
@@ -499,7 +496,7 @@ void btree_reset_height(struct btree *tree)
  * The '...' are completely unaffected.
  */
 
-struct btree *btree_rotate_l(struct btree *tree)
+static struct btree *btree_rotate_l(struct btree *tree)
 {
 	if (tree->right != NULL) {
 		struct btree *right = tree->right;
@@ -524,7 +521,7 @@ struct btree *btree_rotate_l(struct btree *tree)
  * The '...' are completely unaffected.
  */
 
-struct btree *btree_rotate_r(struct btree *tree)
+static struct btree *btree_rotate_r(struct btree *tree)
 {
 	if (tree->left != NULL) {
 		struct btree *left = tree->left;
@@ -537,7 +534,7 @@ struct btree *btree_rotate_r(struct btree *tree)
 	return tree;
 }
 
-struct btree *btree_balance(struct btree *tree)
+static struct btree *btree_balance(struct btree *tree)
 {
 	#if SANITY_CHECK
 		assert(tree != NULL);
@@ -550,7 +547,7 @@ struct btree *btree_balance(struct btree *tree)
 		}
 		tree = btree_rotate_r(tree);
 	}
-	else if (isbalanced < - 1) {
+	else if (isbalanced < -1) {
 		if (is_balanced(tree->right) > 0) {
 			tree->right = btree_rotate_r(tree->right);
 			btree_reset_height(tree); //maybe optional?
@@ -561,7 +558,7 @@ struct btree *btree_balance(struct btree *tree)
 	return tree;
 }
 
-struct btree *btree_add(
+static struct btree *btree_add(
 	struct btree *tree,
 	vamp_t node,
 	vamp_t *count)
@@ -584,7 +581,7 @@ struct btree *btree_add(
 	return tree;
 }
 
-struct btree *btree_cleanup(
+static struct btree *btree_cleanup(
 	struct btree *tree,
 	vamp_t number,
 	struct llhandle *lhandle,
@@ -615,7 +612,8 @@ struct btree *btree_cleanup(
 	return tree;
 }
 
-/*--------------------------- binary tree handle  ---------------------------*/
+/*---------------------------- binary tree handle ----------------------------*/
+
 struct bthandle
 {
 	#ifdef PROCESS_RESULTS
@@ -624,7 +622,7 @@ struct bthandle
 	#endif
 };
 
-struct bthandle *bthandle_init()
+static struct bthandle *bthandle_init()
 {
 	struct bthandle *new = NULL;
 	#ifdef PROCESS_RESULTS
@@ -638,7 +636,7 @@ struct bthandle *bthandle_init()
 	return new;
 }
 
-void bthandle_free(__attribute__((unused)) struct bthandle *handle)
+static void bthandle_free(__attribute__((unused)) struct bthandle *handle)
 {
 	#ifdef PROCESS_RESULTS
 		if (handle != NULL)
@@ -647,7 +645,7 @@ void bthandle_free(__attribute__((unused)) struct bthandle *handle)
 	#endif
 }
 
-void bthandle_add(
+static void bthandle_add(
 	__attribute__((unused)) struct bthandle *handle,
 	__attribute__((unused)) vamp_t number)
 {
@@ -659,7 +657,7 @@ void bthandle_add(
 	#endif
 }
 
-void bthandle_reset(__attribute__((unused)) struct bthandle *handle)
+static void bthandle_reset(__attribute__((unused)) struct bthandle *handle)
 {
 	#ifdef PROCESS_RESULTS
 		btree_free(handle->tree);
@@ -684,7 +682,7 @@ void bthandle_cleanup(
 #endif
 }
 
-/*---------------------------------- tile  ----------------------------------*/
+/*----------------------------------- tile -----------------------------------*/
 struct tile
 {
 	vamp_t lmin; // local minimum
@@ -696,7 +694,7 @@ struct tile
 #endif
 };
 
-struct tile *tile_init(vamp_t min, vamp_t max)
+static struct tile *tile_init(vamp_t min, vamp_t max)
 {
 	struct tile *new = malloc(sizeof(struct tile));
 	if (new == NULL)
@@ -712,7 +710,7 @@ struct tile *tile_init(vamp_t min, vamp_t max)
 	return new;
 }
 
-void tile_free(struct tile *ptr)
+static void tile_free(struct tile *ptr)
 {
 #ifdef PROCESS_RESULTS
 	if (ptr != NULL)
@@ -721,7 +719,7 @@ void tile_free(struct tile *ptr)
 	free(ptr);
 }
 
-/*--------------------------------- matrix  ---------------------------------*/
+/*---------------------------------- matrix ----------------------------------*/
 struct matrix
 {
 	struct tile **arr;
@@ -731,7 +729,7 @@ struct matrix
 	fang_t fmax;
 };
 
-struct matrix *matrix_init()
+static struct matrix *matrix_init()
 {
 	struct matrix *new = malloc(sizeof(struct matrix));
 	if (new == NULL)
@@ -749,7 +747,7 @@ struct matrix *matrix_init()
 	return new;
 }
 
-void matrix_free(struct matrix *ptr)
+static void matrix_free(struct matrix *ptr)
 {
 	if (ptr == NULL)
 		return;
@@ -762,7 +760,7 @@ void matrix_free(struct matrix *ptr)
 	free(ptr);
 }
 
-void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
+static void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 {
 	assert(lmin <= lmax);
 	assert(ptr->arr == NULL);
@@ -809,7 +807,7 @@ void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax)
 	ptr->arr[ptr->size - 1]->lmax = lmax;
 }
 
-void matrix_reset(struct matrix *ptr)
+static void matrix_reset(struct matrix *ptr)
 {
 	for (vamp_t i = 0; i < ptr->size; i++)
 		tile_free(ptr->arr[i]);
@@ -817,7 +815,7 @@ void matrix_reset(struct matrix *ptr)
 	ptr->arr = NULL;
 }
 
-void matrix_print(
+static void matrix_print(
 	__attribute__((unused)) struct matrix *ptr,
 	__attribute__((unused)) vamp_t *count)
 {
@@ -831,7 +829,7 @@ void matrix_print(
 }
 
 // matrix_progress requires mutex lock
-void matrix_progress(__attribute__((unused)) struct matrix *ptr)
+static void matrix_progress(__attribute__((unused)) struct matrix *ptr)
 {
 	#if (defined PROCESS_RESULTS &&  DISPLAY_PROGRESS)
 		fprintf(stderr, "%llu, %llu", ptr->arr[ptr->cleanup]->lmin, ptr->arr[ptr->cleanup]->lmax);
@@ -839,7 +837,7 @@ void matrix_progress(__attribute__((unused)) struct matrix *ptr)
 	#endif
 }
 
-/*-------------------------------- dig_count --------------------------------*/
+/*---------------------------------- cache  ----------------------------------*/
 struct cache
 {
 #if CACHE
@@ -849,7 +847,7 @@ struct cache
 #endif
 };
 
-digits_t set_dig(fang_t number)
+static digits_t set_dig(fang_t number)
 {
 	digits_t ret = 0;
 	#if ELEMENT_BITS == 64
@@ -869,7 +867,7 @@ digits_t set_dig(fang_t number)
 	return ret;
 }
 
-struct cache *cache_init(__attribute__((unused)) vamp_t max)
+static struct cache *cache_init(__attribute__((unused)) vamp_t max)
 {
 	struct cache *new = NULL;
 	#if CACHE
@@ -896,7 +894,7 @@ struct cache *cache_init(__attribute__((unused)) vamp_t max)
 	return new;
 }
 
-void cache_free(__attribute__((unused)) struct cache *ptr)
+static void cache_free(__attribute__((unused)) struct cache *ptr)
 {
 #if CACHE
 	if (ptr != NULL)
@@ -905,7 +903,7 @@ void cache_free(__attribute__((unused)) struct cache *ptr)
 #endif
 }
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 struct vargs	/* Vampire arguments */
 {
 	vamp_t local_count;
@@ -920,7 +918,7 @@ struct vargs	/* Vampire arguments */
 #endif
 };
 
-struct vargs *vargs_init(struct cache *digptr)
+static struct vargs *vargs_init(struct cache *digptr)
 {
 	struct vargs *new = malloc(sizeof(struct vargs));
 	if (new == NULL)
@@ -939,7 +937,7 @@ struct vargs *vargs_init(struct cache *digptr)
 	return new;
 }
 
-void vargs_free(struct vargs *args)
+static void vargs_free(struct vargs *args)
 {
 #ifdef PROCESS_RESULTS
 	bthandle_free(args->thandle);
@@ -948,7 +946,7 @@ void vargs_free(struct vargs *args)
 	free (args);
 }
 
-void vargs_reset(struct vargs *args)
+static void vargs_reset(struct vargs *args)
 {
 	args->local_count = 0;
 
@@ -958,7 +956,8 @@ void vargs_reset(struct vargs *args)
 #endif
 }
 
-struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
+#ifdef PROCESS_RESULTS
+static struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
 {
 	struct llhandle *ret = NULL;
 #ifdef PROCESS_RESULTS
@@ -967,8 +966,9 @@ struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
 #endif
 	return ret;
 }
+#endif
 
-void vargs_btree_cleanup(
+static void vargs_btree_cleanup(
 	__attribute__((unused)) struct vargs *args,
 	__attribute__((unused)) vamp_t number)
 {
@@ -977,10 +977,10 @@ void vargs_btree_cleanup(
 #endif
 }
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 #if !CACHE
 
-void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
+static void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
@@ -1065,7 +1065,7 @@ vampire_exit:
 
 #else /* !CACHE */
 
-void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
+static void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
@@ -1166,7 +1166,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 }
 #endif  /* !CACHE */
 
-/*--------------------------------- Threads ---------------------------------*/
+/*--------------------------------- Threads  ---------------------------------*/
 struct targs_t
 {
 	pthread_mutex_t *read;
@@ -1182,7 +1182,7 @@ struct targs_t
 #endif
 };
 
-struct targs_t *targs_t_init(
+static struct targs_t *targs_t_init(
 	pthread_mutex_t *read,
 	pthread_mutex_t *write,
 	struct matrix *mat,
@@ -1206,19 +1206,19 @@ struct targs_t *targs_t_init(
 	return new;
 }
 
-void targs_t_free(struct targs_t *ptr)
+static void targs_t_free(struct targs_t *ptr)
 {
 	free(ptr);
 }
 
-void thread_timer_start(__attribute__((unused)) struct targs_t *ptr)
+static void thread_timer_start(__attribute__((unused)) struct targs_t *ptr)
 {
 #if MEASURE_RUNTIME
 	clock_gettime(SPDT_CLK_MODE, &(ptr->start));
 #endif
 }
 
-void thread_timer_stop(__attribute__((unused)) struct targs_t *ptr)
+static void thread_timer_stop(__attribute__((unused)) struct targs_t *ptr)
 {
 #if MEASURE_RUNTIME
 	struct timespec finish;
@@ -1229,7 +1229,7 @@ void thread_timer_stop(__attribute__((unused)) struct targs_t *ptr)
 #endif
 }
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 struct targs_handle
 {
 	struct targs_t *targs[THREADS];
@@ -1240,7 +1240,7 @@ struct targs_handle
 	pthread_mutex_t *write;
 };
 
-struct targs_handle *targs_handle_init(vamp_t max)
+static struct targs_handle *targs_handle_init(vamp_t max)
 {
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
 	if (new == NULL)
@@ -1259,7 +1259,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 	return new;
 }
 
-void targs_handle_free(struct targs_handle *ptr)
+static void targs_handle_free(struct targs_handle *ptr)
 {
 	if (ptr == NULL)
 		return;
@@ -1277,7 +1277,7 @@ void targs_handle_free(struct targs_handle *ptr)
 	free(ptr);
 }
 
-void targs_handle_print(struct targs_handle *ptr)
+static void targs_handle_print(struct targs_handle *ptr)
 {
 #if MEASURE_RUNTIME
 	double total_time = 0.0;
@@ -1296,8 +1296,8 @@ void targs_handle_print(struct targs_handle *ptr)
 #endif
 }
 
-/*---------------------------------------------------------------------------*/
-void *thread_worker(void *void_args)
+/*----------------------------------------------------------------------------*/
+static void *thread_worker(void *void_args)
 {
 	struct targs_t *args = (struct targs_t *)void_args;
 	thread_timer_start(args);
@@ -1356,7 +1356,7 @@ void *thread_worker(void *void_args)
 	return 0;
 }
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 int main(int argc, char* argv[])
 {
 	if (argc != 3) {
