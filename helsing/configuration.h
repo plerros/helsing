@@ -12,7 +12,7 @@
 
 // Check memory with valgrind --tool=massif
 
-#define THREADS 16
+#define THREADS 1
 #define thread_t uint16_t
 
 /*
