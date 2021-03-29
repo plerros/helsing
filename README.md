@@ -10,7 +10,8 @@ Windows isn't posix compatible, you'll need to install WSL or WSL2.
 
 Compile with:
 ```
-gcc -O2 -Wall -Wextra -pthread -o helsing helsing.c
+cd helsing
+make
 ```
 Run with: 
 ```
