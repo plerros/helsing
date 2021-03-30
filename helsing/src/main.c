@@ -12,24 +12,11 @@
 #include "helper.h"
 #include "matrix.h"
 #include "targs_handle.h"
+#include "checkpoint.h"
 
 static bool length_isodd(vamp_t x)
 {
 	return (length(x) % 2);
-}
-
-/*
- * willoverflow:
- * Checks if (10 * x + digit) will overflow, without causing and overflow.
- */
-static bool willoverflow(vamp_t x, digit_t digit)
-{
-	assert(digit < 10);
-	if (x > vamp_max / 10)
-		return true;
-	if (x == vamp_max / 10 && digit > vamp_max % 10)
-		return true;
-	return false;
 }
 
 static int atov(const char *str, vamp_t *number) // ASCII to vamp_t
@@ -84,15 +71,36 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 
 int main(int argc, char* argv[])
 {
+	vamp_t min, max;
+#if !defined(USE_CHECKPOINT) || !USE_CHECKPOINT
 	if (argc != 3) {
 		printf("Usage: helsing [min] [max]\n");
 		return 0;
 	}
-	vamp_t min, max;
 	if (atov(argv[1], &min) || atov(argv[2], &max)) {
 		fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
 		return 1;
 	}
+#else
+	vamp_t count = 0;
+	if (argc != 1 && argc != 3) {
+		printf("Usage: helsing alternative placeholder message\n");
+		return 0;
+	}
+	if (argc == 1) {
+		vamp_t ccurrent;
+		load_checkpoint(&min, &max, &ccurrent, &count);
+		if (ccurrent > min)
+			min = ccurrent + 1;
+	}
+	if (argc == 3) {
+		if (atov(argv[1], &min) || atov(argv[2], &max)) {
+			fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
+			return 1;
+		}
+		touch_checkpoint(min, max);
+	}
+#endif
 	if (min > max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		return 1;
@@ -111,6 +119,10 @@ int main(int argc, char* argv[])
 
 	pthread_t threads[THREADS];
 	struct targs_handle *thhandle = targs_handle_init(max);
+
+	#if defined(USE_CHECKPOINT) && USE_CHECKPOINT
+		thhandle->counter = count;
+	#endif
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);

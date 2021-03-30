@@ -62,7 +62,7 @@ void llhandle_free(struct llhandle *handle);
 void llhandle_add(struct llhandle *handle, __attribute__((unused)) vamp_t value);
 void llhandle_reset(struct llhandle *handle);
 
-#if defined(STORE_RESULTS) && defined(PRINT_RESULTS) 
+#if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
 
 void llhandle_print(struct llhandle *ptr, vamp_t count);
 

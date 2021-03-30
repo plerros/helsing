@@ -10,6 +10,7 @@
 
 #include "configuration.h"
 
+bool willoverflow(vamp_t x, digit_t digit);
 length_t length(vamp_t x);
 vamp_t pow10v(length_t exponent);
 vamp_t div_roof (vamp_t x, vamp_t y);

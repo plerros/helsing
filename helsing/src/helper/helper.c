@@ -9,6 +9,20 @@
 
 #include "configuration.h"
 
+/*
+ * willoverflow:
+ * Checks if (10 * x + digit) will overflow, without causing and overflow.
+ */
+bool willoverflow(vamp_t x, digit_t digit)
+{
+	assert(digit < 10);
+	if (x > vamp_max / 10)
+		return true;
+	if (x == vamp_max / 10 && digit > vamp_max % 10)
+		return true;
+	return false;
+}
+
 length_t length(vamp_t x)
 {
 	length_t length = 1;

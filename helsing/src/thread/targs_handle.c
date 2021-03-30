@@ -16,6 +16,7 @@
 #include "vargs.h"
 #include "targs.h"
 #include "targs_handle.h"
+#include "checkpoint.h"
 
 struct targs_handle *targs_handle_init(vamp_t max)
 {
@@ -110,6 +111,8 @@ void *thread_worker(void *void_args)
 					
 					*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
 					matrix_progress(args->mat);
+					
+					save_checkpoint(args->mat->arr[args->mat->cleanup]->lmax, *(args->count));
 
 					tile_free(args->mat->arr[args->mat->cleanup]);
 					args->mat->arr[args->mat->cleanup] = NULL;

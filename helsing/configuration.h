@@ -7,6 +7,7 @@
 #define HELSING_CONFIG_H // safety precaution for the c preprocessor
 
 #include <stdint.h>
+#include <stdbool.h> // preprocessor true/false
 #include <limits.h>
 #include <time.h>
 
@@ -25,7 +26,10 @@
 
 #define VERBOSE_LEVEL 2
 
+#if VERBOSE_LEVEL >= 2
 #define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL > 1
+#endif
+
 #define DISPLAY_PROGRESS false
 #define MEASURE_RUNTIME false
 
@@ -98,6 +102,40 @@
 #define AUTO_TILE_SIZE true
 #define MAX_TILE_SIZE 99999999999ULL
 
+/*
+ * USE_CHECKPOINT:
+ *
+ * 	USE_CHECKPOINT will generate the CHECKPOINT_FILE. In there the code will
+ * store it's progress every (at least) MAX_TILE_SIZE numbers.
+ *
+ * 	The file format is text based (ASCII). The first line is like a header,
+ * there we store [min] and [max], separated by a space. All the following lines
+ * are optional. In those we store [current] and [count], separated by a space.
+ *
+ * Interfacing properly with files is hard. I have made a few design decisions
+ * in the hopes to minimize the damage from possible errors in my code:
+ *
+ * 	1. The code always checks if CHECKPOINT_FILE exists before 'touch'-ing
+ * 	   it. This way we prevent accidental truncation.
+ *
+ * 	2. The code opens the file only in read or append mode. This way we
+ * 	   avoid accidental overwrite of data.
+ *
+ * 	3. The code has no ability to delete files. You'll have to do that
+ * 	   manually.
+ */
+
+#if VERBOSE_LEVEL >= 2
+#define USE_CHECKPOINT false // requires VERBOSE_LEVEL > 1
+#define CHECKPOINT_FILE "a.checkpoint"
+#endif
+
+/*
+ * LINK_SIZE:
+ *
+ * 	The amount of elements stored in each link of a linked list.
+ */
+
 #define LINK_SIZE 100
 #define SANITY_CHECK false
 
@@ -149,4 +187,4 @@ typedef uint8_t length_t;
 	#define PROCESS_RESULTS
 	#define PRINT_RESULTS
 #endif
-#endif
+#endif /* HELSING_CONFIG_H */
