@@ -2,7 +2,7 @@
 A POSIX vampire number generator, with heapsort built in.
 The focus of this project is performance, code readability and portability.
 
-In helsing/configuration.h you can easily set the number of threads, tune the algorithm and adjust verbosity.
+In helsing/configuration.h you can easily set the number of threads, select the algorithm implementation and tune it, adjust verbosity and enable checkpoints.
 Be sure to read the documentation!
 
 Windows isn't posix compatible. You'll need to set up a virtual machine or (if you are on Windows10) install WSL and a linux distribution from the Windows Store.
