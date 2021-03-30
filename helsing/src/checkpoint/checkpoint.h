@@ -9,13 +9,10 @@
 #include "configuration.h"
 
 #if defined(USE_CHECKPOINT) && USE_CHECKPOINT
-
 void touch_checkpoint(vamp_t min, vamp_t max);
 void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count);
 void save_checkpoint(vamp_t current, vamp_t count);
-
 #else /* defined(USE_CHECKPOINT) && USE_CHECKPOINT */
-
 static inline void touch_checkpoint(
 	__attribute__((unused)) vamp_t min,
 	__attribute__((unused)) vamp_t max)
@@ -33,6 +30,5 @@ static inline void save_checkpoint(
 	__attribute__((unused)) vamp_t count)
 {
 }
-
 #endif /* defined(USE_CHECKPOINT) && USE_CHECKPOINT */
 #endif /* HELSING_CHECKPOINT_H */

@@ -26,3 +26,7 @@ Examples:
 ./helsing 1 1172560176
 ./helsing 18446744073709551615 18446744073709551615
 ```
+## Recover from checkpoint (if enabled in configuration)
+```
+./helsing
+```

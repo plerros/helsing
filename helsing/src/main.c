@@ -84,7 +84,8 @@ int main(int argc, char* argv[])
 #else
 	vamp_t count = 0;
 	if (argc != 1 && argc != 3) {
-		printf("Usage: helsing alternative placeholder message\n");
+		printf("Usage: helsing [min] [max]\n");
+		printf("to recover from %s: helsing\n", CHECKPOINT_FILE);
 		return 0;
 	}
 	if (argc == 1) {

@@ -42,35 +42,27 @@ struct targs_t *targs_t_init(
 void targs_t_free(struct targs_t *ptr);
 
 #if MEASURE_RUNTIME
-
 static inline void targs_init_total(
 	struct targs_t *ptr,
 	vamp_t total)
 {
 	ptr->total = total;
 }
-
 void thread_timer_start(struct targs_t *ptr);
 void thread_timer_stop(struct targs_t *ptr);
-
 #else /* MEASURE_RUNTIME */
-
 static inline void targs_init_total(
 	__attribute__((unused)) struct targs_t *ptr,
 	__attribute__((unused)) vamp_t total)
 {
 }
-
 static inline void thread_timer_start(
 	__attribute__((unused)) struct targs_t *ptr)
 {
 }
-
 static inline void thread_timer_stop(
 	__attribute__((unused)) struct targs_t *ptr)
 {
 }
-
 #endif /* MEASURE_RUNTIME */
-
 #endif /* HELSING_TARGS_H */

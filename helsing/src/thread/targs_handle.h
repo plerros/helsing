@@ -28,4 +28,4 @@ void targs_handle_free(struct targs_handle *ptr);
 void targs_handle_print(struct targs_handle *ptr);
 
 void *thread_worker(void *void_args);
-#endif
+#endif /* HELSING_TARGS_HANDLE_H */
