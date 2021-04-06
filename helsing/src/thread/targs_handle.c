@@ -100,35 +100,35 @@ void *thread_worker(void *void_args)
 
 // Critical section start
 			pthread_mutex_lock(args->write);
-			#ifdef PROCESS_RESULTS
-				current->result = vargs_getlhandle(vamp_args);
-				current->complete = true;
-				while (
-					args->mat->cleanup < args->mat->size &&
-					args->mat->arr[args->mat->cleanup]->complete)
-				{
-					llhandle_print(args->mat->arr[args->mat->cleanup]->result, *(args->count));
-					
-					*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
-					matrix_progress(args->mat);
-					
-					save_checkpoint(args->mat->arr[args->mat->cleanup]->lmax, *(args->count));
+#ifdef PROCESS_RESULTS
+			current->result = vargs_getlhandle(vamp_args);
+			current->complete = true;
+			while (
+				args->mat->cleanup < args->mat->size &&
+				args->mat->arr[args->mat->cleanup]->complete)
+			{
+				llhandle_print(args->mat->arr[args->mat->cleanup]->result, *(args->count));
+				
+				*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
+				matrix_progress(args->mat);
+				
+				save_checkpoint(args->mat->arr[args->mat->cleanup]->lmax, *(args->count));
 
-					tile_free(args->mat->arr[args->mat->cleanup]);
-					args->mat->arr[args->mat->cleanup] = NULL;
-					args->mat->cleanup += 1;
-				}
-			#else
-				*(args->count) += vamp_args->local_count;
-			#endif
+				tile_free(args->mat->arr[args->mat->cleanup]);
+				args->mat->arr[args->mat->cleanup] = NULL;
+				args->mat->cleanup += 1;
+			}
+#else
+			*(args->count) += vamp_args->local_count;
+#endif
 			pthread_mutex_unlock(args->write);
 // Critical section end
 			vargs_reset(vamp_args);
 		}
 	}
-	#if MEASURE_RUNTIME
-		args->total += vamp_args->total;
-	#endif
+#if MEASURE_RUNTIME
+	args->total += vamp_args->total;
+#endif
 	vargs_free(vamp_args);
 	thread_timer_stop(args);
 	return 0;

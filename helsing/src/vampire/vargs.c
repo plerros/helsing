@@ -56,29 +56,26 @@ struct vargs *vargs_init(struct cache *digptr)
 	if (new == NULL)
 		abort();
 
-	new->local_count = 0;
 	new->digptr = digptr;
+	vargs_init_local_count(new);
 	vargs_init_lhandle(new);
-	vargs_init_thandle(new);
+	new->thandle = bthandle_init();
 	vargs_init_total(new);
 	return new;
 }
 
 void vargs_free(struct vargs *args)
 {
-	vargs_free_lhandle(args);
-	vargs_free_thandle(args);
+	llhandle_free(args->lhandle);
+	bthandle_free(args->thandle);
 	free (args);
 }
 
 void vargs_reset(struct vargs *args)
 {
-	args->local_count = 0;
+	vargs_init_local_count(args);
 	vargs_init_lhandle(args);
-
-#ifdef PROCESS_RESULTS
 	bthandle_reset(args->thandle);
-#endif
 }
 
 struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
@@ -91,111 +88,15 @@ struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
 	return ret;
 }
 
-#ifdef PROCESS_RESULTS
-
-void vargs_btree_cleanup(
-	__attribute__((unused)) struct vargs *args,
-	__attribute__((unused)) vamp_t number)
-{
-	bthandle_cleanup(args->thandle, args->lhandle, number);
-}
-
-#endif
-
-#if !CACHE
-
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
-	for (fang_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
-		if (multiplier % 3 == 1)
-			continue;
-
-		fang_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
-		bool mult_zero = notrailingzero(multiplier);
-
-		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt)
-			multiplicand_max = max / multiplier;
-		else
-			multiplicand_max = multiplier;
-			// multiplicand can be equal to multiplier:
-			// 5267275776 = 72576 * 72576.
-
-		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
-			multiplicand++;
-
-		if (multiplicand <= multiplicand_max) {
-			vamp_t product_iterator = multiplier;
-			product_iterator *= 9; // <= 9 * 2^32
-			vamp_t product = multiplier;
-			product *= multiplicand; // avoid overflow
-
-			length_t mult_array[10] = {0};
-			for (fang_t i = multiplier; i > 0; i /= 10)
-				mult_array[i % 10] += 1;
-
-			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
-				uint16_t product_array[10] = {0};
-				for (vamp_t p = product; p > 0; p /= 10)
-					product_array[p % 10] += 1;
-
-				for (digit_t i = 0; i < 10; i++)
-					if (product_array[i] < mult_array[i])
-						goto vampire_exit;
-
-				digit_t temp;
-				for (fang_t m = multiplicand; m > 0; m /= 10) {
-					temp = m % 10;
-					if (product_array[temp] == 0)
-						goto vampire_exit;
-					else
-						product_array[temp]--;
-				}
-				for (digit_t i = 0; i < 9; i++)
-					if (product_array[i] != mult_array[i])
-						goto vampire_exit;
-
-				if (mult_zero || notrailingzero(multiplicand)) {
-					#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-						args->local_count += 1;
-					#endif
-					#ifdef DUMP_RESULTS
-						printf("%llu = %lu x %lu\n", product, multiplier, multiplicand);
-					#endif
-					#ifdef PROCESS_RESULTS
-						bthandle_add(args->thandle, product);
-					#endif
-				}
-vampire_exit:
-				product += product_iterator;
-			}
-			if (multiplier < max_sqrt && mult_zero)
-				vargs_btree_cleanup(args, product);
-		}
-	}
-	vargs_btree_cleanup(args, 0);
-	#if MEASURE_RUNTIME
-		#ifdef PROCESS_RESULTS
-			args->total += args->lhandle->size;
-		#elif defined COUNT_RESULTS ||  defined DUMP_RESULTS
-			args->total += args->local_count;
-		#endif
-	#endif
-	return;
-}
-
-#else /* !CACHE */
-
-void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
-{
-	fang_t min_sqrt = sqrtv_roof(min);
-	fang_t max_sqrt = sqrtv_floor(max);
-
+#if CACHE
 	fang_t power_a = args->digptr->power_a;
 	digits_t *dig = args->digptr->dig;
+#endif
 
 	for (fang_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
 		if (multiplier % 3 == 1)
@@ -209,8 +110,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			multiplicand_max = max / multiplier;
 		else
 			multiplicand_max = multiplier;
-			// multiplicand can be equal to multiplier:
-			// 5267275776 = 72576 * 72576.
+			// multiplicand <= multiplier: 5267275776 = 72576 * 72576.
 
 		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
 			multiplicand++;
@@ -220,6 +120,8 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			product_iterator *= 9; // <= 9 * 2^32
 			vamp_t product = multiplier;
 			product *= multiplicand; // avoid overflow
+
+#if CACHE
 
 			fang_t step0 = product_iterator % power_a;
 			fang_t step1 = product_iterator / power_a;
@@ -247,15 +149,9 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
 					if (mult_zero || notrailingzero(multiplicand)) {
-					#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-						args->local_count += 1;
-					#endif
-					#ifdef DUMP_RESULTS
-						printf("%llu = %lu x %lu\n", product, multiplier, multiplicand);
-					#endif
-					#ifdef PROCESS_RESULTS
+						vargs_iterate_local_count(args);
+						vargs_print_results(product, multiplier, multiplicand);
 						bthandle_add(args->thandle, product);
-					#endif
 					}
 				e0 += 9;
 				if (e0 >= power_a) {
@@ -274,19 +170,50 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 				}
 				product += product_iterator;
 			}
+
+#else /* CACHE */
+
+			length_t mult_array[10] = {0};
+			for (fang_t i = multiplier; i > 0; i /= 10)
+				mult_array[i % 10] += 1;
+
+			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
+				uint16_t product_array[10] = {0};
+				for (vamp_t p = product; p > 0; p /= 10)
+					product_array[p % 10] += 1;
+
+				for (digit_t i = 0; i < 10; i++)
+					if (product_array[i] < mult_array[i])
+						goto vampire_exit;
+
+				digit_t temp;
+				for (fang_t m = multiplicand; m > 0; m /= 10) {
+					temp = m % 10;
+					if (product_array[temp] == 0)
+						goto vampire_exit;
+					else
+						product_array[temp]--;
+				}
+				for (digit_t i = 0; i < 9; i++)
+					if (product_array[i] != mult_array[i])
+						goto vampire_exit;
+
+				if (mult_zero || notrailingzero(multiplicand)) {
+					vargs_iterate_local_count(args);
+					vargs_print_results(product, multiplier, multiplicand);
+					bthandle_add(args->thandle, product);
+				}
+vampire_exit:
+				product += product_iterator;
+			}
+
+#endif /* CACHE */
+
 			if (multiplier < max_sqrt && mult_zero)
-				vargs_btree_cleanup(args, product);
+				bthandle_cleanup(args->thandle, args->lhandle, product);
 		}
 	}
-	vargs_btree_cleanup(args, 0);
-	#if MEASURE_RUNTIME
-		#ifdef PROCESS_RESULTS
-			args->total += args->lhandle->size;
-		#elif defined COUNT_RESULTS ||  defined DUMP_RESULTS
-			args->total += args->local_count;
-		#endif
-	#endif
+	bthandle_cleanup(args->thandle, args->lhandle, 0);
+	vargs_update_total(args);
 	return;
 }
-
-#endif  /* !CACHE */

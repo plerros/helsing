@@ -9,6 +9,7 @@
 #include "llist.h"
 #include "llhandle.h"
 
+#ifdef PROCESS_RESULTS
 struct llhandle *llhandle_init()
 {
 	struct llhandle *new = malloc(sizeof(struct llhandle));
@@ -20,27 +21,28 @@ struct llhandle *llhandle_init()
 	return new;
 }
 
-void llhandle_free(struct llhandle *handle)
+void llhandle_free(struct llhandle *ptr)
 {
-	free_head(handle);
-	free(handle);
+	llist_free(ptr->head);
+	free(ptr);
 }
 
-void llhandle_add(struct llhandle *handle, vamp_t value)
+void llhandle_add(struct llhandle *ptr, vamp_t value)
 {
-	if (handle == NULL)
+	if (ptr == NULL)
 		return;
 
-	init_head(handle, value);
-	handle->size += 1;
+	init_head(ptr, value);
+	ptr->size += 1;
 }
 
-void llhandle_reset(struct llhandle *handle)
+void llhandle_reset(struct llhandle *ptr)
 {
-	free_head(handle);
-	handle->size = 0;
+	llist_free(ptr->head);
+	reset_head(ptr);
+	ptr->size = 0;
 }
-
+#endif /* PROCESS_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
 
@@ -49,4 +51,4 @@ void llhandle_print(struct llhandle *ptr, vamp_t count)
 	llist_print(ptr->head, count);
 }
 
-#endif 
+#endif

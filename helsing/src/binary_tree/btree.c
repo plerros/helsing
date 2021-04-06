@@ -65,9 +65,9 @@ int is_balanced(struct btree *tree)
 
 void btree_reset_height(struct btree *tree)
 {
-	#if SANITY_CHECK
-		assert(tree != NULL);
-	#endif
+#if SANITY_CHECK
+	assert(tree != NULL);
+#endif
 
 	tree->height = 0;
 	if (tree->left != NULL && tree->left->height >= tree->height)
@@ -75,9 +75,9 @@ void btree_reset_height(struct btree *tree)
 	if (tree->right != NULL && tree->right->height >= tree->height)
 		tree->height = tree->right->height + 1;
 
-	#if SANITY_CHECK
-		assert(tree->height <= 32);
-	#endif
+#if SANITY_CHECK
+	assert(tree->height <= 32);
+#endif
 }
 
 /*
@@ -132,9 +132,9 @@ struct btree *btree_rotate_r(struct btree *tree)
 
 struct btree *btree_balance(struct btree *tree)
 {
-	#if SANITY_CHECK
-		assert(tree != NULL);
-	#endif
+#if SANITY_CHECK
+	assert(tree != NULL);
+#endif
 
 	int isbalanced = is_balanced(tree);
 	if (isbalanced > 1) {
@@ -190,9 +190,8 @@ struct btree *btree_cleanup(
 	tree->right = btree_cleanup(tree->right, number, lhandle, btree_size);
 
 	if (tree->value >= number) {
-		if (tree->fang_pairs >= MIN_FANG_PAIRS) {
+		if (tree->fang_pairs >= MIN_FANG_PAIRS)
 			llhandle_add(lhandle, tree->value);
-		}
 		struct btree *tmp = tree->left;
 		tree->left = NULL;
 		btree_free(tree);

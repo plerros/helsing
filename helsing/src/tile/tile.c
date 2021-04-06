@@ -24,6 +24,7 @@ struct tile *tile_init(vamp_t min, vamp_t max)
 
 void tile_free(struct tile *ptr)
 {
-	tile_free_result(ptr);
+	if (ptr != NULL)
+		llhandle_free(ptr->result);
 	free(ptr);
 }

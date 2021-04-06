@@ -7,10 +7,7 @@
 #define HELSING_MATRIX_H
 
 #include "configuration.h"
-
-#include "llhandle.h"
 #include "tile.h"
-
 
 struct matrix
 {

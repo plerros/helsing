@@ -121,9 +121,9 @@ int main(int argc, char* argv[])
 	pthread_t threads[THREADS];
 	struct targs_handle *thhandle = targs_handle_init(max);
 
-	#if defined(USE_CHECKPOINT) && USE_CHECKPOINT
-		thhandle->counter = count;
-	#endif
+#if defined(USE_CHECKPOINT) && USE_CHECKPOINT
+	thhandle->counter = count;
+#endif
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);

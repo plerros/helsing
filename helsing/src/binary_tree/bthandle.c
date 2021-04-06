@@ -37,9 +37,9 @@ void bthandle_add(
 	struct bthandle *handle,
 	vamp_t number)
 {
-	#if SANITY_CHECK
-		assert(handle != NULL);
-	#endif
+#if SANITY_CHECK
+	assert(handle != NULL);
+#endif
 	handle->tree = btree_add(handle->tree, number, &(handle->size));
 }
 

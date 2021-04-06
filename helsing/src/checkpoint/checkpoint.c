@@ -114,7 +114,7 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count)
 			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
 			exit(0);
 		}
-		if (*count > *current) {
+		if (*count > 2 * div_roof(*current, 3)) {
 			fclose(fp);
 			err_baditem(line, 2);
 			fprintf(stderr, "%llu > %llu (above current)\n\n", *count, *current);

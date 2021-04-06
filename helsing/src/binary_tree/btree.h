@@ -14,7 +14,6 @@
 #include <stddef.h> // NULL
 #endif
 
-
 #ifdef PROCESS_RESULTS
 struct btree;
 struct btree *btree_init(vamp_t value);

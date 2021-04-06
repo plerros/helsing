@@ -13,12 +13,12 @@
 
 struct vargs	/* Vampire arguments */
 {
-	vamp_t local_count;
 	struct cache *digptr;
-
-#ifdef PROCESS_RESULTS
 	struct bthandle *thandle;
 	struct llhandle *lhandle;
+
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+	vamp_t local_count;
 #endif
 #if MEASURE_RUNTIME
 	vamp_t total;
@@ -37,18 +37,6 @@ static inline void vargs_init_lhandle(struct vargs *ptr)
 {
 	ptr->lhandle = llhandle_init();
 }
-static inline void vargs_init_thandle(struct vargs *ptr)
-{
-	ptr->thandle = bthandle_init();
-}
-static inline void vargs_free_lhandle(struct vargs *ptr)
-{
-	free(ptr->lhandle);
-}
-static inline void vargs_free_thandle(struct vargs *ptr)
-{
-	free(ptr->thandle);
-}
 #else /* PROCESS_RESULTS */
 static inline void vargs_btree_cleanup(
 	__attribute__((unused)) struct vargs *args,
@@ -58,24 +46,63 @@ static inline void vargs_btree_cleanup(
 static inline void vargs_init_lhandle(__attribute__((unused)) struct vargs *ptr)
 {
 }
-static inline void vargs_init_thandle(__attribute__((unused)) struct vargs *ptr)
-{
-}
-static inline void vargs_free_lhandle(__attribute__((unused)) struct vargs *ptr)
-{
-}
-static inline void vargs_free_thandle(__attribute__((unused)) struct vargs *ptr)
-{
-}
 #endif /* PROCESS_RESULTS */
+
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+static inline void vargs_init_local_count(struct vargs *ptr)
+{
+	ptr->local_count = 0;
+}
+static inline void vargs_iterate_local_count(struct vargs *ptr)
+{
+	ptr->local_count += 1;
+}
+#else /* defined COUNT_RESULTS ||  defined DUMP_RESULTS */
+static inline void vargs_init_local_count(
+	__attribute__((unused)) struct vargs *ptr)
+{
+}
+static inline void vargs_iterate_local_count(
+	__attribute__((unused)) struct vargs *ptr)
+{
+}
+#endif /* defined COUNT_RESULTS ||  defined DUMP_RESULTS */
+
+#ifdef DUMP_RESULTS
+static inline void vargs_print_results(
+	vamp_t product,
+	fang_t multiplier,
+	fang_t multiplicand)
+{
+	printf("%llu = %lu x %lu\n", product, multiplier, multiplicand);
+}
+#else /* DUMP_RESULTS */
+static inline void vargs_print_results(
+	__attribute__((unused)) vamp_t product,
+	__attribute__((unused)) fang_t multiplier,
+	__attribute__((unused)) fang_t multiplicand)
+{
+}
+#endif /* DUMP_RESULTS */
 
 #if MEASURE_RUNTIME
 static inline void vargs_init_total(struct vargs *ptr)
 {
 	ptr->total = 0;
 }
+static inline void vargs_update_total(struct vargs *ptr)
+{
+#ifdef PROCESS_RESULTS
+	ptr->total += ptr->lhandle->size;
+#elif defined (COUNT_RESULTS) ||  defined (DUMP_RESULTS)
+	ptr->total += ptr->local_count;
+#endif
+}
 #else /* MEASURE_RUNTIME */
 static inline void vargs_init_total(__attribute__((unused)) struct vargs *ptr)
+{
+}
+static inline void vargs_update_total(__attribute__((unused)) struct vargs *ptr)
 {
 }
 #endif /* MEASURE_RUNTIME */
