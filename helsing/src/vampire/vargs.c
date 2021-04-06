@@ -101,7 +101,7 @@ void vargs_btree_cleanup(
 }
 
 #endif
-/*----------------------------------------------------------------------------*/
+
 #if !CACHE
 
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)

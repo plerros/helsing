@@ -37,12 +37,22 @@ void touch_checkpoint(vamp_t min, vamp_t max)
 	fp = fopen(CHECKPOINT_FILE, "r");
 	if (fp != NULL) {
 		fclose(fp);
-		fprintf(stderr, "helsing.checkpoint already exists\n");
+		fprintf(stderr, "%s already exists\n", CHECKPOINT_FILE);
 		exit(0);
 	}
 	fp = fopen(CHECKPOINT_FILE, "w+");
 	fprintf(fp, "%llu %llu", min, max);
 	fclose(fp);
+}
+
+static void err_badline(vamp_t line)
+{
+	fprintf(stderr, "\n[ERROR] %s line %llu has bad data:\n", CHECKPOINT_FILE, line);
+}
+
+static void err_baditem(vamp_t line, vamp_t item)
+{
+	fprintf(stderr, "\n[ERROR] %s line %llu item #%llu has bad data:\n", CHECKPOINT_FILE, line, item);
 }
 
 void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count)
@@ -54,14 +64,14 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count)
 
 	if (ftov(fp, min) || ftov(fp, max)) {
 		fclose(fp);
-		fprintf(stderr, "\n[ERROR] %s line %llu has bad data:\n", CHECKPOINT_FILE, line);
+		err_badline(line);
 		fprintf(stderr, "Input out of range: [0, %llu]\n\n", vamp_max);
 	 	exit(0);
 	}
 
 	if (*max < *min) {
 		fclose(fp);
-		fprintf(stderr, "\n[ERROR] %s line %llu has bad data:\n", CHECKPOINT_FILE, line);
+		err_badline(line);
 		fprintf(stderr, "max < min\n\n");
 		exit(0);
 	}
@@ -75,38 +85,44 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count)
 	for (; !feof(fp); ) {
 		if (ftov(fp, current)) {
 			fclose(fp);
-			fprintf(stderr, "\n[ERROR] %s line %llu item #1 has bad data:\n", CHECKPOINT_FILE, line);
+			err_baditem(line, 1);
 			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
 			exit(0);
 		}
 		if (*current < *min) {
 			fclose(fp);
-			fprintf(stderr, "\n[ERROR] %s line %llu item #1 has bad data:\n", CHECKPOINT_FILE, line);
+			err_baditem(line, 1);
 			fprintf(stderr, "%llu < %llu (below min)\n\n", *current,  *min);
 			exit(0);
 		}
 		if (*current > *max) {
 			fclose(fp);
-			fprintf(stderr, "\n[ERROR] %s line %llu item #1 has bad data:\n", CHECKPOINT_FILE, line);
+			err_baditem(line, 1);
 			fprintf(stderr, "%llu > %llu (above max)\n\n", *current,  *max);
 			exit(0);
 		}
 		if (*current <= prev && line != 2) {
 			fclose(fp);
-			fprintf(stderr, "\n[ERROR] %s line %llu item #1 has bad data:\n", CHECKPOINT_FILE, line);
+			err_baditem(line, 1);
 			fprintf(stderr, "%llu <= %llu (below previous)\n\n", *current, prev);
 			exit(0);
 		}
 
 		if (ftov(fp, count)) {
 			fclose(fp);
-			fprintf(stderr, "\n[ERROR] %s line %llu item #2 has bad data:\n", CHECKPOINT_FILE, line);
+			err_baditem(line, 2);
 			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
+			exit(0);
+		}
+		if (*count > *current) {
+			fclose(fp);
+			err_baditem(line, 2);
+			fprintf(stderr, "%llu > %llu (above current)\n\n", *count, *current);
 			exit(0);
 		}
 		if (*count < prevcount && line != 2) {
 			fclose(fp);
-			fprintf(stderr, "\n[ERROR] %s line %llu item #2 has bad data:\n", CHECKPOINT_FILE, line);
+			err_baditem(line, 2);
 			fprintf(stderr, "%llu < %llu (below previous)\n\n", *count, prevcount);
 			exit(0);
 		}

@@ -12,7 +12,6 @@
 #include "llist.h"
 #endif
 
-
 struct llhandle
 {
 #ifdef STORE_RESULTS

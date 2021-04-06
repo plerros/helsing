@@ -22,8 +22,7 @@ void cache_free(__attribute__((unused)) struct cache *ptr);
 struct cache
 {
 };
-static inline digits_t set_dig(
-	__attribute__((unused)) fang_t number)
+static inline digits_t set_dig(__attribute__((unused)) fang_t number)
 {
 	return 0;
 }
