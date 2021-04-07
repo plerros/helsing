@@ -10,7 +10,7 @@
 #include "llhandle.h"
 
 #ifdef PROCESS_RESULTS
-struct llhandle *llhandle_init()
+void llhandle_init(struct llhandle **ptr)
 {
 	struct llhandle *new = malloc(sizeof(struct llhandle));
 	if (new == NULL)
@@ -18,7 +18,7 @@ struct llhandle *llhandle_init()
 
 	reset_head(new);
 	new->size = 0;
-	return new;
+	*ptr = new;
 }
 
 void llhandle_free(struct llhandle *ptr)
@@ -32,7 +32,7 @@ void llhandle_add(struct llhandle *ptr, vamp_t value)
 	if (ptr == NULL)
 		return;
 
-	init_head(ptr, value);
+	llist_init(&(ptr->head), value, ptr->head);
 	ptr->size += 1;
 }
 

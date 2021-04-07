@@ -17,17 +17,17 @@ struct llist
 	uint16_t current;
 	struct llist *next;
 };
-struct llist *llist_init(vamp_t value , struct llist *next);
+void llist_init(struct llist **ptr, vamp_t value , struct llist *next);
 void llist_free(struct llist *list);
 #else /* STORE_RESULTS */
 struct llist
 {
 };
-static inline struct llist *llist_init(
+static inline void llist_init(
+	__attribute__((unused)) struct llist **ptr,
 	__attribute__((unused)) vamp_t value,
 	__attribute__((unused)) struct llist *next)
 {
-	return NULL;
 }
 static inline void llist_free(
 	__attribute__((unused)) struct llist *list)

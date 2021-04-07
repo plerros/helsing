@@ -14,7 +14,7 @@
 #include "btree.h"
 #include "bthandle.h"
 
-struct bthandle *bthandle_init()
+void bthandle_init(struct bthandle **ptr)
 {
 	struct bthandle *new = NULL;
 	new = malloc(sizeof(struct bthandle));
@@ -23,7 +23,7 @@ struct bthandle *bthandle_init()
 
 	new->tree = NULL;
 	new->size = 0;
-	return new;
+	*ptr = new;
 }
 
 void bthandle_free(struct bthandle *handle)

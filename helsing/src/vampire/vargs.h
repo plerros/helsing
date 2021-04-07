@@ -33,17 +33,10 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax);
 
 #ifdef PROCESS_RESULTS
 void vargs_btree_cleanup(struct vargs *args, vamp_t number);
-static inline void vargs_init_lhandle(struct vargs *ptr)
-{
-	ptr->lhandle = llhandle_init();
-}
 #else /* PROCESS_RESULTS */
 static inline void vargs_btree_cleanup(
 	__attribute__((unused)) struct vargs *args,
 	__attribute__((unused)) vamp_t number)
-{
-}
-static inline void vargs_init_lhandle(__attribute__((unused)) struct vargs *ptr)
 {
 }
 #endif /* PROCESS_RESULTS */

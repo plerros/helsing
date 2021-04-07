@@ -24,22 +24,13 @@ static inline void reset_head(struct llhandle *ptr)
 {
 	ptr->head = NULL;
 }
-static inline void init_head(struct llhandle *ptr,vamp_t value)
-{
-	ptr->head = llist_init(value, ptr->head);
-}
 #else /* STORE_RESULTS */
 static inline void reset_head(__attribute__((unused)) struct llhandle *ptr)
 {
 }
-static inline void init_head(
-	__attribute__((unused)) struct llhandle *ptr,
-	__attribute__((unused)) vamp_t value)
-{
-}
 #endif /* STORE_RESULTS */
 
-struct llhandle *llhandle_init();
+void llhandle_init(struct llhandle **ptr);
 void llhandle_free(struct llhandle *ptr);
 void llhandle_add(struct llhandle *ptr, __attribute__((unused)) vamp_t value);
 void llhandle_reset(struct llhandle *ptr);
@@ -47,9 +38,8 @@ void llhandle_reset(struct llhandle *ptr);
 struct llhandle
 {
 };
-static inline struct llhandle *llhandle_init()
+static inline void llhandle_init(__attribute__((unused)) struct llhandle **ptr)
 {
-	return NULL;
 }
 static inline void llhandle_free(__attribute__((unused)) struct llhandle *ptr)
 {

@@ -12,7 +12,7 @@
 
 #include "llist.h"
 
-struct llist *llist_init(vamp_t value , struct llist *next)
+void llist_init(struct llist **ptr, vamp_t value , struct llist *next)
 {
 	struct llist *new;
 	if (next != NULL && next->current < LINK_SIZE) {
@@ -28,7 +28,7 @@ struct llist *llist_init(vamp_t value , struct llist *next)
 		new->current = 1;
 		new->next = next;
 	}
-	return new;
+	*ptr = new;
 }
 
 void llist_free(struct llist *list)

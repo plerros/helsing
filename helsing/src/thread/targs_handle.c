@@ -102,10 +102,9 @@ void *thread_worker(void *void_args)
 			pthread_mutex_lock(args->write);
 #ifdef PROCESS_RESULTS
 			current->result = vargs_getlhandle(vamp_args);
-			current->complete = true;
 			while (
 				args->mat->cleanup < args->mat->size &&
-				args->mat->arr[args->mat->cleanup]->complete)
+				args->mat->arr[args->mat->cleanup]->result != NULL)
 			{
 				llhandle_print(args->mat->arr[args->mat->cleanup]->result, *(args->count));
 				

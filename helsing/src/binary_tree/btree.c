@@ -22,7 +22,7 @@ struct btree
 	uint8_t fang_pairs;
 };
 
-struct btree *btree_init(vamp_t value)
+void btree_init(struct btree **ptr, vamp_t value)
 {
 	struct btree *new = malloc(sizeof(struct btree));
 	if (new == NULL)
@@ -33,7 +33,7 @@ struct btree *btree_init(vamp_t value)
 	new->height = 0;
 	new->value = value;
 	new->fang_pairs = 1;
-	return new;
+	*ptr = new;
 }
 
 void btree_free(struct btree *tree)
@@ -162,7 +162,9 @@ struct btree *btree_add(
 {
 	if (tree == NULL) {
 		*count += 1;
-		return btree_init(node);
+		struct btree *tmpptr;
+		btree_init(&tmpptr, node);
+		return (tmpptr);
 	}
 	if (node == tree->value) {
 		tree->fang_pairs += 1;

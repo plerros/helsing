@@ -15,7 +15,7 @@ struct bthandle
 	struct btree *tree;
 	vamp_t size;
 };
-struct bthandle *bthandle_init();
+void bthandle_init(struct bthandle **ptr);
 void bthandle_free(struct bthandle *handle);
 void bthandle_add(struct bthandle *handle, vamp_t number);
 void bthandle_reset(struct bthandle *handle);
@@ -28,9 +28,8 @@ void bthandle_cleanup(
 struct bthandle
 {
 };
-static inline struct bthandle *bthandle_init()
+static inline void bthandle_init(__attribute__((unused)) struct bthandle **ptr)
 {
-	return NULL;
 }
 static inline void bthandle_free(
 	__attribute__((unused)) struct bthandle *handle)

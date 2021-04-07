@@ -8,6 +8,7 @@
 
 #include "configuration.h"
 #include "tile.h"
+#include "llhandle.h"
 
 struct tile *tile_init(vamp_t min, vamp_t max)
 {
@@ -18,7 +19,6 @@ struct tile *tile_init(vamp_t min, vamp_t max)
 	new->lmin = min;
 	new->lmax = max;
 	tile_init_result(new);
-	tile_init_complete(new);
 	return new;
 }
 

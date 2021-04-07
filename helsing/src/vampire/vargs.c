@@ -58,8 +58,8 @@ struct vargs *vargs_init(struct cache *digptr)
 
 	new->digptr = digptr;
 	vargs_init_local_count(new);
-	vargs_init_lhandle(new);
-	new->thandle = bthandle_init();
+	llhandle_init(&(new->lhandle));
+	bthandle_init(&(new->thandle));
 	vargs_init_total(new);
 	return new;
 }
@@ -74,15 +74,15 @@ void vargs_free(struct vargs *args)
 void vargs_reset(struct vargs *args)
 {
 	vargs_init_local_count(args);
-	vargs_init_lhandle(args);
+	llhandle_init(&(args->lhandle));
 	bthandle_reset(args->thandle);
 }
 
 struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
 {
 	struct llhandle *ret = NULL;
-#ifdef PROCESS_RESULTS
 	ret = args->lhandle;
+#ifdef PROCESS_RESULTS
 	args->lhandle = NULL;
 #endif
 	return ret;

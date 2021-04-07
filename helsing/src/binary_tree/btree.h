@@ -16,7 +16,7 @@
 
 #ifdef PROCESS_RESULTS
 struct btree;
-struct btree *btree_init(vamp_t value);
+void btree_init(struct btree **ptr, vamp_t value);
 void btree_free(struct btree *tree);
 struct btree *btree_add(
 	struct btree *tree,
@@ -31,9 +31,10 @@ struct btree *btree_cleanup(
 struct btree
 {
 };
-static inline struct btree *btree_init(__attribute__((unused)) vamp_t value)
+static inline void btree_init(
+	__attribute__((unused)) struct btree **ptr,
+	__attribute__((unused)) vamp_t value)
 {
-	return NULL;
 }
 static inline void btree_free(__attribute__((unused)) struct btree *tree)
 {
