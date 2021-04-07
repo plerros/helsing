@@ -25,7 +25,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 		abort();
 
 	new->mat = matrix_init();
-	new->digptr = cache_init(max);
+	cache_init(&(new->digptr), max);
 	new->counter = 0;
 	new->read = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(new->read, NULL);

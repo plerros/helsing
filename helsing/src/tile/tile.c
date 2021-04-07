@@ -18,7 +18,7 @@ struct tile *tile_init(vamp_t min, vamp_t max)
 
 	new->lmin = min;
 	new->lmax = max;
-	tile_init_result(new);
+	new->result = NULL;
 	return new;
 }
 

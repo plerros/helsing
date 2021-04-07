@@ -16,7 +16,7 @@ void llhandle_init(struct llhandle **ptr)
 	if (new == NULL)
 		abort();
 
-	reset_head(new);
+	new->head = NULL;
 	new->size = 0;
 	*ptr = new;
 }
@@ -39,7 +39,7 @@ void llhandle_add(struct llhandle *ptr, vamp_t value)
 void llhandle_reset(struct llhandle *ptr)
 {
 	llist_free(ptr->head);
-	reset_head(ptr);
+	ptr->head = NULL;
 	ptr->size = 0;
 }
 #endif /* PROCESS_RESULTS */

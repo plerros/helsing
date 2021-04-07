@@ -37,10 +37,9 @@ digits_t set_dig(fang_t number)
 #endif
 }
 
-struct cache *cache_init(vamp_t max)
+void cache_init(struct cache **ptr, vamp_t max)
 {
-	struct cache *new = NULL;
-	new = malloc(sizeof(struct cache));
+	struct cache *new = malloc(sizeof(struct cache));
 	if (new == NULL)
 		abort();
 
@@ -59,7 +58,7 @@ struct cache *cache_init(vamp_t max)
 
 	for (fang_t d = 0; d < new->size; d++)
 		new->dig[d] = set_dig(d);
-	return new;
+	*ptr = new;
 }
 
 void cache_free(struct cache *ptr)

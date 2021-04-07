@@ -78,13 +78,10 @@ void vargs_reset(struct vargs *args)
 	bthandle_reset(args->thandle);
 }
 
-struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args)
+struct llhandle *vargs_getlhandle(struct vargs *args)
 {
-	struct llhandle *ret = NULL;
-	ret = args->lhandle;
-#ifdef PROCESS_RESULTS
+	struct llhandle *ret = args->lhandle;
 	args->lhandle = NULL;
-#endif
 	return ret;
 }
 

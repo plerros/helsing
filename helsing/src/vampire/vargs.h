@@ -28,7 +28,7 @@ struct vargs	/* Vampire arguments */
 struct vargs *vargs_init(struct cache *digptr);
 void vargs_free(struct vargs *args);
 void vargs_reset(struct vargs *args);
-struct llhandle *vargs_getlhandle(__attribute__((unused)) struct vargs *args);
+struct llhandle *vargs_getlhandle(struct vargs *args);
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax);
 
 #ifdef PROCESS_RESULTS

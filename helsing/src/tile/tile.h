@@ -21,15 +21,4 @@ struct tile
 
 struct tile *tile_init(vamp_t min, vamp_t max);
 void tile_free(struct tile *ptr);
-
-#ifdef PROCESS_RESULTS
-static inline void tile_init_result(struct tile *ptr)
-{
-	ptr->result = NULL;
-}
-#else /* PROCESS_RESULTS */
-static inline void tile_init_result(__attribute__((unused)) struct tile *ptr)
-{
-}
-#endif /* PROCESS_RESULTS */
 #endif /* HELSING_TILE_H */
