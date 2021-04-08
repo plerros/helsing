@@ -19,6 +19,6 @@ struct tile
 	struct llhandle *result;
 };
 
-struct tile *tile_init(vamp_t min, vamp_t max);
+struct tile *tile_init(vamp_t lmin, vamp_t lmax);
 void tile_free(struct tile *ptr);
 #endif /* HELSING_TILE_H */

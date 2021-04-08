@@ -31,7 +31,6 @@ static inline void matrix_init_cleanup(__attribute__((unused)) struct matrix *pt
 
 struct matrix *matrix_init();
 void matrix_free(struct matrix *ptr);
-
 void matrix_set(struct matrix *ptr, vamp_t lmin, vamp_t lmax);
 void matrix_reset(struct matrix *ptr);
 

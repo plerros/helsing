@@ -10,14 +10,14 @@
 #include "tile.h"
 #include "llhandle.h"
 
-struct tile *tile_init(vamp_t min, vamp_t max)
+struct tile *tile_init(vamp_t lmin, vamp_t lmax)
 {
 	struct tile *new = malloc(sizeof(struct tile));
 	if (new == NULL)
 		abort();
 
-	new->lmin = min;
-	new->lmax = max;
+	new->lmin = lmin;
+	new->lmax = lmax;
 	new->result = NULL;
 	return new;
 }

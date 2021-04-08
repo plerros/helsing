@@ -44,7 +44,7 @@ void llhandle_reset(struct llhandle *ptr)
 }
 #endif /* PROCESS_RESULTS */
 
-#if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
+#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
 
 void llhandle_print(struct llhandle *ptr, vamp_t count)
 {
