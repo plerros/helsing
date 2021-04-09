@@ -35,13 +35,22 @@ struct targs_handle *targs_handle_init(vamp_t max)
 
 	const EVP_MD *md;
 	OpenSSL_add_all_digests();
+	
+	#ifdef CHECKSUM_RESULTS
 	md = EVP_get_digestbyname(DIGEST_NAME);
+	#else
+	md = EVP_md_null();
+	#endif
+
 	if(!md) {
 		printf("Unknown message digest %s\n", DIGEST_NAME);
 		exit(1);
 	}
 	new->mdctx = EVP_MD_CTX_create();
+
+	#ifdef CHECKSUM_RESULTS
 	EVP_DigestInit_ex(new->mdctx, md, NULL);
+	#endif
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
 		new->targs[thread] = targs_t_init(new->read, new->write, new->mat, &(new->counter), new->digptr, new->mdctx);
@@ -59,7 +68,8 @@ void targs_handle_free(struct targs_handle *ptr)
 	free(ptr->write);
 	matrix_free(ptr->mat);
 	cache_free(ptr->digptr);
-	//free(ptr->context);7
+	free(ptr->mdctx);
+
 	EVP_cleanup();
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
@@ -92,6 +102,7 @@ void targs_handle_print(struct targs_handle *ptr)
 
 	EVP_DigestFinal_ex(ptr->mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(ptr->mdctx);
+	ptr->mdctx = NULL;
 
 	printf("Digest %s is: ", DIGEST_NAME);
 	for(i = 0; i < md_len; i++)

@@ -8,6 +8,7 @@
 
 #include <pthread.h>
 #include <stdbool.h> // preprocessor ifs require bool
+#include <openssl/evp.h>
 
 #if MEASURE_RUNTIME
 #include <time.h>
@@ -16,7 +17,6 @@
 #include "configuration.h"
 #include "matrix.h"
 #include "cache.h"
-#include <openssl/evp.h>
 
 struct targs_t
 {
