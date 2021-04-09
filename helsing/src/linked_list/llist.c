@@ -50,7 +50,13 @@ void llist_checksum(struct llist *list,	EVP_MD_CTX *context)
 {
 	for (struct llist *i = list; i != NULL ; i = i->next) {
 		for (uint16_t j = i->current; j > 0 ; j--) {
-			EVP_DigestUpdate(context, (void *) (&(i->value[j - 1])), sizeof(i->value[j - 1]));
+			vamp_t tmp = i->value[j - 1];
+
+			#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+			tmp = __builtin_bswap64(tmp);
+			#endif
+
+			EVP_DigestUpdate(context, &tmp, sizeof(tmp));
 		}
 	}
 }
