@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <openssl/evp.h>
 
 #include "configuration.h"
 
@@ -44,8 +45,18 @@ void llist_free(struct llist *list)
 
 #endif /* STORE_RESULTS */
 
-#if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
+#if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
+void llist_checksum(struct llist *list,	EVP_MD_CTX *context)
+{
+	for (struct llist *i = list; i != NULL ; i = i->next) {
+		for (uint16_t j = i->current; j > 0 ; j--) {
+			EVP_DigestUpdate(context, (void *) (&(i->value[j - 1])), sizeof(i->value[j - 1]));
+		}
+	}
+}
+#endif
 
+#if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
 void llist_print(struct llist *list, vamp_t count)
 {
 	for (struct llist *i = list; i != NULL ; i = i->next) {
@@ -55,5 +66,4 @@ void llist_print(struct llist *list, vamp_t count)
 		}
 	}
 }
-
-#endif /* defined(STORE_RESULTS) && defined(PRINT_RESULTS) */
+#endif

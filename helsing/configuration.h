@@ -21,7 +21,8 @@
  * 0 - Count fang pairs
  * 1 - Print fang pairs
  * 2 - Count vampire numbers
- * 3 - Print vampire numbers in OEIS format
+ * 3 - Print sha512 checksum
+ * 4 - Print vampire numbers in OEIS format
  */
 
 #define VERBOSE_LEVEL 2
@@ -185,6 +186,13 @@ typedef uint8_t length_t;
 #elif (VERBOSE_LEVEL == 3)
 	#define STORE_RESULTS
 	#define PROCESS_RESULTS
+	#define CHECKSUM_RESULTS
+#elif (VERBOSE_LEVEL == 4)
+	#define STORE_RESULTS
+	#define PROCESS_RESULTS
 	#define PRINT_RESULTS
 #endif
+
+#define DIGEST_NAME "sha512"
+
 #endif /* HELSING_CONFIG_H */

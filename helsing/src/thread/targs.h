@@ -16,6 +16,7 @@
 #include "configuration.h"
 #include "matrix.h"
 #include "cache.h"
+#include <openssl/evp.h>
 
 struct targs_t
 {
@@ -25,6 +26,7 @@ struct targs_t
 	vamp_t *count;
 	double	runtime;
 	struct cache *digptr;
+	EVP_MD_CTX *mdctx;
 
 #if MEASURE_RUNTIME
 	struct timespec start;
@@ -37,7 +39,8 @@ struct targs_t *targs_t_init(
 	pthread_mutex_t *write,
 	struct matrix *mat,
 	vamp_t *count,
-	struct cache *digptr);
+	struct cache *digptr,
+	EVP_MD_CTX *context);
 
 void targs_t_free(struct targs_t *ptr);
 

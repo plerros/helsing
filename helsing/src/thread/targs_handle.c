@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <openssl/evp.h>
 
 #include "configuration.h"
 #include "llhandle.h"
@@ -32,8 +33,18 @@ struct targs_handle *targs_handle_init(vamp_t max)
 	new->write = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(new->write, NULL);
 
+	const EVP_MD *md;
+	OpenSSL_add_all_digests();
+	md = EVP_get_digestbyname(DIGEST_NAME);
+	if(!md) {
+		printf("Unknown message digest %s\n", DIGEST_NAME);
+		exit(1);
+	}
+	new->mdctx = EVP_MD_CTX_create();
+	EVP_DigestInit_ex(new->mdctx, md, NULL);
+
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		new->targs[thread] = targs_t_init(new->read, new->write, new->mat, &(new->counter), new->digptr);
+		new->targs[thread] = targs_t_init(new->read, new->write, new->mat, &(new->counter), new->digptr, new->mdctx);
 	return new;
 }
 
@@ -48,6 +59,8 @@ void targs_handle_free(struct targs_handle *ptr)
 	free(ptr->write);
 	matrix_free(ptr->mat);
 	cache_free(ptr->digptr);
+	//free(ptr->context);7
+	EVP_cleanup();
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
 		targs_t_free(ptr->targs[thread]);
@@ -71,6 +84,19 @@ void targs_handle_print(struct targs_handle *ptr)
 	fprintf(stderr, "Found: %llu valid fang pairs.\n", ptr->counter);
 #else
 	fprintf(stderr, "Found: %llu vampire numbers.\n", ptr->counter);
+#endif
+
+#ifdef CHECKSUM_RESULTS
+	unsigned char md_value[EVP_MAX_MD_SIZE];
+	unsigned int md_len, i;
+
+	EVP_DigestFinal_ex(ptr->mdctx, md_value, &md_len);
+	EVP_MD_CTX_destroy(ptr->mdctx);
+
+	printf("Digest %s is: ", DIGEST_NAME);
+	for(i = 0; i < md_len; i++)
+		printf("%02x", md_value[i]);
+	printf("\n");
 #endif
 }
 
@@ -107,6 +133,7 @@ void *thread_worker(void *void_args)
 				args->mat->arr[args->mat->cleanup]->result != NULL)
 			{
 				llhandle_print(args->mat->arr[args->mat->cleanup]->result, *(args->count));
+				llhandle_checksum(args->mat->arr[args->mat->cleanup]->result, args->mdctx);
 				
 				*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
 				matrix_progress(args->mat);
