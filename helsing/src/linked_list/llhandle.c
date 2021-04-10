@@ -47,9 +47,9 @@ void llhandle_reset(struct llhandle *ptr)
 #endif /* PROCESS_RESULTS */
 
 #if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
-void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *context)
+void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *mdctx)
 {
-	llist_checksum(ptr->head, context);
+	llist_checksum(ptr->head, mdctx);
 }
 #endif
 

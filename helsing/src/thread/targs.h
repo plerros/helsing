@@ -40,7 +40,7 @@ struct targs_t *targs_t_init(
 	struct matrix *mat,
 	vamp_t *count,
 	struct cache *digptr,
-	EVP_MD_CTX *context);
+	EVP_MD_CTX *mdctx);
 
 void targs_t_free(struct targs_t *ptr);
 

@@ -46,7 +46,7 @@ void llist_free(struct llist *list)
 #endif /* STORE_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
-void llist_checksum(struct llist *list,	EVP_MD_CTX *context)
+void llist_checksum(struct llist *list,	EVP_MD_CTX *mdctx)
 {
 	for (struct llist *i = list; i != NULL ; i = i->next) {
 		for (uint16_t j = i->current; j > 0 ; j--) {
@@ -56,7 +56,7 @@ void llist_checksum(struct llist *list,	EVP_MD_CTX *context)
 			tmp = __builtin_bswap64(tmp);
 			#endif
 
-			EVP_DigestUpdate(context, &tmp, sizeof(tmp));
+			EVP_DigestUpdate(mdctx, &tmp, sizeof(tmp));
 		}
 	}
 }

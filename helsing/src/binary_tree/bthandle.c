@@ -11,7 +11,7 @@
 #ifdef PROCESS_RESULTS
 
 #include "llhandle.h"
-#include "btree.h"
+#include "btnode.h"
 #include "bthandle.h"
 
 void bthandle_init(struct bthandle **ptr)
@@ -29,7 +29,7 @@ void bthandle_init(struct bthandle **ptr)
 void bthandle_free(struct bthandle *handle)
 {
 	if (handle != NULL)
-		btree_free(handle->tree);
+		btnode_free(handle->tree);
 	free(handle);
 }
 
@@ -40,12 +40,12 @@ void bthandle_add(
 #if SANITY_CHECK
 	assert(handle != NULL);
 #endif
-	handle->tree = btree_add(handle->tree, number, &(handle->size));
+	handle->tree = btnode_add(handle->tree, number, &(handle->size));
 }
 
 void bthandle_reset(struct bthandle *handle)
 {
-	btree_free(handle->tree);
+	btnode_free(handle->tree);
 	handle->tree = NULL;
 	handle->size = 0;
 }
@@ -59,9 +59,9 @@ void bthandle_cleanup(
 	struct llhandle *lhandle,
 	vamp_t number)
 {
-	struct btree *tree = handle->tree;
+	struct btnode *tree = handle->tree;
 	vamp_t *size = &(handle->size);
-	handle->tree = btree_cleanup(tree, number, lhandle, size);
+	handle->tree = btnode_cleanup(tree, number, lhandle, size);
 }
 
 #endif /* PROCESS_RESULTS */

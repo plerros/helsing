@@ -32,9 +32,9 @@ struct llhandle *vargs_getlhandle(struct vargs *args);
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax);
 
 #ifdef PROCESS_RESULTS
-void vargs_btree_cleanup(struct vargs *args, vamp_t number);
+void vargs_btnode_cleanup(struct vargs *args, vamp_t number);
 #else /* PROCESS_RESULTS */
-static inline void vargs_btree_cleanup(
+static inline void vargs_btnode_cleanup(
 	__attribute__((unused)) struct vargs *args,
 	__attribute__((unused)) vamp_t number)
 {

@@ -97,7 +97,7 @@
  * heapsort.
  *
  * Heapsort shouldn't use more memory than:
- * THREADS * (sizeof(bthandle) + MAX_TILE_SIZE * sizeof(btree))
+ * THREADS * (sizeof(bthandle) + MAX_TILE_SIZE * sizeof(btnode))
  */
 
 #define AUTO_TILE_SIZE true

@@ -37,11 +37,11 @@ static inline void llist_free(
 #endif /* STORE_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
-void llist_checksum(struct llist *list,	EVP_MD_CTX *context);
+void llist_checksum(struct llist *list,	EVP_MD_CTX *mdctx);
 #else
 static inline void llist_checksum(
 	__attribute__((unused)) struct llist *list,
-	__attribute__((unused)) EVP_MD_CTX *context)
+	__attribute__((unused)) EVP_MD_CTX *mdctx)
 {
 }
 #endif

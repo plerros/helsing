@@ -9,10 +9,10 @@
 #include "configuration.h"
 
 #ifdef PROCESS_RESULTS
-#include "btree.h"
+#include "btnode.h"
 struct bthandle
 {
-	struct btree *tree;
+	struct btnode *tree;
 	vamp_t size;
 };
 void bthandle_init(struct bthandle **ptr);

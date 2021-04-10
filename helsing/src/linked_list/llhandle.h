@@ -43,11 +43,11 @@ static inline void llhandle_reset(__attribute__((unused)) struct llhandle *ptr)
 #endif /* PROCESS_RESULTS */
 
 #if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
-void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *context);
+void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *mdctx);
 #else
 static inline void llhandle_checksum(
 	__attribute__((unused)) struct llhandle *ptr,
-	__attribute__((unused)) EVP_MD_CTX *context)
+	__attribute__((unused)) EVP_MD_CTX *mdctx)
 {
 }
 #endif
