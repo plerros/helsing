@@ -7,6 +7,7 @@
 #define HELSING_LLIST_H
 
 #include <stdio.h>
+#include <openssl/evp.h>
 
 #include "configuration.h"
 
@@ -35,13 +36,23 @@ static inline void llist_free(
 }
 #endif /* STORE_RESULTS */
 
+#if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
+void llist_checksum(struct llist *list,	EVP_MD_CTX *context);
+#else
+static inline void llist_checksum(
+	__attribute__((unused)) struct llist *list,
+	__attribute__((unused)) EVP_MD_CTX *context)
+{
+}
+#endif
+
 #if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
 void llist_print(struct llist *list, vamp_t count);
-#else /* defined(STORE_RESULTS) && defined(PRINT_RESULTS) */
+#else
 static inline void llist_print(
 	__attribute__((unused)) struct llist *list,
 	__attribute__((unused)) vamp_t count)
 {
 }
-#endif /* defined(STORE_RESULTS) && defined(PRINT_RESULTS) */
+#endif
 #endif /* HELSING_LLIST_H */

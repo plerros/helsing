@@ -6,6 +6,8 @@
 #ifndef HELSING_LLHANDLE_H
 #define HELSING_LLHANDLE_H
 
+#include <openssl/evp.h>
+
 #include "configuration.h"
 #include "llist.h"
 
@@ -40,13 +42,23 @@ static inline void llhandle_reset(__attribute__((unused)) struct llhandle *ptr)
 }
 #endif /* PROCESS_RESULTS */
 
+#if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
+void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *context);
+#else
+static inline void llhandle_checksum(
+	__attribute__((unused)) struct llhandle *ptr,
+	__attribute__((unused)) EVP_MD_CTX *context)
+{
+}
+#endif
+
 #if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
 void llhandle_print(struct llhandle *ptr, vamp_t count);
-#else /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
+#else
 static inline void llhandle_print(
 	__attribute__((unused)) struct llhandle *ptr,
 	__attribute__((unused)) vamp_t count)
 {
 }
-#endif /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
+#endif
 #endif /* HELSING_LLHANDLE_H */

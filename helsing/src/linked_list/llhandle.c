@@ -4,6 +4,7 @@
  */
 
 #include <stdlib.h>
+#include <openssl/evp.h>
 
 #include "configuration.h"
 #include "llist.h"
@@ -42,13 +43,19 @@ void llhandle_reset(struct llhandle *ptr)
 	ptr->head = NULL;
 	ptr->size = 0;
 }
+
 #endif /* PROCESS_RESULTS */
 
-#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
+#if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
+void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *context)
+{
+	llist_checksum(ptr->head, context);
+}
+#endif
 
+#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
 void llhandle_print(struct llhandle *ptr, vamp_t count)
 {
 	llist_print(ptr->head, count);
 }
-
 #endif

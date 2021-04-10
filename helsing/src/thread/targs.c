@@ -20,7 +20,8 @@ struct targs_t *targs_t_init(
 	pthread_mutex_t *write,
 	struct matrix *mat,
 	vamp_t *count,
-	struct cache *digptr)
+	struct cache *digptr,
+	EVP_MD_CTX *mdctx)
 {
 	struct targs_t *new = malloc(sizeof(struct targs_t));
 	if (new == NULL)
@@ -32,6 +33,7 @@ struct targs_t *targs_t_init(
 	new->count = count;
 	new->runtime = 0.0;
 	new->digptr = digptr;
+	new->mdctx = mdctx;
 	targs_init_total(new, 0);
 	return new;
 }
