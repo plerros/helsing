@@ -10,7 +10,7 @@
 
 #include "configuration.h"
 #include "helper.h"
-#include "matrix.h"
+#include "taskboard.h"
 #include "targs_handle.h"
 #include "checkpoint.h"
 
@@ -127,14 +127,14 @@ int main(int argc, char* argv[])
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
-		matrix_set(thhandle->mat, lmin, lmax);
+		taskboard_set(thhandle->progress, lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			assert(pthread_create(&threads[thread], NULL, thread_worker, (void *)(thhandle->targs[thread])) == 0);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
-		matrix_print(thhandle->mat, &(thhandle->counter));
-		matrix_reset(thhandle->mat);
+		taskboard_print(thhandle->progress, &(thhandle->counter));
+		taskboard_reset(thhandle->progress);
 		if (lmax == max)
 			break;
 

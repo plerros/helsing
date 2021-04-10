@@ -3,8 +3,8 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#ifndef HELSING_llnode_H
-#define HELSING_llnode_H
+#ifndef HELSING_LLNODE_H
+#define HELSING_LLNODE_H
 
 #include <stdio.h>
 #include <openssl/evp.h>
@@ -55,4 +55,4 @@ static inline void llnode_print(
 {
 }
 #endif
-#endif /* HELSING_llnode_H */
+#endif /* HELSING_LLNODE_H */

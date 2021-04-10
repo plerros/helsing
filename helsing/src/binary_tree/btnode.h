@@ -3,8 +3,8 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#ifndef HELSING_btnode_H
-#define HELSING_btnode_H
+#ifndef HELSING_BTNODE_H
+#define HELSING_BTNODE_H
 
 #include "configuration.h"
 
@@ -62,4 +62,4 @@ struct btnode *btnode_cleanup(
 	return NULL;
 }
 #endif /* PROCESS RESULTS */
-#endif /* HELSING_btnode_H */
+#endif /* HELSING_BTNODE_H */

@@ -7,12 +7,12 @@
 #include <stdbool.h>
 
 #include "configuration.h"
-#include "tile.h"
+#include "task.h"
 #include "llhandle.h"
 
-struct tile *tile_init(vamp_t lmin, vamp_t lmax)
+struct task *task_init(vamp_t lmin, vamp_t lmax)
 {
-	struct tile *new = malloc(sizeof(struct tile));
+	struct task *new = malloc(sizeof(struct task));
 	if (new == NULL)
 		abort();
 
@@ -22,7 +22,7 @@ struct tile *tile_init(vamp_t lmin, vamp_t lmax)
 	return new;
 }
 
-void tile_free(struct tile *ptr)
+void task_free(struct task *ptr)
 {
 	if (ptr != NULL)
 		llhandle_free(ptr->result);

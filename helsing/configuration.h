@@ -21,7 +21,7 @@
  * 0 - Count fang pairs
  * 1 - Print fang pairs
  * 2 - Count vampire numbers
- * 3 - Print sha512 checksum
+ * 3 - Calculate sha512 checksum
  * 4 - Print vampire numbers in OEIS format
  */
 

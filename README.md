@@ -10,7 +10,7 @@ Windows isn't posix compatible. You'll need to set up a virtual machine or (if y
 ## Dependencies
  - a C compiler (clang or gcc should do just fine)
  - gmake (GNU make)
- - find
+ - findutils
  - OpenSSL (debian: libssl-dev, fedora: openssl-devel, mac homebrew: openssl)
 
 ## Compile

@@ -15,14 +15,14 @@
 #endif
 
 #include "configuration.h"
-#include "matrix.h"
+#include "taskboard.h"
 #include "cache.h"
 
 struct targs_t
 {
 	pthread_mutex_t *read;
 	pthread_mutex_t *write;
-	struct matrix *mat;
+	struct taskboard *progress;
 	vamp_t *count;
 	double	runtime;
 	struct cache *digptr;
@@ -37,7 +37,7 @@ struct targs_t
 struct targs_t *targs_t_init(
 	pthread_mutex_t *read,
 	pthread_mutex_t *write,
-	struct matrix *mat,
+	struct taskboard *progress,
 	vamp_t *count,
 	struct cache *digptr,
 	EVP_MD_CTX *mdctx);

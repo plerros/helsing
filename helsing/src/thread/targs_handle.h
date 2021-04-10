@@ -10,14 +10,14 @@
 #include <openssl/evp.h>
 
 #include "configuration.h"
-#include "matrix.h"
+#include "taskboard.h"
 #include "cache.h"
 #include "targs.h"
 
 struct targs_handle
 {
 	struct targs_t *targs[THREADS];
-	struct matrix *mat;
+	struct taskboard *progress;
 	struct cache *digptr;
 	EVP_MD_CTX *mdctx;
 	vamp_t counter;

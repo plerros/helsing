@@ -11,8 +11,8 @@
 
 #include "configuration.h"
 #include "llhandle.h"
-#include "tile.h"
-#include "matrix.h"
+#include "task.h"
+#include "taskboard.h"
 #include "cache.h"
 #include "vargs.h"
 #include "targs.h"
@@ -25,7 +25,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 	if (new == NULL)
 		abort();
 
-	new->mat = matrix_init();
+	new->progress = taskboard_init();
 	cache_init(&(new->digptr), max);
 	new->counter = 0;
 	new->read = malloc(sizeof(pthread_mutex_t));
@@ -53,7 +53,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 	#endif
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		new->targs[thread] = targs_t_init(new->read, new->write, new->mat, &(new->counter), new->digptr, new->mdctx);
+		new->targs[thread] = targs_t_init(new->read, new->write, new->progress, &(new->counter), new->digptr, new->mdctx);
 	return new;
 }
 
@@ -66,7 +66,7 @@ void targs_handle_free(struct targs_handle *ptr)
 	free(ptr->read);
 	pthread_mutex_destroy(ptr->write);
 	free(ptr->write);
-	matrix_free(ptr->mat);
+	taskboard_free(ptr->progress);
 	cache_free(ptr->digptr);
 	free(ptr->mdctx);
 
@@ -116,7 +116,7 @@ void *thread_worker(void *void_args)
 	struct targs_t *args = (struct targs_t *)void_args;
 	thread_timer_start(args);
 	struct vargs *vamp_args = vargs_init(args->digptr);
-	struct tile *current = NULL;
+	struct task *current = NULL;
 	bool active = true;
 
 	while (active) {
@@ -124,36 +124,36 @@ void *thread_worker(void *void_args)
 
 // Critical section start
 		pthread_mutex_lock(args->read);
-		if (args->mat->unfinished < args->mat->size) {
-			current = args->mat->arr[args->mat->unfinished];
+		if (args->progress->todo < args->progress->size) {
+			current = args->progress->tasks[args->progress->todo];
 			active = true;
-			args->mat->unfinished += 1;
+			args->progress->todo += 1;
 		}
 		pthread_mutex_unlock(args->read);
 // Critical section end
 
 		if (active) {
-			vampire(current->lmin, current->lmax, vamp_args, args->mat->fmax);
+			vampire(current->lmin, current->lmax, vamp_args, args->progress->fmax);
 
 // Critical section start
 			pthread_mutex_lock(args->write);
 #ifdef PROCESS_RESULTS
 			current->result = vargs_getlhandle(vamp_args);
 			while (
-				args->mat->cleanup < args->mat->size &&
-				args->mat->arr[args->mat->cleanup]->result != NULL)
+				args->progress->done < args->progress->size &&
+				args->progress->tasks[args->progress->done]->result != NULL)
 			{
-				llhandle_print(args->mat->arr[args->mat->cleanup]->result, *(args->count));
-				llhandle_checksum(args->mat->arr[args->mat->cleanup]->result, args->mdctx);
+				llhandle_print(args->progress->tasks[args->progress->done]->result, *(args->count));
+				llhandle_checksum(args->progress->tasks[args->progress->done]->result, args->mdctx);
 
-				*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
-				matrix_progress(args->mat);
+				*(args->count) += args->progress->tasks[args->progress->done]->result->size;
+				taskboard_progress(args->progress);
 
-				save_checkpoint(args->mat->arr[args->mat->cleanup]->lmax, *(args->count));
+				save_checkpoint(args->progress->tasks[args->progress->done]->lmax, *(args->count));
 
-				tile_free(args->mat->arr[args->mat->cleanup]);
-				args->mat->arr[args->mat->cleanup] = NULL;
-				args->mat->cleanup += 1;
+				task_free(args->progress->tasks[args->progress->done]);
+				args->progress->tasks[args->progress->done] = NULL;
+				args->progress->done += 1;
 			}
 #else
 			*(args->count) += vamp_args->local_count;
