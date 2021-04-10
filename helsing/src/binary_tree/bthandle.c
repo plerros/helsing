@@ -21,7 +21,7 @@ void bthandle_init(struct bthandle **ptr)
 	if (new == NULL)
 		abort();
 
-	new->tree = NULL;
+	new->node = NULL;
 	new->size = 0;
 	*ptr = new;
 }
@@ -29,24 +29,24 @@ void bthandle_init(struct bthandle **ptr)
 void bthandle_free(struct bthandle *handle)
 {
 	if (handle != NULL)
-		btnode_free(handle->tree);
+		btnode_free(handle->node);
 	free(handle);
 }
 
 void bthandle_add(
 	struct bthandle *handle,
-	vamp_t number)
+	vamp_t key)
 {
 #if SANITY_CHECK
 	assert(handle != NULL);
 #endif
-	handle->tree = btnode_add(handle->tree, number, &(handle->size));
+	handle->node = btnode_add(handle->node, key, &(handle->size));
 }
 
 void bthandle_reset(struct bthandle *handle)
 {
-	btnode_free(handle->tree);
-	handle->tree = NULL;
+	btnode_free(handle->node);
+	handle->node = NULL;
 	handle->size = 0;
 }
 
@@ -57,11 +57,11 @@ void bthandle_reset(struct bthandle *handle)
 void bthandle_cleanup(
 	struct bthandle *handle,
 	struct llhandle *lhandle,
-	vamp_t number)
+	vamp_t key)
 {
-	struct btnode *tree = handle->tree;
+	struct btnode *tree = handle->node;
 	vamp_t *size = &(handle->size);
-	handle->tree = btnode_cleanup(tree, number, lhandle, size);
+	handle->node = btnode_cleanup(tree, key, lhandle, size);
 }
 
 #endif /* PROCESS_RESULTS */

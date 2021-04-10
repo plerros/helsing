@@ -9,12 +9,12 @@
 #include <openssl/evp.h>
 
 #include "configuration.h"
-#include "llist.h"
+#include "llnode.h"
 
 #ifdef PROCESS_RESULTS
 struct llhandle
 {
-	struct llist *head;
+	struct llnode *first;
 	vamp_t size;
 };
 

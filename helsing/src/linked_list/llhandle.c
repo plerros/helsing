@@ -7,7 +7,7 @@
 #include <openssl/evp.h>
 
 #include "configuration.h"
-#include "llist.h"
+#include "llnode.h"
 #include "llhandle.h"
 
 #ifdef PROCESS_RESULTS
@@ -17,14 +17,14 @@ void llhandle_init(struct llhandle **ptr)
 	if (new == NULL)
 		abort();
 
-	new->head = NULL;
+	new->first = NULL;
 	new->size = 0;
 	*ptr = new;
 }
 
 void llhandle_free(struct llhandle *ptr)
 {
-	llist_free(ptr->head);
+	llnode_free(ptr->first);
 	free(ptr);
 }
 
@@ -33,14 +33,14 @@ void llhandle_add(struct llhandle *ptr, vamp_t value)
 	if (ptr == NULL)
 		return;
 
-	llist_init(&(ptr->head), value, ptr->head);
+	llnode_init(&(ptr->first), value, ptr->first);
 	ptr->size += 1;
 }
 
 void llhandle_reset(struct llhandle *ptr)
 {
-	llist_free(ptr->head);
-	ptr->head = NULL;
+	llnode_free(ptr->first);
+	ptr->first = NULL;
 	ptr->size = 0;
 }
 
@@ -49,13 +49,13 @@ void llhandle_reset(struct llhandle *ptr)
 #if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
 void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *mdctx)
 {
-	llist_checksum(ptr->head, mdctx);
+	llnode_checksum(ptr->first, mdctx);
 }
 #endif
 
 #if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
 void llhandle_print(struct llhandle *ptr, vamp_t count)
 {
-	llist_print(ptr->head, count);
+	llnode_print(ptr->first, count);
 }
 #endif

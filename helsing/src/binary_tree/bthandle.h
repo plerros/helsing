@@ -12,17 +12,17 @@
 #include "btnode.h"
 struct bthandle
 {
-	struct btnode *tree;
+	struct btnode *node;
 	vamp_t size;
 };
 void bthandle_init(struct bthandle **ptr);
 void bthandle_free(struct bthandle *handle);
-void bthandle_add(struct bthandle *handle, vamp_t number);
+void bthandle_add(struct bthandle *handle, vamp_t key);
 void bthandle_reset(struct bthandle *handle);
 void bthandle_cleanup(
 	struct bthandle *handle,
 	struct llhandle *lhandle,
-	vamp_t number);
+	vamp_t key);
 
 #else /* !PROCESS_RESULTS */
 struct bthandle
@@ -37,7 +37,7 @@ static inline void bthandle_free(
 }
 static inline void bthandle_add(
 	__attribute__((unused)) struct bthandle *handle,
-	__attribute__((unused)) vamp_t number)
+	__attribute__((unused)) vamp_t key)
 {
 }
 static inline void bthandle_reset(
@@ -47,7 +47,7 @@ static inline void bthandle_reset(
 static inline void bthandle_cleanup(
 	__attribute__((unused)) struct bthandle *handle,
 	__attribute__((unused)) struct llhandle *lhandle,
-	__attribute__((unused)) vamp_t number)
+	__attribute__((unused)) vamp_t key)
 {
 }
 #endif /* PROCESS_RESULTS */

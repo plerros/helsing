@@ -11,17 +11,17 @@
 
 #ifdef STORE_RESULTS
 
-#include "llist.h"
+#include "llnode.h"
 
-void llist_init(struct llist **ptr, vamp_t value , struct llist *next)
+void llnode_init(struct llnode **ptr, vamp_t value , struct llnode *next)
 {
-	struct llist *new;
+	struct llnode *new;
 	if (next != NULL && next->current < LINK_SIZE) {
 		new = next;
 		new->value[new->current] = value;
 		new->current += 1;
 	} else {
-		new = malloc(sizeof(struct llist));
+		new = malloc(sizeof(struct llnode));
 		if (new == NULL)
 			abort();
 
@@ -32,11 +32,11 @@ void llist_init(struct llist **ptr, vamp_t value , struct llist *next)
 	*ptr = new;
 }
 
-void llist_free(struct llist *list)
+void llnode_free(struct llnode *node)
 {
-	if (list != NULL) {
-		struct llist *tmp = list;
-		for (struct llist *i = tmp; tmp != NULL; i = tmp) {
+	if (node != NULL) {
+		struct llnode *tmp = node;
+		for (struct llnode *i = tmp; tmp != NULL; i = tmp) {
 			tmp = tmp->next;
 			free(i);
 		}
@@ -46,9 +46,9 @@ void llist_free(struct llist *list)
 #endif /* STORE_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
-void llist_checksum(struct llist *list,	EVP_MD_CTX *mdctx)
+void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx)
 {
-	for (struct llist *i = list; i != NULL ; i = i->next) {
+	for (struct llnode *i = node; i != NULL ; i = i->next) {
 		for (uint16_t j = i->current; j > 0 ; j--) {
 			vamp_t tmp = i->value[j - 1];
 
@@ -63,9 +63,9 @@ void llist_checksum(struct llist *list,	EVP_MD_CTX *mdctx)
 #endif
 
 #if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
-void llist_print(struct llist *list, vamp_t count)
+void llnode_print(struct llnode *node, vamp_t count)
 {
-	for (struct llist *i = list; i != NULL ; i = i->next) {
+	for (struct llnode *i = node; i != NULL ; i = i->next) {
 		for (uint16_t j = i->current; j > 0 ; j--) {
 			fprintf(stdout, "%llu %llu\n", ++count, i->value[j - 1]);
 			fflush(stdout);

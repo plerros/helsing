@@ -9,13 +9,14 @@ Windows isn't posix compatible. You'll need to set up a virtual machine or (if y
 
 ## Dependencies
  - a C compiler (clang or gcc should do just fine)
- - make
- - OpenSSL (debian: libssl-dev, fedora: openssl-devel)
+ - gmake (GNU make)
+ - find
+ - OpenSSL (debian: libssl-dev, fedora: openssl-devel, mac homebrew: openssl)
 
 ## Compile
 ```
 cd helsing
-make
+gmake
 ```
 ## Run
 ```

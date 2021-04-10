@@ -35,7 +35,7 @@ struct targs_handle *targs_handle_init(vamp_t max)
 
 	const EVP_MD *md;
 	OpenSSL_add_all_digests();
-	
+
 	#ifdef CHECKSUM_RESULTS
 	md = EVP_get_digestbyname(DIGEST_NAME);
 	#else
@@ -145,10 +145,10 @@ void *thread_worker(void *void_args)
 			{
 				llhandle_print(args->mat->arr[args->mat->cleanup]->result, *(args->count));
 				llhandle_checksum(args->mat->arr[args->mat->cleanup]->result, args->mdctx);
-				
+
 				*(args->count) += args->mat->arr[args->mat->cleanup]->result->size;
 				matrix_progress(args->mat);
-				
+
 				save_checkpoint(args->mat->arr[args->mat->cleanup]->lmax, *(args->count));
 
 				tile_free(args->mat->arr[args->mat->cleanup]);
