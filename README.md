@@ -9,11 +9,23 @@ Windows isn't posix compatible. You'll need to set up a virtual machine or (if y
 
 ## Dependencies
  - a C compiler (clang or gcc should do just fine)
- - gmake (GNU make)
+ - GNU make
  - findutils
- - OpenSSL (debian: libssl-dev, fedora: openssl-devel, mac homebrew: openssl)
+ - OpenSSL
+   Platform | Package name
+   -------- | ------------
+   Homebrew | openssl
+   Debian | libssl-dev
+   Fedora/RHEL | openssl-devel
+   FreeBSD | openssl-devel
 
-## Compile
+
+## How to compile for GNU/Linux & Homebrew
+```
+cd helsing
+make
+```
+## How to compile for FreeBSD
 ```
 cd helsing
 gmake
