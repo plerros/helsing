@@ -27,9 +27,7 @@
 
 #define VERBOSE_LEVEL 2
 
-#if VERBOSE_LEVEL >= 2
 #define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL > 1
-#endif
 
 #define DISPLAY_PROGRESS false
 #define MEASURE_RUNTIME false
@@ -126,10 +124,9 @@
  * 	   manually.
  */
 
-#if VERBOSE_LEVEL >= 2
-#define USE_CHECKPOINT false // requires VERBOSE_LEVEL > 1
+// NOTE: checkpoint currently doesn't support checksum
+#define USE_CHECKPOINT false
 #define CHECKPOINT_FILE "a.checkpoint"
-#endif
 
 /*
  * LINK_SIZE:

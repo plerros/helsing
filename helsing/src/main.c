@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
 	struct targs_handle *thhandle = targs_handle_init(max);
 
 #if defined(USE_CHECKPOINT) && USE_CHECKPOINT
-	thhandle->counter = count;
+	thhandle->progress->common_count = count;
 #endif
 
 	for (; lmax <= max;) {
