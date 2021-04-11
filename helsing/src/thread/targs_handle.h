@@ -7,7 +7,6 @@
 #define HELSING_TARGS_HANDLE_H
 
 #include <pthread.h>
-#include <openssl/evp.h>
 
 #include "configuration.h"
 #include "taskboard.h"
@@ -19,8 +18,6 @@ struct targs_handle
 	struct targs_t *targs[THREADS];
 	struct taskboard *progress;
 	struct cache *digptr;
-	EVP_MD_CTX *mdctx;
-	vamp_t counter;
 	pthread_mutex_t *read;
 	pthread_mutex_t *write;
 };

@@ -7,6 +7,7 @@
 #define HELSING_TASK_H
 
 #include "configuration.h"
+#include "vargs.h"
 
 #ifdef PROCESS_RESULTS
 #include "llhandle.h"
@@ -15,8 +16,8 @@
 /*
  * task:
  *
- * A task consists of a closed interval [a, b] and a pointer to a linked list,
- * where the results will be stored.
+ * A task consists of a closed interval [lmin, lmax] and a pointer to a linked 
+ * list, where the results will be stored.
  */
 
 struct task
@@ -24,8 +25,20 @@ struct task
 	vamp_t lmin; // local minimum
 	vamp_t lmax; // local maximum
 	struct llhandle *result;
+	vamp_t count;
 };
 
 struct task *task_init(vamp_t lmin, vamp_t lmax);
 void task_free(struct task *ptr);
+void task_copy_vargs(struct task *ptr, struct vargs *vamp_args);
+
+#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
+void task_print(struct task *ptr, vamp_t *count);
+#else /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
+static inline void task_print(
+	__attribute__((unused)) struct task *ptr,
+	__attribute__((unused)) vamp_t *count)
+{
+}
+#endif /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
 #endif /* HELSING_TASK_H */
