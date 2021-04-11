@@ -17,7 +17,6 @@ struct llhandle
 	struct llnode *first;
 	vamp_t size;
 };
-
 void llhandle_init(struct llhandle **ptr);
 void llhandle_free(struct llhandle *ptr);
 void llhandle_add(struct llhandle *ptr, vamp_t value);
@@ -28,9 +27,14 @@ struct llhandle
 };
 static inline void llhandle_init(__attribute__((unused)) struct llhandle **ptr)
 {
+	struct llhandle *new = malloc(sizeof(struct llhandle));
+	if (new == NULL)
+		abort();
+	*ptr = new;
 }
 static inline void llhandle_free(__attribute__((unused)) struct llhandle *ptr)
 {
+	free(ptr);
 }
 static inline void llhandle_add(
 	__attribute__((unused)) struct llhandle *ptr,

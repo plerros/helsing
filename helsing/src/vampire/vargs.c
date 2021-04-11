@@ -57,10 +57,9 @@ struct vargs *vargs_init(struct cache *digptr)
 		abort();
 
 	new->digptr = digptr;
-	vargs_init_local_count(new);
+	new->local_count = 0;
 	llhandle_init(&(new->lhandle));
 	bthandle_init(&(new->thandle));
-	vargs_init_total(new);
 	return new;
 }
 
@@ -73,7 +72,7 @@ void vargs_free(struct vargs *args)
 
 void vargs_reset(struct vargs *args)
 {
-	vargs_init_local_count(args);
+	args->local_count = 0;
 	llhandle_init(&(args->lhandle));
 	bthandle_reset(args->thandle);
 }
@@ -211,6 +210,6 @@ vampire_exit:
 		}
 	}
 	bthandle_cleanup(args->thandle, args->lhandle, 0);
-	vargs_update_total(args);
+	vargs_set_lc(args);
 	return;
 }

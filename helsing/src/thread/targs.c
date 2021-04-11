@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 #include <pthread.h>
-#include <stdbool.h> // preprocessor ifs require bool
 
 #if MEASURE_RUNTIME
 #include <time.h>
@@ -19,9 +18,7 @@ struct targs_t *targs_t_init(
 	pthread_mutex_t *read,
 	pthread_mutex_t *write,
 	struct taskboard *progress,
-	vamp_t *count,
-	struct cache *digptr,
-	EVP_MD_CTX *mdctx)
+	struct cache *digptr)
 {
 	struct targs_t *new = malloc(sizeof(struct targs_t));
 	if (new == NULL)
@@ -30,10 +27,8 @@ struct targs_t *targs_t_init(
 	new->read = read;
 	new->write = write;
 	new->progress = progress;
-	new->count = count;
 	new->runtime = 0.0;
 	new->digptr = digptr;
-	new->mdctx = mdctx;
 	targs_init_total(new, 0);
 	return new;
 }
