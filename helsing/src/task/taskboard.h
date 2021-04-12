@@ -19,6 +19,8 @@ struct taskboard
 	vamp_t done; // Last task that's completed, but isn't yet processed. (print, hash, checksum...)
 	fang_t fmax;
 	EVP_MD_CTX *common_mdctx;
+	EVP_MD *common_md;
+	unsigned char common_md_value[EVP_MAX_MD_SIZE];
 	vamp_t common_count;
 };
 

@@ -29,24 +29,22 @@ struct taskboard *taskboard_init()
 	new->done = 0;
 	new->common_count = 0;
 
-	const EVP_MD *md;
+	for (unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
+		new->common_md_value[i] = 0;
+
 	OpenSSL_add_all_digests();
 
 #ifdef CHECKSUM_RESULTS
-	md = EVP_get_digestbyname(DIGEST_NAME);
+	new->common_md = EVP_get_digestbyname(DIGEST_NAME);
 #else
-	md = EVP_md_null();
+	new->common_md = EVP_md_null();
 #endif
 
-	if(!md) {
+	if(!new->common_md) {
 		printf("Unknown message digest %s\n", DIGEST_NAME);
 		exit(1);
 	}
 	new->common_mdctx = EVP_MD_CTX_create();
-
-#ifdef CHECKSUM_RESULTS
-	EVP_DigestInit_ex(new->common_mdctx, md, NULL);
-#endif
 
 	return new;
 }
@@ -61,6 +59,9 @@ void taskboard_free(struct taskboard *ptr)
 			task_free(ptr->tasks[i]);
 		free(ptr->tasks);
 	}
+
+	EVP_MD_CTX_destroy(ptr->common_mdctx);
+	ptr->common_mdctx = NULL;
 	free(ptr->common_mdctx);
 	EVP_cleanup();
 
@@ -153,12 +154,13 @@ void taskboard_cleanup(struct taskboard *ptr)
 		ptr->tasks[ptr->done]->result != NULL)
 	{
 		llhandle_print(ptr->tasks[ptr->done]->result, ptr->common_count);
-		llhandle_checksum(ptr->tasks[ptr->done]->result, ptr->common_mdctx);
+
+		llhandle_checksum(ptr->tasks[ptr->done]->result, ptr->common_mdctx, ptr->common_md, ptr->common_md_value);
 
 		ptr->common_count += ptr->tasks[ptr->done]->count;
 		taskboard_progress(ptr);
 
-		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr->common_count);
+		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr->common_count, ptr->common_md_value);
 
 		task_free(ptr->tasks[ptr->done]);
 		ptr->tasks[ptr->done] = NULL;

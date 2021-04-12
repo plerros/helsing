@@ -71,16 +71,9 @@ void targs_handle_print(struct targs_handle *ptr)
 #endif
 
 #ifdef CHECKSUM_RESULTS
-	unsigned char md_value[EVP_MAX_MD_SIZE];
-	unsigned int md_len;
-
-	EVP_DigestFinal_ex(ptr->progress->common_mdctx, md_value, &md_len);
-	EVP_MD_CTX_destroy(ptr->progress->common_mdctx);
-	ptr->progress->common_mdctx = NULL;
-
 	printf("Digest %s is: ", DIGEST_NAME);
-	for(unsigned int i = 0; i < md_len; i++)
-		printf("%02x", md_value[i]);
+	for(unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
+		printf("%02x", ptr->progress->common_md_value[i]);
 	printf("\n");
 #endif
 }

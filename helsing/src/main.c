@@ -83,6 +83,7 @@ int main(int argc, char* argv[])
 	}
 #else
 	vamp_t count = 0;
+	unsigned char mdtmp[EVP_MAX_MD_SIZE];
 	if (argc != 1 && argc != 3) {
 		printf("Usage: helsing [min] [max]\n");
 		printf("to recover from %s: helsing\n", CHECKPOINT_FILE);
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
 	}
 	if (argc == 1) {
 		vamp_t ccurrent;
-		load_checkpoint(&min, &max, &ccurrent, &count);
+		load_checkpoint(&min, &max, &ccurrent, &count, mdtmp);
 		if (ccurrent > min)
 			min = ccurrent + 1;
 	}
@@ -123,6 +124,9 @@ int main(int argc, char* argv[])
 
 #if defined(USE_CHECKPOINT) && USE_CHECKPOINT
 	thhandle->progress->common_count = count;
+
+	for (unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
+		thhandle->progress->common_md_value[i] = mdtmp[i];
 #endif
 
 	for (; lmax <= max;) {

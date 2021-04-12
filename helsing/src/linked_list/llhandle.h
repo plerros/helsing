@@ -47,11 +47,13 @@ static inline void llhandle_reset(__attribute__((unused)) struct llhandle *ptr)
 #endif /* PROCESS_RESULTS */
 
 #if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
-void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *mdctx);
+void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *mdctx, EVP_MD *md, unsigned char *md_value);
 #else
 static inline void llhandle_checksum(
 	__attribute__((unused)) struct llhandle *ptr,
-	__attribute__((unused)) EVP_MD_CTX *mdctx)
+	__attribute__((unused)) EVP_MD_CTX *mdctx,
+	__attribute__((unused)) EVP_MD *md,
+	__attribute__((unused)) unsigned char *md_value)
 {
 }
 #endif

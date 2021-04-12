@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <ctype.h>	// isdigit
+#include <openssl/evp.h>
 
 #include "configuration.h"
 #include "helper.h"
@@ -29,6 +30,36 @@ static int ftov(FILE *fp, vamp_t *number) // file to vamp_t
 	}
 	*number = ret;
 	return flag;
+}
+
+static uint8_t chartohex(char in)
+{
+	if (isdigit(in))
+		return (in - '0');
+	else
+		return (in - 'a' + 10);
+	return 0;
+}
+static int ftostr(FILE *fp, unsigned char *str)
+{
+	assert(fp != NULL);
+	assert(str != NULL);
+	int i = 0;
+	bool flag = true;
+	for (char ch = fgetc(fp); isxdigit(ch) && !feof(fp) && i < EVP_MAX_MD_SIZE; ch = fgetc(fp)) {
+		flag = false;
+		char ch2 = fgetc(fp);
+		if (isxdigit(ch2) && !feof(fp)) {
+			str[i] = (chartohex(ch) << 4) | chartohex(ch2);
+		} else {
+			return 1;
+		}
+		//fprintf(stderr, "read[%c][%c]", ch, ch2);
+		//fprintf(stderr, " write [%02x]\n", str[i]);
+		i++;
+	}
+	return flag;
+
 }
 
 void touch_checkpoint(vamp_t min, vamp_t max)
@@ -55,7 +86,7 @@ static void err_baditem(vamp_t line, vamp_t item)
 	fprintf(stderr, "\n[ERROR] %s line %llu item #%llu has bad data:\n", CHECKPOINT_FILE, line, item);
 }
 
-void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count)
+void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count, unsigned char *md_value)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "r");
 	assert(fp != NULL);
@@ -114,18 +145,24 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count)
 			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
 			exit(0);
 		}
-		if (*count > 2 * div_roof(*current, 3)) {
-			fclose(fp);
-			err_baditem(line, 2);
-			fprintf(stderr, "%llu > %llu (above current)\n\n", *count, *current);
-			exit(0);
-		}
+			//fprintf(stderr, "%u\n", EVP_MAX_MD_SIZE););
 		if (*count < prevcount && line != 2) {
 			fclose(fp);
 			err_baditem(line, 2);
 			fprintf(stderr, "%llu < %llu (below previous)\n\n", *count, prevcount);
 			exit(0);
 		}
+
+		if (ftostr(fp, md_value)) {
+			fclose(fp);
+			err_baditem(line, 3);
+			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
+			exit(0);
+		}
+		//for (unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
+		//	fprintf(stderr, "%02x", md_value[i]);
+		//fprintf(stderr, "\n");
+
 		line++;
 		prev = *current;
 		prevcount = *count;
@@ -133,10 +170,16 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, vamp_t *count)
 	fclose(fp);
 }
 
-void save_checkpoint(vamp_t current, vamp_t count)
+void save_checkpoint(vamp_t current, vamp_t count, unsigned char *md_value)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
-	fprintf(fp, "\n%llu %llu", current, count);
+	fprintf(fp, "\n%llu %llu ", current, count);
+
+#ifdef CHECKSUM_RESULTS
+	for (unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
+		fprintf(fp, "%02x", md_value[i]);
+#endif
+
 	fclose(fp);
 }
 

@@ -37,11 +37,13 @@ static inline void llnode_free(
 #endif /* STORE_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
-void llnode_checksum(struct llnode *list,	EVP_MD_CTX *mdctx);
+void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx, EVP_MD *md, unsigned char *md_value);
 #else
 static inline void llnode_checksum(
 	__attribute__((unused)) struct llnode *list,
-	__attribute__((unused)) EVP_MD_CTX *mdctx)
+	__attribute__((unused)) EVP_MD_CTX *mdctx,
+	__attribute__((unused)) EVP_MD *md,
+	__attribute__((unused)) unsigned char *md_value)
 {
 }
 #endif

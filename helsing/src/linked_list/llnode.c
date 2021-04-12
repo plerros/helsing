@@ -46,7 +46,7 @@ void llnode_free(struct llnode *node)
 #endif /* STORE_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
-void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx)
+void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx, EVP_MD *md, unsigned char *md_value)
 {
 	for (struct llnode *i = node; i != NULL ; i = i->next) {
 		for (uint16_t j = i->current; j > 0 ; j--) {
@@ -56,7 +56,12 @@ void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx)
 			tmp = __builtin_bswap64(tmp);
 			#endif
 
+			EVP_DigestInit_ex(mdctx, md, NULL);
+
+			EVP_DigestUpdate(mdctx, md_value, EVP_MAX_MD_SIZE);
 			EVP_DigestUpdate(mdctx, &tmp, sizeof(tmp));
+
+			EVP_DigestFinal_ex(mdctx, md_value, NULL);
 		}
 	}
 }
