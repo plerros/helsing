@@ -124,7 +124,7 @@
  * 	   manually.
  */
 
-// NOTE: checkpoint currently doesn't support checksum
+// NOTE: checkpoint checksum support is in alpha
 #define USE_CHECKPOINT false
 #define CHECKPOINT_FILE "a.checkpoint"
 

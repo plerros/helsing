@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 	}
 #else
 	vamp_t count = 0;
-	unsigned char mdtmp[EVP_MAX_MD_SIZE];
+	unsigned char mdtmp[EVP_MAX_MD_SIZE] = {0};
 	if (argc != 1 && argc != 3) {
 		printf("Usage: helsing [min] [max]\n");
 		printf("to recover from %s: helsing\n", CHECKPOINT_FILE);

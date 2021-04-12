@@ -22,7 +22,7 @@ static inline void load_checkpoint(
 	__attribute__((unused)) vamp_t *min,
 	__attribute__((unused)) vamp_t *max,
 	__attribute__((unused)) vamp_t *current,
-	__attribute__((unused)) vamp_t *count
+	__attribute__((unused)) vamp_t *count,
 	__attribute__((unused)) unsigned char *md_value)
 {
 }
