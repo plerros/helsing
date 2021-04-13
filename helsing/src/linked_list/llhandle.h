@@ -6,10 +6,12 @@
 #ifndef HELSING_LLHANDLE_H
 #define HELSING_LLHANDLE_H
 
-#include <openssl/evp.h>
-
 #include "configuration.h"
+#include "hash.h"
+
+#ifdef PROCESS_RESULTS
 #include "llnode.h"
+#endif
 
 #ifdef PROCESS_RESULTS
 struct llhandle
@@ -47,13 +49,11 @@ static inline void llhandle_reset(__attribute__((unused)) struct llhandle *ptr)
 #endif /* PROCESS_RESULTS */
 
 #if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
-void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *mdctx, EVP_MD *md, unsigned char *md_value);
+void llhandle_checksum(struct llhandle *ptr, struct hash *checksum);
 #else
 static inline void llhandle_checksum(
 	__attribute__((unused)) struct llhandle *ptr,
-	__attribute__((unused)) EVP_MD_CTX *mdctx,
-	__attribute__((unused)) EVP_MD *md,
-	__attribute__((unused)) unsigned char *md_value)
+	__attribute__((unused)) struct hash *checksum)
 {
 }
 #endif

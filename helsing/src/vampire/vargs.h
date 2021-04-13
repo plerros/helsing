@@ -11,7 +11,7 @@
 #include "bthandle.h"
 #include "cache.h"
 
-struct vargs	/* Vampire arguments */
+struct vargs /* Vampire arguments */
 {
 	struct cache *digptr;
 	struct bthandle *thandle;

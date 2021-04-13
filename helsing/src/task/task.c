@@ -4,12 +4,15 @@
  */
 
 #include <stdlib.h>
-#include <assert.h>
 
 #include "configuration.h"
 #include "task.h"
 #include "llhandle.h"
 #include "vargs.h"
+
+#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
+#include <assert.h>
+#endif
 
 struct task *task_init(vamp_t lmin, vamp_t lmax)
 {

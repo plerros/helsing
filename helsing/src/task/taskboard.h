@@ -6,10 +6,9 @@
 #ifndef HELSING_TASKBOARD_H
 #define HELSING_TASKBOARD_H
 
-#include <openssl/evp.h>
-
 #include "configuration.h"
 #include "task.h"
+#include "hash.h"
 
 struct taskboard
 {
@@ -18,10 +17,8 @@ struct taskboard
 	vamp_t todo; // First task that hasn't been accepted.
 	vamp_t done; // Last task that's completed, but isn't yet processed. (print, hash, checksum...)
 	fang_t fmax;
-	EVP_MD_CTX *common_mdctx;
-	EVP_MD *common_md;
-	unsigned char common_md_value[EVP_MAX_MD_SIZE];
 	vamp_t common_count;
+	struct hash *checksum;
 };
 
 struct taskboard *taskboard_init();
@@ -41,7 +38,7 @@ static inline void taskboard_print(__attribute__((unused)) struct taskboard *ptr
 #endif /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
 
 #if DISPLAY_PROGRESS
-void taskboard_progress( struct taskboard *ptr);
+void taskboard_progress(struct taskboard *ptr);
 #else /* DISPLAY_PROGRESS */
 static inline void taskboard_progress(__attribute__((unused)) struct taskboard *ptr)
 {

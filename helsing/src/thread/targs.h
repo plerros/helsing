@@ -8,13 +8,13 @@
 
 #include <pthread.h>
 
-#if MEASURE_RUNTIME
-#include <time.h>
-#endif
-
 #include "configuration.h"
 #include "taskboard.h"
 #include "cache.h"
+
+#if MEASURE_RUNTIME
+#include <time.h>
+#endif
 
 struct targs_t
 {

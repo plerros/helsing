@@ -6,10 +6,8 @@
 #ifndef HELSING_LLNODE_H
 #define HELSING_LLNODE_H
 
-#include <stdio.h>
-#include <openssl/evp.h>
-
 #include "configuration.h"
+#include "hash.h"
 
 #ifdef STORE_RESULTS
 struct llnode
@@ -18,7 +16,7 @@ struct llnode
 	uint16_t current;
 	struct llnode *next;
 };
-void llnode_init(struct llnode **ptr, vamp_t value , struct llnode *next);
+void llnode_init(struct llnode **ptr, vamp_t value, struct llnode *next);
 void llnode_free(struct llnode *list);
 #else /* STORE_RESULTS */
 struct llnode
@@ -37,13 +35,11 @@ static inline void llnode_free(
 #endif /* STORE_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
-void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx, EVP_MD *md, unsigned char *md_value);
+void llnode_checksum(struct llnode *node, struct hash *checksum);
 #else
 static inline void llnode_checksum(
 	__attribute__((unused)) struct llnode *list,
-	__attribute__((unused)) EVP_MD_CTX *mdctx,
-	__attribute__((unused)) EVP_MD *md,
-	__attribute__((unused)) unsigned char *md_value)
+	__attribute__((unused)) struct hash *checksum)
 {
 }
 #endif

@@ -9,14 +9,12 @@
 #include "configuration.h"
 #include "vargs.h"
 
-#ifdef PROCESS_RESULTS
 #include "llhandle.h"
-#endif
 
 /*
  * task:
  *
- * A task consists of a closed interval [lmin, lmax] and a pointer to a linked 
+ * A task consists of a closed interval [lmin, lmax] and a pointer to a linked
  * list, where the results will be stored.
  */
 

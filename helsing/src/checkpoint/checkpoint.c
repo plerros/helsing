@@ -3,19 +3,19 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
+#include "configuration.h"
+
+#if USE_CHECKPOINT
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <ctype.h>	// isdigit
-#include <openssl/evp.h>
-
-#include "configuration.h"
 #include "helper.h"
 #include "taskboard.h"
+#endif
 
-#if defined(USE_CHECKPOINT) && USE_CHECKPOINT
-
+#if USE_CHECKPOINT
 // we assume ASCII / ASCII compatible
 
 static int ftov(FILE *fp, vamp_t *number) // file to vamp_t
@@ -36,7 +36,6 @@ static int ftov(FILE *fp, vamp_t *number) // file to vamp_t
 }
 
 #ifdef CHECKSUM_RESULTS
-
 static char chartohex(char in)
 {
 	if (isdigit(in))
@@ -44,14 +43,13 @@ static char chartohex(char in)
 	else
 		return (in - 'a' + 10);
 }
-
-static int ftostr(FILE *fp, unsigned char *str)
+static int ftostr(FILE *fp, unsigned char *str, int size)
 {
 	assert(fp != NULL);
 	assert(str != NULL);
 
 	char ch[2] = {0};
-	for (int i = 0; i < EVP_MAX_MD_SIZE; i++) {
+	for (int i = 0; i < size; i++) {
 		ch[0] = fgetc(fp);
 		if (!isxdigit(ch[0]) || feof(fp))
 			return 1;
@@ -63,8 +61,7 @@ static int ftostr(FILE *fp, unsigned char *str)
 	}
 	return (fgetc(fp) != '\n' && !feof(fp));
 }
-
-#endif
+#endif /* CHECKSUM_RESULTS */
 
 void touch_checkpoint(vamp_t min, vamp_t max)
 {
@@ -157,13 +154,13 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard
 		}
 
 #ifdef CHECKSUM_RESULTS
-		if (ftostr(fp, progress->common_md_value)) {
+		if (ftostr(fp, progress->checksum->md_value, progress->checksum->md_size)) {
 			fclose(fp);
 			err_baditem(line, 3);
 			fprintf(stderr, "invalid checksum length\n\n");
 			exit(0);
 		}
-#endif
+#endif /* CHECKSUM_RESULTS */
 
 		line++;
 		prev = *current;
@@ -172,18 +169,18 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard
 	fclose(fp);
 }
 
-void save_checkpoint(vamp_t current, vamp_t count, unsigned char *md_value)
+void save_checkpoint(vamp_t current, struct taskboard *progress)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
-	fprintf(fp, "\n%llu %llu", current, count);
+	fprintf(fp, "\n%llu %llu", current, progress->common_count);
 
 #ifdef CHECKSUM_RESULTS
 	fprintf(fp, " ");
-	for (unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
-		fprintf(fp, "%02x", md_value[i]);
-#endif
+	for (int i = 0; i < progress->checksum->md_size; i++)
+		fprintf(fp, "%02x", progress->checksum->md_value[i]);
+#endif /* CHECKSUM_RESULTS */
 
 	fclose(fp);
 }
 
-#endif /* defined(USE_CHECKPOINT) && USE_CHECKPOINT */
+#endif /* USE_CHECKPOINT */

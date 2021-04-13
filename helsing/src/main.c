@@ -69,12 +69,12 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 	return max;
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
 	vamp_t min, max;
 	struct taskboard *progress = taskboard_init();
 
-#if !defined(USE_CHECKPOINT) || !USE_CHECKPOINT
+#if !USE_CHECKPOINT
 	if (argc != 3) {
 		printf("Usage: helsing [min] [max]\n");
 		return 0;

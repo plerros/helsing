@@ -3,12 +3,14 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include <stdlib.h>
-#include <openssl/evp.h>
-
 #include "configuration.h"
+
+#ifdef PROCESS_RESULTS
+#include <stdlib.h>
 #include "llnode.h"
 #include "llhandle.h"
+#include "hash.h"
+#endif
 
 #ifdef PROCESS_RESULTS
 void llhandle_init(struct llhandle **ptr)
@@ -43,13 +45,12 @@ void llhandle_reset(struct llhandle *ptr)
 	ptr->first = NULL;
 	ptr->size = 0;
 }
-
 #endif /* PROCESS_RESULTS */
 
 #if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
-void llhandle_checksum(struct llhandle *ptr, EVP_MD_CTX *mdctx, EVP_MD *md, unsigned char *md_value)
+void llhandle_checksum(struct llhandle *ptr, struct hash *checksum)
 {
-	llnode_checksum(ptr->first, mdctx, md, md_value);
+	llnode_checksum(ptr->first, checksum);
 }
 #endif
 
