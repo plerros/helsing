@@ -72,6 +72,8 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 int main(int argc, char* argv[])
 {
 	vamp_t min, max;
+	struct taskboard *progress = taskboard_init();
+
 #if !defined(USE_CHECKPOINT) || !USE_CHECKPOINT
 	if (argc != 3) {
 		printf("Usage: helsing [min] [max]\n");
@@ -82,8 +84,6 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 #else
-	vamp_t count = 0;
-	unsigned char mdtmp[EVP_MAX_MD_SIZE] = {0};
 	if (argc != 1 && argc != 3) {
 		printf("Usage: helsing [min] [max]\n");
 		printf("to recover from %s: helsing\n", CHECKPOINT_FILE);
@@ -91,7 +91,12 @@ int main(int argc, char* argv[])
 	}
 	if (argc == 1) {
 		vamp_t ccurrent;
-		load_checkpoint(&min, &max, &ccurrent, &count, mdtmp);
+		load_checkpoint(&min, &max, &ccurrent, progress);
+		if (ccurrent == max) {
+			taskboard_print_results(progress);
+			taskboard_free(progress);
+			return 0;
+		}
 		if (ccurrent > min)
 			min = ccurrent + 1;
 	}
@@ -120,14 +125,7 @@ int main(int argc, char* argv[])
 	vamp_t lmax = get_lmax(lmin, max);
 
 	pthread_t threads[THREADS];
-	struct targs_handle *thhandle = targs_handle_init(max);
-
-#if defined(USE_CHECKPOINT) && USE_CHECKPOINT
-	thhandle->progress->common_count = count;
-
-	for (unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
-		thhandle->progress->common_md_value[i] = mdtmp[i];
-#endif
+	struct targs_handle *thhandle = targs_handle_init(max, progress);
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);

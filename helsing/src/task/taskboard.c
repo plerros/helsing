@@ -168,6 +168,22 @@ void taskboard_cleanup(struct taskboard *ptr)
 	}
 }
 
+void taskboard_print_results(struct taskboard *ptr)
+{
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+	fprintf(stderr, "Found: %llu valid fang pairs.\n", ptr->common_count);
+#else
+	fprintf(stderr, "Found: %llu vampire numbers.\n",  ptr->common_count);
+#endif
+
+#ifdef CHECKSUM_RESULTS
+	fprintf(stderr, "Digest %s is: ", DIGEST_NAME);
+	for(unsigned int i = 0; i < EVP_MAX_MD_SIZE; i++)
+		fprintf(stderr, "%02x", ptr->common_md_value[i]);
+	fprintf(stderr, "\n");
+#endif
+}
+
 #if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
 
 void taskboard_print(struct taskboard *ptr)

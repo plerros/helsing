@@ -22,7 +22,7 @@ struct targs_handle
 	pthread_mutex_t *write;
 };
 
-struct targs_handle *targs_handle_init(vamp_t max);
+struct targs_handle *targs_handle_init(vamp_t max, struct taskboard *progress);
 void targs_handle_free(struct targs_handle *ptr);
 void targs_handle_print(struct targs_handle *ptr);
 

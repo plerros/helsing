@@ -19,7 +19,6 @@ Windows isn't posix compatible. You'll need to set up a virtual machine or (if y
    Fedora/RHEL | openssl-devel
    FreeBSD | openssl-devel
 
-
 ## How to compile for GNU/Linux & Homebrew
 ```
 cd helsing
