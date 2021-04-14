@@ -6,13 +6,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#if MEASURE_RUNTIME
-#include <time.h>
-#endif
-
 #include "configuration.h"
 #include "cache.h"
 #include "targs.h"
+
+#if MEASURE_RUNTIME
+#include <time.h>
+#endif
 
 struct targs_t *targs_t_init(
 	pthread_mutex_t *read,

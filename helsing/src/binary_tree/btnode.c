@@ -3,15 +3,16 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include <stdlib.h>
-#include <assert.h>
-
 #include "configuration.h"
 
 #ifdef PROCESS_RESULTS
-
+#include <stdlib.h>
+#include <assert.h>
 #include "llhandle.h"
 #include "btnode.h"
+#endif
+
+#ifdef PROCESS_RESULTS
 
 void btnode_init(struct btnode **ptr, vamp_t key)
 {

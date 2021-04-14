@@ -7,9 +7,13 @@
 #define HELSING_BTHANDLE_H
 
 #include "configuration.h"
+#include "llhandle.h"
 
 #ifdef PROCESS_RESULTS
 #include "btnode.h"
+#endif
+
+#ifdef PROCESS_RESULTS
 struct bthandle
 {
 	struct btnode *node;

@@ -7,10 +7,9 @@
 #define HELSING_BTNODE_H
 
 #include "configuration.h"
-
-#ifdef PROCESS_RESULTS
 #include "llhandle.h"
-#else
+
+#ifndef PROCESS_RESULTS
 #include <stddef.h> // NULL
 #endif
 
@@ -20,7 +19,7 @@ struct btnode
 	struct btnode *left;
 	struct btnode *right;
 	vamp_t key;
-	length_t height; //Should probably be less than 32
+	length_t height; // Should probably be less than 32
 	uint8_t fang_pairs;
 };
 void btnode_init(struct btnode **ptr, vamp_t key);

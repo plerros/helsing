@@ -3,17 +3,22 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <openssl/evp.h>
-
 #include "configuration.h"
 
 #ifdef STORE_RESULTS
-
+#include <stdlib.h>
+#include <stdio.h>
 #include "llnode.h"
+#include "hash.h"
+#endif
 
-void llnode_init(struct llnode **ptr, vamp_t value , struct llnode *next)
+#if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
+#include <openssl/evp.h>
+#endif
+
+#ifdef STORE_RESULTS
+
+void llnode_init(struct llnode **ptr, vamp_t value, struct llnode *next)
 {
 	struct llnode *new;
 	if (next != NULL && next->current < LINK_SIZE) {
@@ -46,17 +51,22 @@ void llnode_free(struct llnode *node)
 #endif /* STORE_RESULTS */
 
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
-void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx)
+void llnode_checksum(struct llnode *node, struct hash *checksum)
 {
-	for (struct llnode *i = node; i != NULL ; i = i->next) {
-		for (uint16_t j = i->current; j > 0 ; j--) {
+	for (struct llnode *i = node; i != NULL; i = i->next) {
+		for (uint16_t j = i->current; j > 0; j--) {
 			vamp_t tmp = i->value[j - 1];
 
 			#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 			tmp = __builtin_bswap64(tmp);
 			#endif
 
-			EVP_DigestUpdate(mdctx, &tmp, sizeof(tmp));
+			EVP_DigestInit_ex(checksum->mdctx, checksum->md, NULL);
+
+			EVP_DigestUpdate(checksum->mdctx, checksum->md_value, checksum->md_size);
+			EVP_DigestUpdate(checksum->mdctx, &tmp, sizeof(tmp));
+
+			EVP_DigestFinal_ex(checksum->mdctx, checksum->md_value, NULL);
 		}
 	}
 }
@@ -65,8 +75,8 @@ void llnode_checksum(struct llnode *node, EVP_MD_CTX *mdctx)
 #if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
 void llnode_print(struct llnode *node, vamp_t count)
 {
-	for (struct llnode *i = node; i != NULL ; i = i->next) {
-		for (uint16_t j = i->current; j > 0 ; j--) {
+	for (struct llnode *i = node; i != NULL; i = i->next) {
+		for (uint16_t j = i->current; j > 0; j--) {
 			fprintf(stdout, "%llu %llu\n", ++count, i->value[j - 1]);
 			fflush(stdout);
 		}

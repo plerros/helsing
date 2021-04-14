@@ -3,17 +3,17 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include <stdlib.h>
-#include <assert.h>
-
 #include "configuration.h"
 
 #ifdef PROCESS_RESULTS
-
+#include <stdlib.h>
+#include <assert.h>
 #include "llhandle.h"
 #include "btnode.h"
 #include "bthandle.h"
+#endif
 
+#ifdef PROCESS_RESULTS
 void bthandle_init(struct bthandle **ptr)
 {
 	struct bthandle *new = NULL;

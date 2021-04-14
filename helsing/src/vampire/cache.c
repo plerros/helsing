@@ -4,11 +4,13 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include <stdlib.h>
-
 #include "configuration.h"
+
+#if CACHE
+#include <stdlib.h>
 #include "helper.h"
 #include "cache.h"
+#endif
 
 #if CACHE
 

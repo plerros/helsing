@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
-#include <openssl/evp.h>
 
 #include "configuration.h"
 #include "helper.h"
@@ -15,6 +14,7 @@
 #include "task.h"
 #include "taskboard.h"
 #include "checkpoint.h"
+#include "hash.h"
 
 struct taskboard *taskboard_init()
 {
@@ -28,25 +28,7 @@ struct taskboard *taskboard_init()
 	new->fmax = 0;
 	new->done = 0;
 	new->common_count = 0;
-
-	const EVP_MD *md;
-	OpenSSL_add_all_digests();
-
-#ifdef CHECKSUM_RESULTS
-	md = EVP_get_digestbyname(DIGEST_NAME);
-#else
-	md = EVP_md_null();
-#endif
-
-	if(!md) {
-		printf("Unknown message digest %s\n", DIGEST_NAME);
-		exit(1);
-	}
-	new->common_mdctx = EVP_MD_CTX_create();
-
-#ifdef CHECKSUM_RESULTS
-	EVP_DigestInit_ex(new->common_mdctx, md, NULL);
-#endif
+	hash_init(&(new->checksum));
 
 	return new;
 }
@@ -61,9 +43,7 @@ void taskboard_free(struct taskboard *ptr)
 			task_free(ptr->tasks[i]);
 		free(ptr->tasks);
 	}
-	free(ptr->common_mdctx);
-	EVP_cleanup();
-
+	hash_free(ptr->checksum);
 	free(ptr);
 }
 
@@ -153,17 +133,28 @@ void taskboard_cleanup(struct taskboard *ptr)
 		ptr->tasks[ptr->done]->result != NULL)
 	{
 		llhandle_print(ptr->tasks[ptr->done]->result, ptr->common_count);
-		llhandle_checksum(ptr->tasks[ptr->done]->result, ptr->common_mdctx);
+
+		llhandle_checksum(ptr->tasks[ptr->done]->result, ptr->checksum);
 
 		ptr->common_count += ptr->tasks[ptr->done]->count;
 		taskboard_progress(ptr);
 
-		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr->common_count);
+		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr);
 
 		task_free(ptr->tasks[ptr->done]);
 		ptr->tasks[ptr->done] = NULL;
 		ptr->done += 1;
 	}
+}
+
+void taskboard_print_results(struct taskboard *ptr)
+{
+#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+	fprintf(stderr, "Found: %llu valid fang pairs.\n", ptr->common_count);
+#else
+	fprintf(stderr, "Found: %llu vampire numbers.\n",  ptr->common_count);
+#endif
+	hash_print(ptr->checksum);
 }
 
 #if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
@@ -179,7 +170,7 @@ void taskboard_print(struct taskboard *ptr)
 #if  DISPLAY_PROGRESS
 
 // taskboard_progress requires mutex lock
-void taskboard_progress( struct taskboard *ptr)
+void taskboard_progress(struct taskboard *ptr)
 {
 	fprintf(stderr, "%llu, %llu", ptr->tasks[ptr->done]->lmin, ptr->tasks[ptr->done]->lmax);
 	fprintf(stderr, "  %llu/%llu\n", ptr->done + 1, ptr->size);

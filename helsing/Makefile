@@ -10,7 +10,7 @@ SRC_DIRS ?= .
 
 CFLAGS := -O2 -Wall -Wextra # compiler flags
 LFLAGS := -Wl,--gc-sections # linker flags
-LIBS := -pthread -l crypto
+LIBS := -pthread -lcrypto
 
 SRCS := $(shell find $(SRC_DIRS) -name *.c)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)

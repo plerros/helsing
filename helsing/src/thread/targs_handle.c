@@ -15,13 +15,13 @@
 #include "targs.h"
 #include "targs_handle.h"
 
-struct targs_handle *targs_handle_init(vamp_t max)
+struct targs_handle *targs_handle_init(vamp_t max, struct taskboard *progress)
 {
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
 	if (new == NULL)
 		abort();
 
-	new->progress = taskboard_init();
+	new->progress = progress;
 	cache_init(&(new->digptr), max);
 
 	new->read = malloc(sizeof(pthread_mutex_t));
@@ -64,25 +64,7 @@ void targs_handle_print(struct targs_handle *ptr)
 	fprintf(stderr, "\nFang search took: %.2lf s, average: %.2lf s\n", total_time, total_time / THREADS);
 #endif
 
-#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
-	fprintf(stderr, "Found: %llu valid fang pairs.\n", ptr->progress->common_count);
-#else
-	fprintf(stderr, "Found: %llu vampire numbers.\n",  ptr->progress->common_count);
-#endif
-
-#ifdef CHECKSUM_RESULTS
-	unsigned char md_value[EVP_MAX_MD_SIZE];
-	unsigned int md_len;
-
-	EVP_DigestFinal_ex(ptr->progress->common_mdctx, md_value, &md_len);
-	EVP_MD_CTX_destroy(ptr->progress->common_mdctx);
-	ptr->progress->common_mdctx = NULL;
-
-	printf("Digest %s is: ", DIGEST_NAME);
-	for(unsigned int i = 0; i < md_len; i++)
-		printf("%02x", md_value[i]);
-	printf("\n");
-#endif
+	taskboard_print_results(ptr->progress);
 }
 
 void *thread_worker(void *void_args)
