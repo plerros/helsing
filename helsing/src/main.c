@@ -60,9 +60,8 @@ static vamp_t get_max(vamp_t min, vamp_t max)
 
 static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
-	vamp_t lmax;
 	if (length(lmin) < length(vamp_max)) {
-		lmax = pow10v(length(lmin)) - 1;
+		vamp_t lmax = pow10v(length(lmin)) - 1;
 		if (lmax < max)
 			return lmax;
 	}
