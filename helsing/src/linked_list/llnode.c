@@ -18,22 +18,18 @@
 
 #ifdef STORE_RESULTS
 
-void llnode_init(struct llnode **ptr, vamp_t value, struct llnode *next)
+void llnode_new(struct llnode **ptr, vamp_t value, struct llnode *next)
 {
-	struct llnode *new;
-	if (next != NULL && next->current < LINK_SIZE) {
-		new = next;
-		new->value[new->current] = value;
-		new->current += 1;
-	} else {
-		new = malloc(sizeof(struct llnode));
-		if (new == NULL)
-			abort();
+	if (ptr == NULL)
+		return;
 
-		new->value[0] = value;
-		new->current = 1;
-		new->next = next;
-	}
+	struct llnode *new = malloc(sizeof(struct llnode));
+	if (new == NULL)
+		abort();
+
+	new->value[0] = value;
+	new->current = 1;
+	new->next = next;
 	*ptr = new;
 }
 
@@ -46,6 +42,22 @@ void llnode_free(struct llnode *node)
 			free(i);
 		}
 	}
+}
+
+void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next)
+{
+	if (ptr == NULL)
+		return;
+
+	struct llnode *new;
+	if (next != NULL && next->current < LINK_SIZE) {
+		new = next;
+		new->value[new->current] = value;
+		new->current += 1;
+	} else {
+		llnode_new(&new, value, next);
+	}
+	*ptr = new;
 }
 
 #endif /* STORE_RESULTS */

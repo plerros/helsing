@@ -19,14 +19,14 @@ struct hash
 	unsigned char *md_value;
 	int md_size;
 };
-void hash_init(struct hash **ptr);
+void hash_new(struct hash **ptr);
 void hash_free(struct hash *ptr);
 void hash_print(struct hash *ptr);
 #else /* CHECKSUM_RESULTS */
 struct hash
 {
 };
-static inline void hash_init(__attribute__((unused)) struct hash **ptr)
+static inline void hash_new(__attribute__((unused)) struct hash **ptr)
 {
 }
 static inline void hash_free(__attribute__((unused)) struct hash *ptr)

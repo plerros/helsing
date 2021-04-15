@@ -7,14 +7,18 @@
 #ifdef CHECKSUM_RESULTS
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include <openssl/evp.h>
 #include "hash.h"
 #endif
 
 #ifdef CHECKSUM_RESULTS
 
-void hash_init(struct hash **ptr)
+void hash_new(struct hash **ptr)
 {
+	if (ptr == NULL)
+		return;
+
 	struct hash *new = malloc(sizeof(struct hash));
 	if (new == NULL)
 		abort();
@@ -22,10 +26,7 @@ void hash_init(struct hash **ptr)
 	OpenSSL_add_all_digests();
 
 	new->md = EVP_get_digestbyname(DIGEST_NAME);
-	if (!new->md) {
-		printf("Unknown message digest %s\n", DIGEST_NAME);
-		exit(1);
-	}
+	assert(new->md != NULL);
 
 	new->md_size = EVP_MD_size(new->md);
 	new->md_value = malloc(sizeof(unsigned char) * new->md_size);
@@ -34,8 +35,7 @@ void hash_init(struct hash **ptr)
 		new->md_value[i] = 0;
 
 	new->mdctx = EVP_MD_CTX_create();
-
-	*ptr = new;	
+	*ptr = new;
 }
 
 void hash_free(struct hash *ptr)

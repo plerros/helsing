@@ -26,7 +26,7 @@ struct task
 	vamp_t count;
 };
 
-struct task *task_init(vamp_t lmin, vamp_t lmax);
+void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax);
 void task_free(struct task *ptr);
 void task_copy_vargs(struct task *ptr, struct vargs *vamp_args);
 

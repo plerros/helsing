@@ -19,7 +19,7 @@ struct bthandle
 	struct btnode *node;
 	vamp_t size;
 };
-void bthandle_init(struct bthandle **ptr);
+void bthandle_new(struct bthandle **ptr);
 void bthandle_free(struct bthandle *handle);
 void bthandle_add(struct bthandle *handle, vamp_t key);
 void bthandle_reset(struct bthandle *handle);
@@ -32,7 +32,7 @@ void bthandle_cleanup(
 struct bthandle
 {
 };
-static inline void bthandle_init(__attribute__((unused)) struct bthandle **ptr)
+static inline void bthandle_new(__attribute__((unused)) struct bthandle **ptr)
 {
 }
 static inline void bthandle_free(

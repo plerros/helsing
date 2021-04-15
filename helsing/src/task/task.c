@@ -14,8 +14,11 @@
 #include <assert.h>
 #endif
 
-struct task *task_init(vamp_t lmin, vamp_t lmax)
+void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 {
+	if (ptr == NULL)
+		return;
+
 	struct task *new = malloc(sizeof(struct task));
 	if (new == NULL)
 		abort();
@@ -24,7 +27,7 @@ struct task *task_init(vamp_t lmin, vamp_t lmax)
 	new->lmax = lmax;
 	new->result = NULL;
 	new->count = 0;
-	return new;
+	*ptr = new;
 }
 
 void task_free(struct task *ptr)

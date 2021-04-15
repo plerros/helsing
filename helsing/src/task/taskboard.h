@@ -21,7 +21,7 @@ struct taskboard
 	struct hash *checksum;
 };
 
-struct taskboard *taskboard_init();
+void taskboard_new(struct taskboard **ptr);
 void taskboard_free(struct taskboard *ptr);
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax);
 void taskboard_reset(struct taskboard *ptr);

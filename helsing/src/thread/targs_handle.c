@@ -15,14 +15,17 @@
 #include "targs.h"
 #include "targs_handle.h"
 
-struct targs_handle *targs_handle_init(vamp_t max, struct taskboard *progress)
+void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *progress)
 {
+	if (ptr == NULL)
+		return;
+
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
 	if (new == NULL)
 		abort();
 
 	new->progress = progress;
-	cache_init(&(new->digptr), max);
+	cache_new(&(new->digptr), max);
 
 	new->read = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(new->read, NULL);
@@ -30,8 +33,8 @@ struct targs_handle *targs_handle_init(vamp_t max, struct taskboard *progress)
 	pthread_mutex_init(new->write, NULL);
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		new->targs[thread] = targs_t_init(new->read, new->write, new->progress, new->digptr);
-	return new;
+		targs_new(&(new->targs[thread]), new->read, new->write, new->progress, new->digptr);
+	*ptr = new;
 }
 
 void targs_handle_free(struct targs_handle *ptr)
@@ -47,7 +50,7 @@ void targs_handle_free(struct targs_handle *ptr)
 	cache_free(ptr->digptr);
 
 	for (thread_t thread = 0; thread < THREADS; thread++)
-		targs_t_free(ptr->targs[thread]);
+		targs_free(ptr->targs[thread]);
 
 	free(ptr);
 }
@@ -69,9 +72,10 @@ void targs_handle_print(struct targs_handle *ptr)
 
 void *thread_worker(void *void_args)
 {
-	struct targs_t *args = (struct targs_t *)void_args;
+	struct targs *args = (struct targs *)void_args;
 	thread_timer_start(args);
-	struct vargs *vamp_args = vargs_init(args->digptr);
+	struct vargs *vamp_args;
+	vargs_new(&(vamp_args), args->digptr);
 	struct task *current = NULL;
 
 	do {

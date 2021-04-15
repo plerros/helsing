@@ -71,7 +71,8 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 int main(int argc, char *argv[])
 {
 	vamp_t min, max;
-	struct taskboard *progress = taskboard_init();
+	struct taskboard *progress;
+	taskboard_new(&(progress));
 
 #if !USE_CHECKPOINT
 	if (argc != 3) {
@@ -124,7 +125,8 @@ int main(int argc, char *argv[])
 	vamp_t lmax = get_lmax(lmin, max);
 
 	pthread_t threads[THREADS];
-	struct targs_handle *thhandle = targs_handle_init(max, progress);
+	struct targs_handle *thhandle;
+	targs_handle_new(&(thhandle), max, progress);
 
 	for (; lmax <= max;) {
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);

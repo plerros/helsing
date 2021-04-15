@@ -14,13 +14,17 @@
 #include <time.h>
 #endif
 
-struct targs_t *targs_t_init(
+void targs_new(
+	struct targs **ptr,
 	pthread_mutex_t *read,
 	pthread_mutex_t *write,
 	struct taskboard *progress,
 	struct cache *digptr)
 {
-	struct targs_t *new = malloc(sizeof(struct targs_t));
+	if (ptr == NULL)
+		return;
+
+	struct targs *new = malloc(sizeof(struct targs));
 	if (new == NULL)
 		abort();
 
@@ -29,23 +33,23 @@ struct targs_t *targs_t_init(
 	new->progress = progress;
 	new->runtime = 0.0;
 	new->digptr = digptr;
-	targs_init_total(new, 0);
-	return new;
+	targs_new_total(new, 0);
+	*ptr = new;
 }
 
-void targs_t_free(struct targs_t *ptr)
+void targs_free(struct targs *ptr)
 {
 	free(ptr);
 }
 
 #if MEASURE_RUNTIME
 
-void thread_timer_start(struct targs_t *ptr)
+void thread_timer_start(struct targs *ptr)
 {
 	clock_gettime(SPDT_CLK_MODE, &(ptr->start));
 }
 
-void thread_timer_stop(struct targs_t *ptr)
+void thread_timer_stop(struct targs *ptr)
 {
 	struct timespec finish;
 	clock_gettime(SPDT_CLK_MODE, &(finish));

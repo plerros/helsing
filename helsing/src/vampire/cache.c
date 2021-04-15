@@ -39,8 +39,11 @@ digits_t set_dig(fang_t number)
 #endif
 }
 
-void cache_init(struct cache **ptr, vamp_t max)
+void cache_new(struct cache **ptr, vamp_t max)
 {
+	if (ptr == NULL)
+		return;
+
 	struct cache *new = malloc(sizeof(struct cache));
 	if (new == NULL)
 		abort();

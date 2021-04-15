@@ -16,8 +16,11 @@
 #include "checkpoint.h"
 #include "hash.h"
 
-struct taskboard *taskboard_init()
+void taskboard_new(struct taskboard **ptr)
 {
+	if (ptr == NULL)
+		return;
+
 	struct taskboard *new = malloc(sizeof(struct taskboard));
 	if (new == NULL)
 		abort();
@@ -28,9 +31,8 @@ struct taskboard *taskboard_init()
 	new->fmax = 0;
 	new->done = 0;
 	new->common_count = 0;
-	hash_init(&(new->checksum));
-
-	return new;
+	hash_new(&(new->checksum));
+	*ptr = new;
 }
 
 void taskboard_free(struct taskboard *ptr)
@@ -92,14 +94,18 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	if (ptr->tasks == NULL)
 		abort();
 
+	for (vamp_t i = 0; i < ptr->size; i++)
+		ptr->tasks[i] = NULL;
+
 	vamp_t x = 0;
 	vamp_t iterator = interval_size;
 	for (vamp_t i = lmin; i <= lmax; i += iterator + 1) {
 		if (lmax - i < interval_size)
 			iterator = lmax - i;
 
-		ptr->tasks[x++] = task_init(i, i + iterator);
+		task_new(&(ptr->tasks[x]), i, i + iterator);
 
+		x++;
 		if (i == lmax)
 			break;
 		if (i + iterator == vamp_max)

@@ -16,13 +16,14 @@ struct llnode
 	uint16_t current;
 	struct llnode *next;
 };
-void llnode_init(struct llnode **ptr, vamp_t value, struct llnode *next);
+void llnode_new(struct llnode **ptr, vamp_t value, struct llnode *next);
 void llnode_free(struct llnode *list);
+void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next);
 #else /* STORE_RESULTS */
 struct llnode
 {
 };
-static inline void llnode_init(
+static inline void llnode_new(
 	__attribute__((unused)) struct llnode **ptr,
 	__attribute__((unused)) vamp_t value,
 	__attribute__((unused)) struct llnode *next)
@@ -30,6 +31,12 @@ static inline void llnode_init(
 }
 static inline void llnode_free(
 	__attribute__((unused)) struct llnode *list)
+{
+}
+static inline void llnode_add(
+	__attribute__((unused)) struct llnode **ptr,
+	__attribute__((unused)) vamp_t value,
+	__attribute__((unused)) struct llnode *next)
 {
 }
 #endif /* STORE_RESULTS */

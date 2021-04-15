@@ -22,7 +22,7 @@ struct btnode
 	length_t height; // Should probably be less than 32
 	uint8_t fang_pairs;
 };
-void btnode_init(struct btnode **ptr, vamp_t key);
+void btnode_new(struct btnode **ptr, vamp_t key);
 void btnode_free(struct btnode *node);
 struct btnode *btnode_add(
 	struct btnode *node,
@@ -37,7 +37,7 @@ struct btnode *btnode_cleanup(
 struct btnode
 {
 };
-static inline void btnode_init(
+static inline void btnode_new(
 	__attribute__((unused)) struct btnode **ptr,
 	__attribute__((unused)) vamp_t key)
 {

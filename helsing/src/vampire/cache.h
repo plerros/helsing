@@ -16,7 +16,7 @@ struct cache
 	fang_t power_a;
 };
 digits_t set_dig(fang_t number);
-void cache_init(struct cache **ptr, vamp_t max);
+void cache_new(struct cache **ptr, vamp_t max);
 void cache_free(struct cache *ptr);
 #else /* !CACHE */
 struct cache
@@ -26,7 +26,7 @@ static inline digits_t set_dig(__attribute__((unused)) fang_t number)
 {
 	return 0;
 }
-static inline void cache_init(
+static inline void cache_new(
 	__attribute__((unused)) struct cache **ptr,
 	__attribute__((unused)) vamp_t max)
 {

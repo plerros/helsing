@@ -50,17 +50,20 @@ static bool con9(vamp_t x, vamp_t y)
 	return ((x + y) % 9 != (x * y) % 9);
 }
 
-struct vargs *vargs_init(struct cache *digptr)
+void vargs_new(struct vargs **ptr, struct cache *digptr)
 {
+	if (ptr == NULL)
+		return;
+
 	struct vargs *new = malloc(sizeof(struct vargs));
 	if (new == NULL)
 		abort();
 
 	new->digptr = digptr;
 	new->local_count = 0;
-	llhandle_init(&(new->lhandle));
-	bthandle_init(&(new->thandle));
-	return new;
+	llhandle_new(&(new->lhandle));
+	bthandle_new(&(new->thandle));
+	*ptr = new;
 }
 
 void vargs_free(struct vargs *args)
@@ -73,7 +76,7 @@ void vargs_free(struct vargs *args)
 void vargs_reset(struct vargs *args)
 {
 	args->local_count = 0;
-	llhandle_init(&(args->lhandle));
+	llhandle_new(&(args->lhandle));
 	bthandle_reset(args->thandle);
 }
 

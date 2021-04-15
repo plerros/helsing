@@ -16,7 +16,7 @@
 #include <time.h>
 #endif
 
-struct targs_t
+struct targs
 {
 	pthread_mutex_t *read;
 	pthread_mutex_t *write;
@@ -30,35 +30,36 @@ struct targs_t
 #endif
 };
 
-struct targs_t *targs_t_init(
+void targs_new(
+	struct targs **ptr,
 	pthread_mutex_t *read,
 	pthread_mutex_t *write,
 	struct taskboard *progress,
 	struct cache *digptr);
 
-void targs_t_free(struct targs_t *ptr);
+void targs_free(struct targs *ptr);
 
 #if MEASURE_RUNTIME
-static inline void targs_init_total(
-	struct targs_t *ptr,
+static inline void targs_new_total(
+	struct targs *ptr,
 	vamp_t total)
 {
 	ptr->total = total;
 }
-void thread_timer_start(struct targs_t *ptr);
-void thread_timer_stop(struct targs_t *ptr);
+void thread_timer_start(struct targs *ptr);
+void thread_timer_stop(struct targs *ptr);
 #else /* MEASURE_RUNTIME */
-static inline void targs_init_total(
-	__attribute__((unused)) struct targs_t *ptr,
+static inline void targs_new_total(
+	__attribute__((unused)) struct targs *ptr,
 	__attribute__((unused)) vamp_t total)
 {
 }
 static inline void thread_timer_start(
-	__attribute__((unused)) struct targs_t *ptr)
+	__attribute__((unused)) struct targs *ptr)
 {
 }
 static inline void thread_timer_stop(
-	__attribute__((unused)) struct targs_t *ptr)
+	__attribute__((unused)) struct targs *ptr)
 {
 }
 #endif /* MEASURE_RUNTIME */

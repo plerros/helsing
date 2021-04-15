@@ -7,17 +7,22 @@
 
 #ifdef PROCESS_RESULTS
 #include <stdlib.h>
-#include <assert.h>
 #include "llhandle.h"
 #include "btnode.h"
 #include "bthandle.h"
 #endif
 
+#if defined (PROCESS_RESULTS) && SANITY_CHECK
+#include <assert.h>
+#endif
+
 #ifdef PROCESS_RESULTS
-void bthandle_init(struct bthandle **ptr)
+void bthandle_new(struct bthandle **ptr)
 {
-	struct bthandle *new = NULL;
-	new = malloc(sizeof(struct bthandle));
+	if (ptr == NULL)
+		return;
+
+	struct bthandle *new = malloc(sizeof(struct bthandle));
 	if (new == NULL)
 		abort();
 

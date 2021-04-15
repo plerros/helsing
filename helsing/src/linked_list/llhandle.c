@@ -13,8 +13,11 @@
 #endif
 
 #ifdef PROCESS_RESULTS
-void llhandle_init(struct llhandle **ptr)
+void llhandle_new(struct llhandle **ptr)
 {
+	if (ptr == NULL)
+		return;
+
 	struct llhandle *new = malloc(sizeof(struct llhandle));
 	if (new == NULL)
 		abort();
@@ -35,7 +38,7 @@ void llhandle_add(struct llhandle *ptr, vamp_t value)
 	if (ptr == NULL)
 		return;
 
-	llnode_init(&(ptr->first), value, ptr->first);
+	llnode_add(&(ptr->first), value, ptr->first);
 	ptr->size += 1;
 }
 

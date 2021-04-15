@@ -19,7 +19,7 @@ struct vargs /* Vampire arguments */
 	vamp_t local_count;
 };
 
-struct vargs *vargs_init(struct cache *digptr);
+void vargs_new(struct vargs **ptr, struct cache *digptr);
 void vargs_free(struct vargs *args);
 void vargs_reset(struct vargs *args);
 struct llhandle *vargs_getlhandle(struct vargs *args);

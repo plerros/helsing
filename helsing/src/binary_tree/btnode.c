@@ -7,15 +7,21 @@
 
 #ifdef PROCESS_RESULTS
 #include <stdlib.h>
-#include <assert.h>
 #include "llhandle.h"
 #include "btnode.h"
 #endif
 
+#if defined (PROCESS_RESULTS) && SANITY_CHECK
+#include <assert.h>
+#endif
+
 #ifdef PROCESS_RESULTS
 
-void btnode_init(struct btnode **ptr, vamp_t key)
+void btnode_new(struct btnode **ptr, vamp_t key)
 {
+	if (ptr == NULL)
+		return;
+
 	struct btnode *new = malloc(sizeof(struct btnode));
 	if (new == NULL)
 		abort();
@@ -155,7 +161,7 @@ struct btnode *btnode_add(
 	if (node == NULL) {
 		*count += 1;
 		struct btnode *tmpptr;
-		btnode_init(&tmpptr, key);
+		btnode_new(&tmpptr, key);
 		return (tmpptr);
 	}
 	if (key == node->key) {
