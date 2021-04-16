@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <assert.h>
 #include <ctype.h>	// isdigit
 #include "helper.h"
@@ -36,45 +37,95 @@ static int ftov(FILE *fp, vamp_t *number) // file to vamp_t
 }
 
 #ifdef CHECKSUM_RESULTS
-static char chartohex(char in)
+static int hextobyte(char ch, uint8_t *hex)
 {
-	if (isdigit(in))
-		return (in - '0');
-	else
-		return (in - 'a' + 10);
+	if (!isxdigit(ch))
+		return 1;
+
+	switch (ch) {
+		case '0':
+			*hex = 0;
+			break;
+		case '1':
+			*hex = 1;
+			break;
+		case '2':
+			*hex = 2;
+			break;
+		case '3':
+			*hex = 3;
+			break;
+		case '4':
+			*hex = 4;
+			break;
+		case '5':
+			*hex = 5;
+			break;
+		case '6':
+			*hex = 6;
+			break;
+		case '7':
+			*hex = 7;
+			break;
+		case '8':
+			*hex = 8;
+			break;
+		case '9':
+			*hex = 9;
+			break;
+		case 'a':
+			*hex = 10;
+			break;
+		case 'b':
+			*hex = 11;
+			break;
+		case 'c':
+			*hex = 12;
+			break;
+		case 'd':
+			*hex = 13;
+			break;
+		case 'e':
+			*hex = 14;
+			break;
+		case 'f':
+			*hex = 15;
+			break;
+	}
+	return 0;
 }
-static int ftostr(FILE *fp, unsigned char *str, int size)
+static int ftomd(FILE *fp, struct hash *ptr)
 {
 	assert(fp != NULL);
-	assert(str != NULL);
-
-	char ch[2] = {0};
-	for (int i = 0; i < size; i++) {
-		ch[0] = fgetc(fp);
-		if (!isxdigit(ch[0]) || feof(fp))
+	assert(ptr->md_value != NULL);
+	int err;
+	uint8_t byte[2] = {0};
+	for (int i = 0; i < ptr->md_size; i++) {
+		err = hextobyte(fgetc(fp), &(byte[0]));
+		if (err || feof(fp))
 			return 1;
-		ch[1] = fgetc(fp);
-		if (!isxdigit(ch[1]) || feof(fp))
+		err = hextobyte(fgetc(fp), &(byte[1]));
+		if (err || feof(fp))
 			return 1;
-
-		str[i] = (chartohex(ch[0]) << 4) | chartohex(ch[1]);
+		ptr->md_value[i] = (byte[0] << 4) | byte[1];
 	}
 	return (fgetc(fp) != '\n' && !feof(fp));
 }
 #endif /* CHECKSUM_RESULTS */
 
-void touch_checkpoint(vamp_t min, vamp_t max)
+int touch_checkpoint(vamp_t min, vamp_t max)
 {
 	FILE *fp;
 	fp = fopen(CHECKPOINT_FILE, "r");
 	if (fp != NULL) {
 		fclose(fp);
 		fprintf(stderr, "%s already exists\n", CHECKPOINT_FILE);
-		exit(0);
+		return 1;
 	}
 	fp = fopen(CHECKPOINT_FILE, "w+");
 	fprintf(fp, "%llu %llu", min, max);
 	fclose(fp);
+	return 0;
 }
 
 static void err_badline(vamp_t line)
@@ -87,7 +138,7 @@ static void err_baditem(vamp_t line, vamp_t item)
 	fprintf(stderr, "\n[ERROR] %s line %llu item #%llu has bad data:\n", CHECKPOINT_FILE, line, item);
 }
 
-void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard *progress)
+int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard *progress)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "r");
 	assert(fp != NULL);
@@ -98,14 +149,14 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard
 		fclose(fp);
 		err_badline(line);
 		fprintf(stderr, "Input out of range: [0, %llu]\n\n", vamp_max);
-	 	exit(0);
+	 	return 1;
 	}
 
 	if (*max < *min) {
 		fclose(fp);
 		err_badline(line);
 		fprintf(stderr, "max < min\n\n");
-		exit(0);
+		return 1;
 	}
 
 	*current = *min;
@@ -119,46 +170,46 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard
 			fclose(fp);
 			err_baditem(line, 1);
 			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
-			exit(0);
+			return 1;
 		}
 		if (*current < *min) {
 			fclose(fp);
 			err_baditem(line, 1);
 			fprintf(stderr, "%llu < %llu (below min)\n\n", *current,  *min);
-			exit(0);
+			return 1;
 		}
 		if (*current > *max) {
 			fclose(fp);
 			err_baditem(line, 1);
 			fprintf(stderr, "%llu > %llu (above max)\n\n", *current,  *max);
-			exit(0);
+			return 1;
 		}
 		if (*current <= prev && line != 2) {
 			fclose(fp);
 			err_baditem(line, 1);
 			fprintf(stderr, "%llu <= %llu (below previous)\n\n", *current, prev);
-			exit(0);
+			return 1;
 		}
 
 		if (ftov(fp, &(progress->common_count))) {
 			fclose(fp);
 			err_baditem(line, 2);
 			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
-			exit(0);
+			return 1;
 		}
 		if (progress->common_count < prevcount && line != 2) {
 			fclose(fp);
 			err_baditem(line, 2);
 			fprintf(stderr, "%llu < %llu (below previous)\n\n", progress->common_count, prevcount);
-			exit(0);
+			return 1;
 		}
 
 #ifdef CHECKSUM_RESULTS
-		if (ftostr(fp, progress->checksum->md_value, progress->checksum->md_size)) {
+		if (ftomd(fp, progress->checksum)) {
 			fclose(fp);
 			err_baditem(line, 3);
 			fprintf(stderr, "invalid checksum length\n\n");
-			exit(0);
+			return 1;
 		}
 #endif /* CHECKSUM_RESULTS */
 
@@ -167,6 +218,7 @@ void load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard
 		prevcount = progress->common_count;
 	}
 	fclose(fp);
+	return 0;
 }
 
 void save_checkpoint(vamp_t current, struct taskboard *progress)

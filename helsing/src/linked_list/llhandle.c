@@ -29,6 +29,9 @@ void llhandle_new(struct llhandle **ptr)
 
 void llhandle_free(struct llhandle *ptr)
 {
+	if (ptr == NULL)
+		return;
+
 	llnode_free(ptr->first);
 	free(ptr);
 }

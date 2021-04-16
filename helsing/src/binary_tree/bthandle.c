@@ -33,8 +33,10 @@ void bthandle_new(struct bthandle **ptr)
 
 void bthandle_free(struct bthandle *handle)
 {
-	if (handle != NULL)
-		btnode_free(handle->node);
+	if (handle == NULL)
+		return;
+		
+	btnode_free(handle->node);
 	free(handle);
 }
 
@@ -56,8 +58,11 @@ void bthandle_reset(struct bthandle *handle)
 }
 
 /*
- * Move inactive data from binary tree to linked list
- * and free up memory. Works best with low thread counts.
+ * bthandle_cleanup
+ *
+ * Move data from binary tree to linked list.
+ * This function is used to reduce memory usage, as a linked list has less
+ * memory overhead.
  */
 void bthandle_cleanup(
 	struct bthandle *handle,

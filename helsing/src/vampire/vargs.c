@@ -68,9 +68,12 @@ void vargs_new(struct vargs **ptr, struct cache *digptr)
 
 void vargs_free(struct vargs *args)
 {
+	if (args == NULL)
+		return;
+
 	llhandle_free(args->lhandle);
 	bthandle_free(args->thandle);
-	free (args);
+	free(args);
 }
 
 void vargs_reset(struct vargs *args)

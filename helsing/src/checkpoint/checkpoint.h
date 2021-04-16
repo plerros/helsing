@@ -10,25 +10,27 @@
 #include "taskboard.h"
 
 #if USE_CHECKPOINT
-void touch_checkpoint(vamp_t min, vamp_t max);
-void load_checkpoint(
+int touch_checkpoint(vamp_t min, vamp_t max);
+int load_checkpoint(
 	vamp_t *min,
 	vamp_t *max,
 	vamp_t *current,
 	struct taskboard *progress);
 void save_checkpoint(vamp_t current, struct taskboard *progress);
 #else /* USE_CHECKPOINT */
-static inline void touch_checkpoint(
+static inline int touch_checkpoint(
 	__attribute__((unused)) vamp_t min,
 	__attribute__((unused)) vamp_t max)
 {
+	return 0;
 }
-static inline void load_checkpoint(
+static inline int load_checkpoint(
 	__attribute__((unused)) vamp_t *min,
 	__attribute__((unused)) vamp_t *max,
 	__attribute__((unused)) vamp_t *current,
 	__attribute__((unused)) struct taskboard *progress)
 {
+	return 0;
 }
 static inline void save_checkpoint(
 	__attribute__((unused)) vamp_t current,

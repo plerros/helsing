@@ -40,9 +40,7 @@ void targs_new(
 void targs_free(struct targs *ptr);
 
 #if MEASURE_RUNTIME
-static inline void targs_new_total(
-	struct targs *ptr,
-	vamp_t total)
+static inline void targs_new_total(struct targs *ptr, vamp_t total)
 {
 	ptr->total = total;
 }

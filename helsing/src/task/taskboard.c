@@ -55,12 +55,12 @@ static vamp_t get_interval_size(
 {
 	vamp_t interval_size = vamp_max;
 
-#if AUTO_TILE_SIZE
+#if AUTO_TASK_SIZE
 	interval_size = (lmax - lmin) / (4 * THREADS + 2);
 #endif
 
-	if (interval_size > MAX_TILE_SIZE)
-		interval_size = MAX_TILE_SIZE;
+	if (interval_size > MAX_TASK_SIZE)
+		interval_size = MAX_TASK_SIZE;
 
 	return interval_size;
 }
@@ -139,12 +139,9 @@ void taskboard_cleanup(struct taskboard *ptr)
 		ptr->tasks[ptr->done]->result != NULL)
 	{
 		llhandle_print(ptr->tasks[ptr->done]->result, ptr->common_count);
-
 		llhandle_checksum(ptr->tasks[ptr->done]->result, ptr->checksum);
-
 		ptr->common_count += ptr->tasks[ptr->done]->count;
 		taskboard_progress(ptr);
-
 		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr);
 
 		task_free(ptr->tasks[ptr->done]);

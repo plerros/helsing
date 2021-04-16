@@ -36,12 +36,13 @@ void btnode_new(struct btnode **ptr, vamp_t key)
 
 void btnode_free(struct btnode *node)
 {
-	if (node != NULL) {
-		if (node->left != NULL)
-			btnode_free(node->left);
-		if (node->right != NULL)
-			btnode_free(node->right);
-	}
+	if (node == NULL)
+		return;
+
+	if (node->left != NULL)
+		btnode_free(node->left);
+	if (node->right != NULL)
+		btnode_free(node->right);
 	free(node);
 }
 

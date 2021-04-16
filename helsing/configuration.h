@@ -86,30 +86,31 @@
 #define ELEMENT_BITS 64
 
 /*
- * MAX_TILE_SIZE:
+ * MAX_TASK_SIZE:
  *
  * Maximum value: 18446744073709551615ULL (2^64 -1)
  *
  * 	Because there is no simple way to predict the amount of vampire numbers
- * for a given range, MAX_TILE_SIZE can be used to limit the memory usage of
+ * for a given range, MAX_TASK_SIZE can be used to limit the memory usage of
  * heapsort.
  *
  * Heapsort shouldn't use more memory than:
- * THREADS * (sizeof(bthandle) + MAX_TILE_SIZE * sizeof(btnode))
+ * THREADS * (sizeof(bthandle) + MAX_TASK_SIZE * sizeof(btnode))
  */
 
-#define AUTO_TILE_SIZE true
-#define MAX_TILE_SIZE 99999999999ULL
+#define AUTO_TASK_SIZE true
+#define MAX_TASK_SIZE 99999999999ULL
 
 /*
  * USE_CHECKPOINT:
  *
  * 	USE_CHECKPOINT will generate the CHECKPOINT_FILE. In there the code will
- * store it's progress every (at least) MAX_TILE_SIZE numbers.
+ * store it's progress.
  *
  * 	The file format is text based (ASCII). The first line is like a header,
  * there we store [min] and [max], separated by a space. All the following lines
- * are optional. In those we store [current] and [count], separated by a space.
+ * are optional. In those we store [current], [count] and optionally [checksum],
+ * separated by a space.
  *
  * Interfacing properly with files is hard. I have made a few design decisions
  * in the hopes to minimize the damage from possible errors in my code:
@@ -124,37 +125,33 @@
  * 	   manually.
  */
 
-// NOTE: checkpoint checksum support is in alpha
 #define USE_CHECKPOINT false
 #define CHECKPOINT_FILE "a.checkpoint"
 
 /*
  * LINK_SIZE:
  *
- * 	The amount of elements stored in each link of a linked list.
+ * The amount of elements stored in each link of a linked list.
  */
 
 #define LINK_SIZE 100
 #define SANITY_CHECK false
 
-/*
- * Both vamp_t and fang_t must be unsigned, vamp_t should be double the size
- * of fang_t and fang_max, vamp_max should be set accordingly.
- *
- * You should be able to change vamp_t up to 256-bit without any issues.
- * If you want to go any higher check the uint8_t for overflow.
-*/
+/*----------------------------------------------------------------------------*/
 
-typedef unsigned long long vamp_t;
+/*
+ * The following typedefs are used to explicate intent.
+ */
+
+typedef unsigned long long vamp_t; // vampire type
 #define vamp_max ULLONG_MAX
 
-typedef unsigned long fang_t;
+typedef unsigned long fang_t; // fang type
 #define fang_max ULONG_MAX
 
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
 
-/*---------------------------- PREPROCESSOR STUFF ----------------------------*/
 // DIGMULT = ELEMENT_BITS/(10 - DIGSKIP)
 #if ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
@@ -184,12 +181,11 @@ typedef uint8_t length_t;
 	#define STORE_RESULTS
 	#define PROCESS_RESULTS
 	#define CHECKSUM_RESULTS
+	#define DIGEST_NAME "sha512"
 #elif (VERBOSE_LEVEL == 4)
 	#define STORE_RESULTS
 	#define PROCESS_RESULTS
 	#define PRINT_RESULTS
 #endif
-
-#define DIGEST_NAME "sha512"
 
 #endif /* HELSING_CONFIG_H */

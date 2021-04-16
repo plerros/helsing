@@ -68,8 +68,10 @@ void cache_new(struct cache **ptr, vamp_t max)
 
 void cache_free(struct cache *ptr)
 {
-	if (ptr != NULL)
-		free(ptr->dig);
+	if (ptr == NULL)
+		return;
+
+	free(ptr->dig);
 	free(ptr);
 }
 

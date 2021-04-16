@@ -32,8 +32,10 @@ void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 
 void task_free(struct task *ptr)
 {
-	if (ptr != NULL)
-		llhandle_free(ptr->result);
+	if (ptr == NULL)
+		return;
+
+	llhandle_free(ptr->result);
 	free(ptr);
 }
 

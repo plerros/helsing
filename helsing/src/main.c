@@ -68,30 +68,40 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 	return max;
 }
 
+static bool check_argc (int argc)
+{
+#if !USE_CHECKPOINT
+	return (argc != 3);
+#else
+	return (argc != 1 && argc != 3);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
 	vamp_t min, max;
+
+	if(check_argc(argc)) {
+		printf("Usage: helsing [min] [max]\n");
+		return 0;
+	}
+	if (argc == 3) {
+		if (atov(argv[1], &min) || atov(argv[2], &max)) {
+			fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
+			return 0;
+		}
+		if (touch_checkpoint(min, max))
+			return 0;
+	}
 	struct taskboard *progress;
 	taskboard_new(&(progress));
 
-#if !USE_CHECKPOINT
-	if (argc != 3) {
-		printf("Usage: helsing [min] [max]\n");
-		return 0;
-	}
-	if (atov(argv[1], &min) || atov(argv[2], &max)) {
-		fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
-		return 1;
-	}
-#else
-	if (argc != 1 && argc != 3) {
-		printf("Usage: helsing [min] [max]\n");
-		printf("to recover from %s: helsing\n", CHECKPOINT_FILE);
-		return 0;
-	}
 	if (argc == 1) {
 		vamp_t ccurrent;
-		load_checkpoint(&min, &max, &ccurrent, progress);
+		if (load_checkpoint(&min, &max, &ccurrent, progress)) {
+			taskboard_free(progress);
+			return 0;
+		}
 		if (ccurrent == max) {
 			taskboard_print_results(progress);
 			taskboard_free(progress);
@@ -100,21 +110,16 @@ int main(int argc, char *argv[])
 		if (ccurrent > min)
 			min = ccurrent + 1;
 	}
-	if (argc == 3) {
-		if (atov(argv[1], &min) || atov(argv[2], &max)) {
-			fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
-			return 1;
-		}
-		touch_checkpoint(min, max);
-	}
-#endif
+
 	if (min > max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
-		return 1;
+		taskboard_free(progress);
+		return 0;
 	}
 	if (max > 9999999999 && ELEMENT_BITS == 32) {
 		fprintf(stderr, "WARNING: the code might produce false ");
 		fprintf(stderr, "positives, please set ELEMENT_BITS to 64.\n");
+		taskboard_free(progress);
 		return 0;
 	}
 

@@ -8,6 +8,7 @@
 #include "configuration.h"
 
 #ifdef CHECKSUM_RESULTS
+#include <stdint.h>
 #include <openssl/evp.h>
 #endif
 
@@ -16,7 +17,7 @@ struct hash
 {
 	EVP_MD_CTX *mdctx;
 	const EVP_MD *md;
-	unsigned char *md_value;
+	uint8_t *md_value;
 	int md_size;
 };
 void hash_new(struct hash **ptr);

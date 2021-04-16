@@ -7,6 +7,7 @@
 #ifdef CHECKSUM_RESULTS
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <assert.h>
 #include <openssl/evp.h>
 #include "hash.h"
@@ -29,7 +30,7 @@ void hash_new(struct hash **ptr)
 	assert(new->md != NULL);
 
 	new->md_size = EVP_MD_size(new->md);
-	new->md_value = malloc(sizeof(unsigned char) * new->md_size);
+	new->md_value = malloc(sizeof(uint8_t) * new->md_size);
 
 	for (int i = 0; i < new->md_size; i++)
 		new->md_value[i] = 0;
@@ -40,6 +41,9 @@ void hash_new(struct hash **ptr)
 
 void hash_free(struct hash *ptr)
 {
+	if (ptr == NULL)
+		return;
+
 	EVP_MD_CTX_destroy(ptr->mdctx);
 	ptr->mdctx = NULL;
 	free(ptr->mdctx);

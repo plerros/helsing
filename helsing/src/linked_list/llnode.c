@@ -35,12 +35,13 @@ void llnode_new(struct llnode **ptr, vamp_t value, struct llnode *next)
 
 void llnode_free(struct llnode *node)
 {
-	if (node != NULL) {
-		struct llnode *tmp = node;
-		for (struct llnode *i = tmp; tmp != NULL; i = tmp) {
-			tmp = tmp->next;
-			free(i);
-		}
+	if (node == NULL)
+		return;
+
+	struct llnode *tmp = node;
+	for (struct llnode *i = tmp; tmp != NULL; i = tmp) {
+		tmp = tmp->next;
+		free(i);
 	}
 }
 
