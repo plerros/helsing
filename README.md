@@ -11,7 +11,7 @@ Windows isn't posix compatible. You'll need to set up a virtual machine or (if y
  - a C compiler (clang or gcc should do just fine)
  - GNU make
  - findutils
- - OpenSSL
+ - OpenSSL (optional)
    Platform | Package name
    -------- | ------------
    Homebrew | openssl
