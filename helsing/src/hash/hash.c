@@ -3,6 +3,7 @@
  */
 
 #include "configuration.h"
+#include "configuration_adv.h"
 
 #ifdef CHECKSUM_RESULTS
 #include <stdlib.h>

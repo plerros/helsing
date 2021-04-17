@@ -8,7 +8,7 @@
 
 #include <stdbool.h>
 
-#include "configuration.h"
+#include "configuration_adv.h"
 
 bool willoverflow(vamp_t x, digit_t digit);
 length_t length(vamp_t x);

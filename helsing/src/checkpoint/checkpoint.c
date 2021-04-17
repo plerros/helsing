@@ -4,6 +4,7 @@
  */
 
 #include "configuration.h"
+#include "configuration_adv.h"
 
 #if USE_CHECKPOINT
 #include <stdio.h>

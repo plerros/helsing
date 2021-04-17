@@ -6,7 +6,7 @@
 #ifndef HELSING_BTNODE_H
 #define HELSING_BTNODE_H
 
-#include "configuration.h"
+#include "configuration_adv.h"
 #include "llhandle.h"
 
 #ifndef PROCESS_RESULTS

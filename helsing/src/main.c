@@ -9,6 +9,7 @@
 #include <ctype.h>	// isdigit
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "helper.h"
 #include "taskboard.h"
 #include "targs_handle.h"
@@ -137,7 +138,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
 		taskboard_set(thhandle->progress, lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++)
-			assert(pthread_create(&threads[thread], NULL, thread_worker, (void *)(thhandle->targs[thread])) == 0);
+			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 

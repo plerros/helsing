@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "llhandle.h"
 #include "taskboard.h"
 #include "cache.h"
@@ -70,7 +71,7 @@ void targs_handle_print(struct targs_handle *ptr)
 	taskboard_print_results(ptr->progress);
 }
 
-void *thread_worker(void *void_args)
+void *thread_function(void *void_args)
 {
 	struct targs *args = (struct targs *)void_args;
 	thread_timer_start(args);

@@ -6,7 +6,7 @@
 #ifndef HELSING_TASK_H
 #define HELSING_TASK_H
 
-#include "configuration.h"
+#include "configuration_adv.h"
 #include "vargs.h"
 
 #include "llhandle.h"

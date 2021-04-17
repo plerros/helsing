@@ -6,26 +6,23 @@
 #ifndef HELSING_CONFIG_H
 #define HELSING_CONFIG_H // safety precaution for the c preprocessor
 
-#include <stdint.h>
 #include <stdbool.h> // preprocessor true/false
-#include <limits.h>
-#include <time.h>
 
 // Check memory with valgrind --tool=massif
 
 #define THREADS 1
-#define thread_t uint16_t
 
 /*
  * VERBOSE_LEVEL:
  * 0 - Count fang pairs
  * 1 - Print fang pairs
  * 2 - Count vampire numbers
- * 3 - Calculate sha512 checksum
+ * 3 - Calculate checksum
  * 4 - Print vampire numbers in OEIS format
  */
 
 #define VERBOSE_LEVEL 2
+#define DIGEST_NAME "sha512" // requires VERBOSE_LEVEL 3
 
 #define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL > 1
 
@@ -136,56 +133,5 @@
 
 #define LINK_SIZE 100
 #define SANITY_CHECK false
-
-/*----------------------------------------------------------------------------*/
-
-/*
- * The following typedefs are used to explicate intent.
- */
-
-typedef unsigned long long vamp_t; // vampire type
-#define vamp_max ULLONG_MAX
-
-typedef unsigned long fang_t; // fang type
-#define fang_max ULONG_MAX
-
-typedef uint8_t digit_t;
-typedef uint8_t length_t;
-
-// DIGMULT = ELEMENT_BITS/(10 - DIGSKIP)
-#if ELEMENT_BITS == 32
-	typedef uint32_t digits_t;
-	#define DIGMULT 3
-	#define DIG_BASE 11
-#elif ELEMENT_BITS == 64
-	typedef uint64_t digits_t;
-	#define DIGMULT 7
-	#define DIG_BASE 128
-#endif
-
-#if MEASURE_RUNTIME
-	#if defined(CLOCK_MONOTONIC)
-		#define SPDT_CLK_MODE CLOCK_MONOTONIC
-	#elif defined(CLOCK_REALTIME)
-		#define SPDT_CLK_MODE CLOCK_REALTIME
-	#endif
-#endif
-
-#if (VERBOSE_LEVEL == 0)
-	#define COUNT_RESULTS
-#elif (VERBOSE_LEVEL == 1)
-	#define DUMP_RESULTS
-#elif (VERBOSE_LEVEL == 2)
-	#define PROCESS_RESULTS
-#elif (VERBOSE_LEVEL == 3)
-	#define STORE_RESULTS
-	#define PROCESS_RESULTS
-	#define CHECKSUM_RESULTS
-	#define DIGEST_NAME "sha512"
-#elif (VERBOSE_LEVEL == 4)
-	#define STORE_RESULTS
-	#define PROCESS_RESULTS
-	#define PRINT_RESULTS
-#endif
 
 #endif /* HELSING_CONFIG_H */

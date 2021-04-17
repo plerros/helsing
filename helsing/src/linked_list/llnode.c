@@ -4,6 +4,7 @@
  */
 
 #include "configuration.h"
+#include "configuration_adv.h"
 
 #ifdef STORE_RESULTS
 #include <stdlib.h>

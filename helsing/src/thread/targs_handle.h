@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "taskboard.h"
 #include "cache.h"
 #include "targs.h"
@@ -25,6 +26,5 @@ struct targs_handle
 void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *progress);
 void targs_handle_free(struct targs_handle *ptr);
 void targs_handle_print(struct targs_handle *ptr);
-
-void *thread_worker(void *void_args);
+void *thread_function(void *void_args);
 #endif /* HELSING_TARGS_HANDLE_H */

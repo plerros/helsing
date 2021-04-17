@@ -6,7 +6,7 @@
 #ifndef HELSING_BTHANDLE_H
 #define HELSING_BTHANDLE_H
 
-#include "configuration.h"
+#include "configuration_adv.h"
 #include "llhandle.h"
 
 #ifdef PROCESS_RESULTS

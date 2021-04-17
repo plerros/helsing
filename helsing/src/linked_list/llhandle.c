@@ -3,7 +3,7 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include "configuration.h"
+#include "configuration_adv.h"
 
 #ifdef PROCESS_RESULTS
 #include <stdlib.h>

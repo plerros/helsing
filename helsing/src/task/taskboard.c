@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "helper.h"
 #include "llhandle.h"
 #include "task.h"

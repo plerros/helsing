@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "helper.h"
 #include "llhandle.h"
 #include "bthandle.h"
@@ -81,13 +82,6 @@ void vargs_reset(struct vargs *args)
 	args->local_count = 0;
 	llhandle_new(&(args->lhandle));
 	bthandle_reset(args->thandle);
-}
-
-struct llhandle *vargs_getlhandle(struct vargs *args)
-{
-	struct llhandle *ret = args->lhandle;
-	args->lhandle = NULL;
-	return ret;
 }
 
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
@@ -216,6 +210,6 @@ vampire_exit:
 		}
 	}
 	bthandle_cleanup(args->thandle, args->lhandle, 0);
-	vargs_set_lc(args);
+	llhandle_getfield_size(args->lhandle, &(args->local_count));
 	return;
 }

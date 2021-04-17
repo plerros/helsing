@@ -6,7 +6,7 @@
 #ifndef HELSING_LLHANDLE_H
 #define HELSING_LLHANDLE_H
 
-#include "configuration.h"
+#include "configuration_adv.h"
 #include "hash.h"
 
 #ifdef PROCESS_RESULTS
@@ -23,6 +23,13 @@ void llhandle_new(struct llhandle **ptr);
 void llhandle_free(struct llhandle *ptr);
 void llhandle_add(struct llhandle *ptr, vamp_t value);
 void llhandle_reset(struct llhandle *ptr);
+static inline void llhandle_getfield_size(struct llhandle *ptr, vamp_t *size)
+{
+	if (ptr == NULL || size == NULL)
+		return;
+	
+	*size = ptr->size;
+}
 #else /* PROCESS_RESULTS */
 struct llhandle
 {
@@ -44,6 +51,11 @@ static inline void llhandle_add(
 {
 }
 static inline void llhandle_reset(__attribute__((unused)) struct llhandle *ptr)
+{
+}
+static inline void llhandle_getfield_size(
+	__attribute__((unused)) struct llhandle *ptr,
+	__attribute__((unused)) vamp_t *size)
 {
 }
 #endif /* PROCESS_RESULTS */

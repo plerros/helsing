@@ -7,6 +7,7 @@
 #define HELSING_CACHE_H
 
 #include "configuration.h"
+#include "configuration_adv.h"
 
 #if CACHE
 struct cache

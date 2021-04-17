@@ -7,6 +7,7 @@
 #define HELSING_TASKBOARD_H
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "task.h"
 #include "hash.h"
 

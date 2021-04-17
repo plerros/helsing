@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include "configuration.h"
+#include "configuration_adv.h"
 
 /*
  * willoverflow:

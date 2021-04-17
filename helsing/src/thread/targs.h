@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "taskboard.h"
 #include "cache.h"
 

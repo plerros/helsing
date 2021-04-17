@@ -7,6 +7,7 @@
 #define HELSING_LLNODE_H
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "hash.h"
 
 #ifdef STORE_RESULTS

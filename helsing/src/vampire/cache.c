@@ -5,6 +5,7 @@
  */
 
 #include "configuration.h"
+#include "configuration_adv.h"
 
 #if CACHE
 #include <stdlib.h>

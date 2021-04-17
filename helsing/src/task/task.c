@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "configuration.h"
+#include "configuration_adv.h"
 #include "task.h"
 #include "llhandle.h"
 #include "vargs.h"
