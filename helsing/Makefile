@@ -10,7 +10,7 @@ SRC_DIRS ?= .
 
 CFLAGS := -O2 -Wall -Wextra # compiler flags
 LFLAGS := -Wl,--gc-sections # linker flags
-LIBS := -pthread $(shell if grep -q './configuration.h' -e '#define VERBOSE_LEVEL 3' || !(grep -q './configuration.h' -e ' * 3 - Calculate checksum'); then echo "-lcrypto"; fi)
+LIBS := -pthread $(shell if $(CC) -dM -E -I./configuration.h ./configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
 
 SRCS := $(shell find $(SRC_DIRS) -name *.c)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
