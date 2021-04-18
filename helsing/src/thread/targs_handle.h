@@ -26,5 +26,4 @@ struct targs_handle
 void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *progress);
 void targs_handle_free(struct targs_handle *ptr);
 void targs_handle_print(struct targs_handle *ptr);
-void *thread_function(void *void_args);
 #endif /* HELSING_TARGS_HANDLE_H */

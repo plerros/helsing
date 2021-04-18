@@ -17,6 +17,10 @@
 #include <openssl/evp.h>
 #endif
 
+#if defined(STORE_RESULTS) && SANITY_CHECK
+	#include <assert.h>
+#endif
+
 #ifdef STORE_RESULTS
 
 void llnode_new(struct llnode **ptr, vamp_t value, struct llnode *next)
@@ -48,9 +52,9 @@ void llnode_free(struct llnode *node)
 
 void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next)
 {
-	if (ptr == NULL)
-		return;
-
+#if SANITY_CHECK
+	assert(ptr != NULL);
+#endif
 	struct llnode *new;
 	if (next != NULL && next->current < LINK_SIZE) {
 		new = next;

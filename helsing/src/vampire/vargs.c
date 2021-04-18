@@ -80,6 +80,7 @@ void vargs_free(struct vargs *args)
 void vargs_reset(struct vargs *args)
 {
 	args->local_count = 0;
+	llhandle_free(args->lhandle);
 	llhandle_new(&(args->lhandle));
 	bthandle_reset(args->thandle);
 }

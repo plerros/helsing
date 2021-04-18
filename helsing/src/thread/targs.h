@@ -39,6 +39,7 @@ void targs_new(
 	struct cache *digptr);
 
 void targs_free(struct targs *ptr);
+void *thread_function(void *void_args);
 
 #if MEASURE_RUNTIME
 static inline void targs_new_total(struct targs *ptr, vamp_t total)

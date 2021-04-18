@@ -41,9 +41,7 @@ void bthandle_free(struct bthandle *handle)
 	free(handle);
 }
 
-void bthandle_add(
-	struct bthandle *handle,
-	vamp_t key)
+void bthandle_add(struct bthandle *handle, vamp_t key)
 {
 #if SANITY_CHECK
 	assert(handle != NULL);

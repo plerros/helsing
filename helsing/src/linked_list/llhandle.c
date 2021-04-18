@@ -3,6 +3,7 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
+#include "configuration.h"
 #include "configuration_adv.h"
 
 #ifdef PROCESS_RESULTS
@@ -10,6 +11,10 @@
 #include "llnode.h"
 #include "llhandle.h"
 #include "hash.h"
+#endif
+
+#if defined(PROCESS_RESULTS) && SANITY_CHECK
+	#include <assert.h>
 #endif
 
 #ifdef PROCESS_RESULTS
@@ -38,9 +43,9 @@ void llhandle_free(struct llhandle *ptr)
 
 void llhandle_add(struct llhandle *ptr, vamp_t value)
 {
-	if (ptr == NULL)
-		return;
-
+#if SANITY_CHECK
+	assert(ptr != NULL);
+#endif
 	llnode_add(&(ptr->first), value, ptr->first);
 	ptr->size += 1;
 }

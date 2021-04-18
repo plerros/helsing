@@ -121,6 +121,10 @@ void taskboard_reset(struct taskboard *ptr)
 		task_free(ptr->tasks[i]);
 	free(ptr->tasks);
 	ptr->tasks = NULL;
+	ptr->size = 0;
+	ptr->todo = 0;
+	ptr->done = 0;
+	ptr->fmax = 0;
 }
 
 struct task *taskboard_get_task(struct taskboard *ptr)
