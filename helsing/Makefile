@@ -8,6 +8,7 @@ SRC_DIRS ?= .
 
 # Check threads with thread sanitizer -fsanitize=thread
 
+CC := $(shell if [ -z $(CC) ]; then echo $(CC); else echo "gcc"; fi)
 CFLAGS := -O2 -Wall -Wextra # compiler flags
 LFLAGS := -Wl,--gc-sections # linker flags
 LIBS := -pthread $(shell if $(CC) -dM -E -I./configuration.h ./configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
