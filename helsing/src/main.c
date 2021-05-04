@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 {
 	vamp_t min, max;
 
-	if(check_argc(argc)) {
+	if (check_argc(argc)) {
 		printf("Usage: helsing [min] [max]\n");
 		return 0;
 	}

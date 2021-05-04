@@ -56,7 +56,7 @@ void hash_free(struct hash *ptr)
 void hash_print(struct hash *ptr)
 {
 	fprintf(stderr, "Digest %s is: ", DIGEST_NAME);
-	for(int i = 0; i < ptr->md_size; i++)
+	for (int i = 0; i < ptr->md_size; i++)
 		fprintf(stderr, "%02x", ptr->md_value[i]);
 	fprintf(stderr, "\n");
 }

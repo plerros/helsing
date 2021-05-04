@@ -11,6 +11,8 @@
 
 #ifdef PROCESS_RESULTS
 #include "llnode.h"
+#else
+#include <stdlib.h>
 #endif
 
 #ifdef PROCESS_RESULTS

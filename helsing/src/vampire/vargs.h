@@ -11,6 +11,10 @@
 #include "bthandle.h"
 #include "cache.h"
 
+#ifdef DUMP_RESULTS
+#include <stdio.h>
+#endif
+
 struct vargs /* Vampire arguments */
 {
 	struct cache *digptr;
@@ -24,17 +28,17 @@ void vargs_free(struct vargs *args);
 void vargs_reset(struct vargs *args);
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax);
 
-#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+#if defined COUNT_RESULTS || defined DUMP_RESULTS
 static inline void vargs_iterate_local_count(struct vargs *ptr)
 {
 	ptr->local_count += 1;
 }
-#else /* defined COUNT_RESULTS ||  defined DUMP_RESULTS */
+#else /* defined COUNT_RESULTS || defined DUMP_RESULTS */
 static inline void vargs_iterate_local_count(
 	__attribute__((unused)) struct vargs *ptr)
 {
 }
-#endif /* defined COUNT_RESULTS ||  defined DUMP_RESULTS */
+#endif /* defined COUNT_RESULTS || defined DUMP_RESULTS */
 
 #ifdef DUMP_RESULTS
 static inline void vargs_print_results(

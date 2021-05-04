@@ -157,10 +157,10 @@ void taskboard_cleanup(struct taskboard *ptr)
 
 void taskboard_print_results(struct taskboard *ptr)
 {
-#if defined COUNT_RESULTS ||  defined DUMP_RESULTS
+#if defined COUNT_RESULTS || defined DUMP_RESULTS
 	fprintf(stderr, "Found: %llu valid fang pairs.\n", ptr->common_count);
 #else
-	fprintf(stderr, "Found: %llu vampire numbers.\n",  ptr->common_count);
+	fprintf(stderr, "Found: %llu vampire numbers.\n", ptr->common_count);
 #endif
 	hash_print(ptr->checksum);
 }
@@ -175,7 +175,7 @@ void taskboard_print(struct taskboard *ptr)
 
 #endif /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
 
-#if  DISPLAY_PROGRESS
+#if DISPLAY_PROGRESS
 
 // taskboard_progress requires mutex lock
 void taskboard_progress(struct taskboard *ptr)
