@@ -20,21 +20,32 @@
 #if USE_CHECKPOINT
 // we assume ASCII / ASCII compatible
 
-static int ftov(FILE *fp, vamp_t *number) // file to vamp_t
+/*
+ * ftov return values:
+ *
+ * -1: EOF on start / empty.
+ * -2: Overflow
+ */
+
+static int ftov(FILE *fp, vamp_t *ptr, char *ch) // file to vamp_t
 {
 	assert(fp != NULL);
-	assert(number != NULL);
-	vamp_t ret = 0;
-	bool flag = true;
-	for (char ch = fgetc(fp); isdigit(ch) && !feof(fp); ch = fgetc(fp)) {
-		flag = false;
-		digit_t digit = ch - '0';
-		if (willoverflow(ret, digit))
-			return 1;
-		ret = 10 * ret + digit;
+	assert(ptr != NULL);
+
+	*ch = fgetc(fp);
+
+	if (feof(fp))
+		return -1;
+
+	vamp_t number = 0;
+	for (; isdigit(*ch) && !feof(fp); *ch = fgetc(fp)) {
+		digit_t digit = *ch - '0';
+		if (willoverflow(number, digit))
+			return -2;
+		number = 10 * number + digit;
 	}
-	*number = ret;
-	return flag;
+	*ptr = number;
+	return 0;
 }
 
 #ifdef CHECKSUM_RESULTS
@@ -95,22 +106,38 @@ static int hextobyte(char ch, uint8_t *hex)
 	}
 	return 0;
 }
-static int ftomd(FILE *fp, struct hash *ptr)
+
+/*
+ * ftomd return values:
+ *
+ * -1: EOF on start / empty.
+ * -2: Non hex character
+ */
+
+static int ftomd(FILE *fp, struct hash *ptr, char *ch)
 {
 	assert(fp != NULL);
 	assert(ptr->md_value != NULL);
+
+	*ch = fgetc(fp);
+
+	if (feof(fp))
+		return -1;
+
 	int err;
 	uint8_t byte[2] = {0};
 	for (int i = 0; i < ptr->md_size; i++) {
-		err = hextobyte(fgetc(fp), &(byte[0]));
-		if (err || feof(fp))
-			return 1;
-		err = hextobyte(fgetc(fp), &(byte[1]));
-		if (err || feof(fp))
-			return 1;
+		for (int j = 0; j < 2; j++) {
+			err = hextobyte(*ch, &(byte[j]));
+			if (feof(fp))
+				return -1;
+			if (err)
+				return -2;
+			*ch = fgetc(fp);
+		}
 		ptr->md_value[i] = (byte[0] << 4) | byte[1];
 	}
-	return (fgetc(fp) != '\n' && !feof(fp));
+	return 0;
 }
 #endif /* CHECKSUM_RESULTS */
 
@@ -124,7 +151,7 @@ int touch_checkpoint(vamp_t min, vamp_t max)
 		return 1;
 	}
 	fp = fopen(CHECKPOINT_FILE, "w+");
-	fprintf(fp, "%llu %llu", min, max);
+	fprintf(fp, "%llu %llu\n", min, max);
 	fclose(fp);
 	return 0;
 }
@@ -145,12 +172,57 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 	assert(fp != NULL);
 
 	vamp_t line = 1;
+	char ch = 0;
 
-	if (ftov(fp, min) || ftov(fp, max)) {
-		fclose(fp);
-		err_badline(line);
-		fprintf(stderr, "Input out of range: [0, %llu]\n\n", vamp_max);
-	 	return 1;
+	switch (ftov(fp, min, &ch)) {
+		case 0:
+			if (ch == ' ')
+				break;
+			
+			err_baditem(line, 1);
+			if (feof(fp))
+				fprintf(stderr, "Unexpected end of file.\n\n");
+			else
+				fprintf(stderr, "Non digit character: %c\n\n", ch);
+
+			fclose(fp);
+			return 1;
+		case -1:
+			fclose(fp);
+			err_baditem(line, 1);
+			fprintf(stderr, "Unexpected end of file.\n\n");
+			return 1;
+		case -2:
+			fclose(fp);
+			err_baditem(line, 1);
+			fprintf(stderr, "Input out of range: [0, %llu]\n\n", vamp_max);
+			return 1;
+	}
+
+
+	switch (ftov(fp, max, &ch)) {
+		case 0:
+			if (ch == '\n')
+				break;
+			
+			err_baditem(line, 2);
+			if (feof(fp))
+				fprintf(stderr, "Unexpected end of file.\n\n");
+			else
+				fprintf(stderr, "Non digit character: %c\n\n", ch);
+
+			fclose(fp);
+			return 1;
+		case -1:
+			fclose(fp);
+			err_baditem(line, 2);
+			fprintf(stderr, "Unexpected end of file.\n\n");
+			return 1;
+		case -2:
+			fclose(fp);
+			err_baditem(line, 2);
+			fprintf(stderr, "Input out of range: [0, %llu]\n\n", vamp_max);
+			return 1;
 	}
 
 	if (*max < *min) {
@@ -167,12 +239,29 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 	vamp_t prev = *current;
 	vamp_t prevcount = 0;
 	for (; !feof(fp); ) {
-		if (ftov(fp, current)) {
-			fclose(fp);
-			err_baditem(line, 1);
-			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
-			return 1;
+
+		switch (ftov(fp, current, &ch)) {
+			case 0:
+				if (ch == ' ')
+					break;
+				
+				err_baditem(line, 1);
+				if (feof(fp))
+					fprintf(stderr, "Unexpected end of file.\n\n");
+				else
+					fprintf(stderr, "Non digit character: %c\n\n", ch);
+
+				fclose(fp);
+				return 1;
+			case -1:
+				goto load_checkpoint_exit;
+			case -2:
+				fclose(fp);
+				err_baditem(line, 1);
+				fprintf(stderr, "Number out of range: [0, %llu]\n\n", vamp_max);
+				return 1;
 		}
+
 		if (*current < *min) {
 			fclose(fp);
 			err_baditem(line, 1);
@@ -192,11 +281,39 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 			return 1;
 		}
 
-		if (ftov(fp, &(progress->common_count))) {
-			fclose(fp);
-			err_baditem(line, 2);
-			fprintf(stderr, "number out of range: [0, %llu]\n\n", vamp_max);
-			return 1;
+		switch (ftov(fp, &(progress->common_count), &ch)) {
+			case 0:
+#ifdef CHECKSUM_RESULTS
+				if (ch == ' ')
+					break;
+				
+				err_baditem(line, 1);
+				if (feof(fp))
+					fprintf(stderr, "Unexpected end of file.\n\n");
+				else
+					fprintf(stderr, "Non digit character: %c\n\n", ch);
+#else
+				if (ch == '\n')
+					break;
+				
+				err_baditem(line, 1);
+				if (feof(fp))
+					fprintf(stderr, "Missing newline.\n\n");
+				else
+					fprintf(stderr, "Non digit character: %c\n\n", ch);
+#endif
+				fclose(fp);
+				return 1;
+			case -1:
+				fclose(fp);
+				err_baditem(line, 2);
+				fprintf(stderr, "Unexpected end of file.\n\n");
+				return 1;
+			case -2:
+				fclose(fp);
+				err_baditem(line, 2);
+				fprintf(stderr, "Number out of range: [0, %llu]\n\n", vamp_max);
+				return 1;
 		}
 		if (progress->common_count < prevcount && line != 2) {
 			fclose(fp);
@@ -206,11 +323,31 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		}
 
 #ifdef CHECKSUM_RESULTS
-		if (ftomd(fp, progress->checksum)) {
-			fclose(fp);
-			err_baditem(line, 3);
-			fprintf(stderr, "invalid checksum length\n\n");
-			return 1;
+
+		switch (ftomd(fp, progress->checksum, &ch)) {
+			case 0:
+				if (ch == '\n')
+					break;
+				err_baditem(line, 3);
+				if (feof(fp))
+					fprintf(stderr, "Missing newline.\n\n");
+				else
+					fprintf(stderr, "Invalid checksum character length.\n\n");
+				return 1;
+				
+			case -1:
+				fclose(fp);
+				err_baditem(line, 3);
+				fprintf(stderr, "Unexpected end of file.\n\n");
+				return 1;
+			case -2:
+				fclose(fp);
+				err_baditem(line, 3);
+				if (ch == '\n')
+					fprintf(stderr, "Invalid checksum character length.\n\n");
+				else
+					fprintf(stderr, "Non hex character: %c\n\n", ch);
+				return 1;
 		}
 #endif /* CHECKSUM_RESULTS */
 
@@ -218,6 +355,8 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		prev = *current;
 		prevcount = progress->common_count;
 	}
+load_checkpoint_exit:
+
 	fclose(fp);
 	return 0;
 }
@@ -225,7 +364,7 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 void save_checkpoint(vamp_t current, struct taskboard *progress)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
-	fprintf(fp, "\n%llu %llu", current, progress->common_count);
+	fprintf(fp, "%llu %llu", current, progress->common_count);
 
 #ifdef CHECKSUM_RESULTS
 	fprintf(fp, " ");
@@ -233,6 +372,7 @@ void save_checkpoint(vamp_t current, struct taskboard *progress)
 		fprintf(fp, "%02x", progress->checksum->md_value[i]);
 #endif /* CHECKSUM_RESULTS */
 
+	fprintf(fp, "\n");
 	fclose(fp);
 }
 
