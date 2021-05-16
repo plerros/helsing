@@ -150,10 +150,11 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 						vargs_print_results(product, multiplier, multiplicand);
 						bthandle_add(args->thandle, product);
 					}
+				product += product_iterator;
 				e0 += 9;
 				if (e0 >= power_a) {
 					e0 -= power_a;
-					e1 ++;
+					e1 += 1;
 				}
 				de0 += step0;
 				if (de0 >= power_a) {
@@ -165,7 +166,6 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 					de1 -= power_a;
 					de2 += 1;
 				}
-				product += product_iterator;
 			}
 
 #else /* CACHE */
