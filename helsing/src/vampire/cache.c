@@ -53,11 +53,6 @@ void cache_new(struct cache **ptr, vamp_t max)
 	fang_t length_b = length(max) - (2 * length_a);
 	new->size = pow10v(length_b);
 
-	if (length_a < 3)
-		new->power_a = new->size;
-	else
-		new->power_a = pow10v(length_a);
-
 	new->dig = malloc(sizeof(digits_t) * new->size);
 	if (new->dig == NULL)
 		abort();

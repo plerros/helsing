@@ -14,7 +14,6 @@ struct cache
 {
 	digits_t *dig;
 	fang_t size;
-	fang_t power_a;
 };
 digits_t set_dig(fang_t number);
 void cache_new(struct cache **ptr, vamp_t max);
