@@ -49,8 +49,8 @@ void cache_new(struct cache **ptr, vamp_t max)
 	if (new == NULL)
 		abort();
 
-	fang_t length_a = length(max) / 3;
-	fang_t length_b = length(max) - (2 * length_a);
+	length_t length_a = length(max) / 3;
+	length_t length_b = length(max) - (2 * length_a);
 	new->size = pow10v(length_b);
 
 	new->dig = malloc(sizeof(digits_t) * new->size);
