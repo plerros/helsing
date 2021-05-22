@@ -108,7 +108,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier >= max_sqrt)
+		if (multiplier > max_sqrt)
 			multiplicand_max = max / multiplier;
 		else
 			multiplicand_max = multiplier;
