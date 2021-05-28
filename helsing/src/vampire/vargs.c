@@ -128,21 +128,16 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			fang_t step0 = product_iterator % power_a;
 			fang_t step1 = product_iterator / power_a;
 
-			fang_t e0 = multiplicand % power_a;
-			fang_t e1 = multiplicand / power_a;
-
 			/*
 			 * digd = dig[multiplier];
 			 * Each digd is calculated and accessed only once, we don't need to store them in memory.
 			 * We can calculate digd on the spot and make the dig array 10 times smaller.
 			 */
 
-			digits_t digd;
+			digits_t digd = set_dig(multiplier);
 
-			if (min_sqrt >= args->digptr->size)
-				digd = set_dig(multiplier);
-			else
-				digd = dig[multiplier];
+			fang_t e0 = multiplicand % power_a;
+			fang_t e1 = multiplicand / power_a;
 
 			fang_t de0 = product % power_a;
 			fang_t de1 = (product / power_a) % power_a;
