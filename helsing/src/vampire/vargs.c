@@ -141,7 +141,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 
 			fang_t de0 = product % power_a;
 			fang_t de1 = (product / power_a) % power_a;
-			fang_t de2 = ((product / power_a) / power_a);
+			fang_t de2 = (product / power_a) / power_a;
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])

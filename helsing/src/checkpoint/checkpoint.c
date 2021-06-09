@@ -258,7 +258,7 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		err = ftov(fp, current, &ch);
 
 		if (err || ch != ' ') {
-			if(err == -1)
+			if (err == -1)
 				goto load_checkpoint_exit;
 
 			err_switch(err, line, item, ch);
