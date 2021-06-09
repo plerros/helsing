@@ -62,9 +62,7 @@
  * 	32/64 bit unsigned integer in place of the aforementioned array.
  *
  * 	It just so happens that all the elements get processed at once (in
- * 	parallel), memory alignment issues are avoided and the base-m for a 64
- * 	bit element tops at 128	(2^7). It's as if we had assigned dedicated
- * 	bitfields and we get to use bitshift operations.
+ * 	parallel) and memory alignment issues are avoided.
  *
  * Note to future developers; it's possible to make the array even smaller:
  * 	1. By using 32-bit elements and then expanding them to 64 bits.

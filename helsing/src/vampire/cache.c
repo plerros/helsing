@@ -17,8 +17,6 @@
 
 digits_t set_dig(fang_t number)
 {
-#if ELEMENT_BITS < 64
-
 	digits_t ret = 0;
 	digits_t tmp[10] = {0};
 	for (; number > 0; number /= 10)
@@ -28,16 +26,6 @@ digits_t set_dig(fang_t number)
 		ret = ret * DIG_BASE + tmp[i];
 
 	return ret;
-
-#else
-	digits_t ret = 0;
-	for (fang_t i = number; i > 0; i /= 10) {
-		digit_t digit = i % 10;
-		if (digit >= 1)
-			ret += (digits_t)1 << ((digit - 1) * DIGMULT);
-	}
-	return ret;
-#endif
 }
 
 void cache_new(struct cache **ptr, vamp_t max)
