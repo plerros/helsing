@@ -87,9 +87,9 @@
  *
  * 	Because there is no simple way to predict the amount of vampire numbers
  * for a given range, MAX_TASK_SIZE can be used to limit the memory usage of
- * heapsort.
+ * treesort.
  *
- * Heapsort shouldn't use more memory than:
+ * Treesort shouldn't use more memory than:
  * THREADS * (sizeof(bthandle) + MAX_TASK_SIZE * sizeof(btnode))
  */
 
@@ -108,7 +108,7 @@
  * separated by a space.
  *
  * Interfacing properly with files is hard. I have made a few design decisions
- * in the hopes to minimize the damage from possible errors in my code:
+ * hoping to minimize the damage from possible errors in my code:
  *
  * 	1. The code always checks if CHECKPOINT_FILE exists before 'touch'-ing
  * 	   it. This way we prevent accidental truncation.
