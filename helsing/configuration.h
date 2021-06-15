@@ -87,9 +87,9 @@
  *
  * 	Because there is no simple way to predict the amount of vampire numbers
  * for a given range, MAX_TASK_SIZE can be used to limit the memory usage of
- * heapsort.
+ * the Self-balancing binary search tree.
  *
- * Heapsort shouldn't use more memory than:
+ * The Self-balancing binary search tree shouldn't use more memory than:
  * THREADS * (sizeof(bthandle) + MAX_TASK_SIZE * sizeof(btnode))
  */
 

@@ -1,5 +1,5 @@
 # Helsing
-A POSIX vampire number generator, with heapsort built in.
+A POSIX vampire number generator.
 The focus of this project is performance, code readability and portability.
 
 In *helsing/configuration.h* you can easily set the number of threads, select the algorithm implementation and tune it, adjust verbosity and enable resume from checkpoint.
