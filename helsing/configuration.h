@@ -126,7 +126,7 @@
 /*
  * LINK_SIZE:
  *
- * The amount of elements stored in each link of a linked list.
+ * The amount of elements stored in each node of an unrolled linked list.
  */
 
 #define LINK_SIZE 100

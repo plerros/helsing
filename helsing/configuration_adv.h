@@ -48,6 +48,7 @@ typedef uint8_t length_t;
 #elif (VERBOSE_LEVEL == 1)
 	#define DUMP_RESULTS
 #elif (VERBOSE_LEVEL == 2)
+	#define STORE_RESULTS
 	#define PROCESS_RESULTS
 #elif (VERBOSE_LEVEL == 3)
 	#define STORE_RESULTS

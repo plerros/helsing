@@ -23,7 +23,7 @@
 
 #ifdef STORE_RESULTS
 
-void llnode_new(struct llnode **ptr, vamp_t value, struct llnode *next)
+void llnode_new(struct llnode **ptr, vamp_t size, struct llnode *next)
 {
 	if (ptr == NULL)
 		return;
@@ -32,8 +32,12 @@ void llnode_new(struct llnode **ptr, vamp_t value, struct llnode *next)
 	if (new == NULL)
 		abort();
 
-	new->value[0] = value;
-	new->current = 1;
+	new->value = malloc(sizeof(vamp_t) * size);
+	if (new->value == NULL)
+		abort();
+
+	new->size = size;
+	new->current = 0;
 	new->next = next;
 	*ptr = new;
 }
@@ -46,6 +50,7 @@ void llnode_free(struct llnode *node)
 	struct llnode *tmp = node;
 	for (struct llnode *i = tmp; tmp != NULL; i = tmp) {
 		tmp = tmp->next;
+		free(i->value);
 		free(i);
 	}
 }
@@ -56,13 +61,14 @@ void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next)
 	assert(ptr != NULL);
 #endif
 	struct llnode *new;
-	if (next != NULL && next->current < LINK_SIZE) {
+	if (next != NULL && next->current < next->size) {
 		new = next;
 		new->value[new->current] = value;
-		new->current += 1;
 	} else {
-		llnode_new(&new, value, next);
+		llnode_new(&new, LINK_SIZE, next);
+		new->value[0] = value;
 	}
+	new->current += 1;
 	*ptr = new;
 }
 
@@ -72,7 +78,7 @@ void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next)
 void llnode_checksum(struct llnode *node, struct hash *checksum)
 {
 	for (struct llnode *i = node; i != NULL; i = i->next) {
-		for (uint16_t j = i->current; j > 0; j--) {
+		for (vamp_t j = i->current; j > 0; j--) {
 			vamp_t tmp = i->value[j - 1];
 
 			#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -94,7 +100,10 @@ void llnode_checksum(struct llnode *node, struct hash *checksum)
 void llnode_print(struct llnode *node, vamp_t count)
 {
 	for (struct llnode *i = node; i != NULL; i = i->next) {
-		for (uint16_t j = i->current; j > 0; j--) {
+		for (vamp_t j = i->current; j > 0; j--) {
+			if (i->value[j - 1] == 0)
+				continue;
+
 			fprintf(stdout, "%llu %llu\n", ++count, i->value[j - 1]);
 			fflush(stdout);
 		}

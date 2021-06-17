@@ -6,18 +6,19 @@
 #ifndef HELSING_LLNODE_H
 #define HELSING_LLNODE_H
 
-#include "configuration.h"
+//#include "configuration.h"
 #include "configuration_adv.h"
 #include "hash.h"
 
 #ifdef STORE_RESULTS
 struct llnode
 {
-	vamp_t value[LINK_SIZE];
-	uint16_t current;
+	vamp_t *value;
+	vamp_t size;
+	vamp_t current;
 	struct llnode *next;
 };
-void llnode_new(struct llnode **ptr, vamp_t value, struct llnode *next);
+void llnode_new(struct llnode **ptr, vamp_t size, struct llnode *next);
 void llnode_free(struct llnode *list);
 void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next);
 #else /* STORE_RESULTS */
@@ -26,7 +27,7 @@ struct llnode
 };
 static inline void llnode_new(
 	__attribute__((unused)) struct llnode **ptr,
-	__attribute__((unused)) vamp_t value,
+	__attribute__((unused)) vamp_t size,
 	__attribute__((unused)) struct llnode *next)
 {
 }
