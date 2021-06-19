@@ -79,6 +79,9 @@ void llnode_checksum(struct llnode *node, struct hash *checksum)
 {
 	for (struct llnode *i = node; i != NULL; i = i->next) {
 		for (vamp_t j = i->current; j > 0; j--) {
+			if (i->value[j - 1] == 0)
+				continue;
+
 			vamp_t tmp = i->value[j - 1];
 
 			#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)

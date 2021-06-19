@@ -59,21 +59,30 @@ void llhandle_reset(struct llhandle *ptr)
 }
 
 void swap(vamp_t num1, vamp_t num2, struct llnode *node) {
-//	assert(node->current > 0);
+
+#if SANITY_CHECK
+	assert(node->current > 0);
+#endif
 	vamp_t max = node->current - 1;
 
-//	assert(max >= num1);
-//	assert(max >= num2);
+#if SANITY_CHECK
+	assert(max >= num1);
+	assert(max >= num2);
+#endif
 	vamp_t temp = node->value[max - num1];
 	node->value[max - num1] = node->value[max - num2];
 	node->value[max - num2] = temp;
 }
 
 vamp_t partition(vamp_t lo, vamp_t hi, struct llnode *node) {
-//	assert(node->current > 0);
+#if SANITY_CHECK
+	assert(node->current > 0);
+#endif
 	vamp_t max = node->current - 1;
 
-//	assert(max >= hi);
+#if SANITY_CHECK
+	assert(max >= hi);
+#endif
 	vamp_t pivot = node->value[max - hi];
 
 	vamp_t i = lo;
@@ -99,42 +108,39 @@ void quickSort(vamp_t lo, vamp_t hi, struct llnode *node) {
 }
 
 void llhandle_sort(struct llhandle *ptr) {
+	if (ptr->first == NULL)
+		return;
 
-	struct llnode *tmpnode;
-	llnode_new(&(tmpnode), ptr->size, NULL);
+	struct llnode *tmp;
+	llnode_new(&(tmp), ptr->size, NULL);
 
 	vamp_t x = 0;
 	for (struct llnode *i = ptr->first; i != NULL; i = i->next) {
-		memcpy(&(tmpnode->value[x]), &(i->value[0]), (i->current) * sizeof(vamp_t));
+		memcpy(&(tmp->value[x]), &(i->value[0]), (i->current) * sizeof(vamp_t));
 		x += i->current;
 
-		tmpnode->current += i->current;
+		tmp->current += i->current;
 	}
 
 	llnode_free(ptr->first);
-	quickSort(0, tmpnode->current - 1, tmpnode);
+	quickSort(0, tmp->current - 1, tmp);
 
-	vamp_t total = 0;
+	ptr->size = 0;
 
-	struct llnode *i = tmpnode;
-
-	for (vamp_t j = 0; j < i->current; j++) {
+	for (vamp_t j = 0; j < tmp->current; j++) {
 		vamp_t numcount = 1;
-		vamp_t curr = i->value[j];
 
-		for (; j+1 < i->current && i->value[j+1] == curr; j++) {
-			i->value[j] = 0;
+		for (vamp_t curr = tmp->value[j]; j+1 < tmp->current && tmp->value[j+1] == curr; j++) {
+			tmp->value[j] = 0;
 			numcount++;
 		}
-		if (numcount < MIN_FANG_PAIRS) {
-			i->value[j] = 0;
-		} else {
-			total++;
-		}
+		if (numcount < MIN_FANG_PAIRS)
+			tmp->value[j] = 0;
+		else
+			ptr->size += 1;
 	}
 
-	ptr->first = tmpnode;
-	ptr->size = total;
+	ptr->first = tmp;
 }
 #endif /* PROCESS_RESULTS */
 
