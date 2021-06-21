@@ -13,14 +13,15 @@
 #ifdef STORE_RESULTS
 struct llnode
 {
-	vamp_t *value;
-	vamp_t size;
-	vamp_t current;
+	vamp_t *data;
+	vamp_t size;         // data[size]
+	vamp_t logical_size; // The first unoccupied element.
 	struct llnode *next;
 };
 void llnode_new(struct llnode **ptr, vamp_t size, struct llnode *next);
 void llnode_free(struct llnode *list);
 void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next);
+vamp_t llnode_sort(struct llnode **pptr);
 #else /* STORE_RESULTS */
 struct llnode
 {
@@ -40,6 +41,11 @@ static inline void llnode_add(
 	__attribute__((unused)) vamp_t value,
 	__attribute__((unused)) struct llnode *next)
 {
+}
+static inline vamp_t llnode_sort(
+	__attribute__((unused)) struct llnode **pptr)
+{
+	return 0;
 }
 #endif /* STORE_RESULTS */
 

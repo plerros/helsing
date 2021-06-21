@@ -61,7 +61,7 @@ static inline void llhandle_getfield_size(
 	__attribute__((unused)) vamp_t *size)
 {
 }
-void llhandle_sort(__attribute__((unused)) struct llhandle *ptr)
+static inline void llhandle_sort(__attribute__((unused)) struct llhandle *ptr)
 {
 }
 #endif /* PROCESS_RESULTS */

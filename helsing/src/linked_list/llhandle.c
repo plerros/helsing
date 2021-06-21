@@ -8,7 +8,6 @@
 
 #ifdef PROCESS_RESULTS
 #include <stdlib.h>
-#include <string.h>
 #include "llnode.h"
 #include "llhandle.h"
 #include "hash.h"
@@ -58,89 +57,12 @@ void llhandle_reset(struct llhandle *ptr)
 	ptr->size = 0;
 }
 
-void swap(vamp_t num1, vamp_t num2, struct llnode *node) {
-
-#if SANITY_CHECK
-	assert(node->current > 0);
-#endif
-	vamp_t max = node->current - 1;
-
-#if SANITY_CHECK
-	assert(max >= num1);
-	assert(max >= num2);
-#endif
-	vamp_t temp = node->value[max - num1];
-	node->value[max - num1] = node->value[max - num2];
-	node->value[max - num2] = temp;
-}
-
-vamp_t partition(vamp_t lo, vamp_t hi, struct llnode *node) {
-#if SANITY_CHECK
-	assert(node->current > 0);
-#endif
-	vamp_t max = node->current - 1;
-
-#if SANITY_CHECK
-	assert(max >= hi);
-#endif
-	vamp_t pivot = node->value[max - hi];
-
-	vamp_t i = lo;
-	for (vamp_t j = lo; j <= hi; j++) {
-		if (node->value[max - j] < pivot) {
-			swap(i, j, node);
-			i++;
-		}
-	}
-	swap(i, hi, node);
-	return i;
-}
-
-void quickSort(vamp_t lo, vamp_t hi, struct llnode *node) {
-	if(hi <= lo)
-		return;
-
-	vamp_t partitionPoint = partition(lo, hi, node);
-	if (partitionPoint > 0)
-		quickSort(lo, partitionPoint-1, node);
-	if (partitionPoint < vamp_max)
-		quickSort(partitionPoint+1, hi, node);
-}
-
-void llhandle_sort(struct llhandle *ptr) {
+void llhandle_sort(struct llhandle *ptr)
+{
 	if (ptr->first == NULL)
 		return;
 
-	struct llnode *tmp;
-	llnode_new(&(tmp), ptr->size, NULL);
-
-	vamp_t x = 0;
-	for (struct llnode *i = ptr->first; i != NULL; i = i->next) {
-		memcpy(&(tmp->value[x]), &(i->value[0]), (i->current) * sizeof(vamp_t));
-		x += i->current;
-
-		tmp->current += i->current;
-	}
-
-	llnode_free(ptr->first);
-	quickSort(0, tmp->current - 1, tmp);
-
-	ptr->size = 0;
-
-	for (vamp_t j = 0; j < tmp->current; j++) {
-		vamp_t numcount = 1;
-
-		for (vamp_t curr = tmp->value[j]; j+1 < tmp->current && tmp->value[j+1] == curr; j++) {
-			tmp->value[j] = 0;
-			numcount++;
-		}
-		if (numcount < MIN_FANG_PAIRS)
-			tmp->value[j] = 0;
-		else
-			ptr->size += 1;
-	}
-
-	ptr->first = tmp;
+	ptr->size = llnode_sort(&(ptr->first));
 }
 #endif /* PROCESS_RESULTS */
 
