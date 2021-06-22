@@ -46,7 +46,7 @@ void llhandle_add(struct llhandle *ptr, vamp_t value)
 #if SANITY_CHECK
 	assert(ptr != NULL);
 #endif
-	llnode_add(&(ptr->first), value, ptr->first);
+	llnode_add(&(ptr->first), value);
 	ptr->size += 1;
 }
 
@@ -55,6 +55,14 @@ void llhandle_reset(struct llhandle *ptr)
 	llnode_free(ptr->first);
 	ptr->first = NULL;
 	ptr->size = 0;
+}
+
+void llhandle_sort(struct llhandle *ptr)
+{
+	if (ptr->first == NULL)
+		return;
+
+	ptr->size = llnode_sort(&(ptr->first));
 }
 #endif /* PROCESS_RESULTS */
 

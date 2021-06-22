@@ -8,7 +8,6 @@
 
 #include "configuration_adv.h"
 #include "llhandle.h"
-#include "bthandle.h"
 #include "cache.h"
 
 #ifdef DUMP_RESULTS
@@ -18,7 +17,6 @@
 struct vargs /* Vampire arguments */
 {
 	struct cache *digptr;
-	struct bthandle *thandle;
 	struct llhandle *lhandle;
 	vamp_t local_count;
 };

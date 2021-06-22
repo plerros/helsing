@@ -21,7 +21,6 @@ typedef unsigned long long vamp_t; // vampire type
 typedef unsigned long fang_t; // fang type
 #define fang_max ULONG_MAX
 
-//#define thread_t uint16_t
 typedef uint16_t thread_t;
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
@@ -48,6 +47,7 @@ typedef uint8_t length_t;
 #elif (VERBOSE_LEVEL == 1)
 	#define DUMP_RESULTS
 #elif (VERBOSE_LEVEL == 2)
+	#define STORE_RESULTS
 	#define PROCESS_RESULTS
 #elif (VERBOSE_LEVEL == 3)
 	#define STORE_RESULTS

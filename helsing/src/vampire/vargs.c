@@ -12,7 +12,6 @@
 #include "configuration_adv.h"
 #include "helper.h"
 #include "llhandle.h"
-#include "bthandle.h"
 #include "cache.h"
 #include "vargs.h"
 
@@ -63,7 +62,6 @@ void vargs_new(struct vargs **ptr, struct cache *digptr)
 	new->digptr = digptr;
 	new->local_count = 0;
 	llhandle_new(&(new->lhandle));
-	bthandle_new(&(new->thandle));
 	*ptr = new;
 }
 
@@ -73,7 +71,6 @@ void vargs_free(struct vargs *args)
 		return;
 
 	llhandle_free(args->lhandle);
-	bthandle_free(args->thandle);
 	free(args);
 }
 
@@ -82,7 +79,6 @@ void vargs_reset(struct vargs *args)
 	args->local_count = 0;
 	llhandle_free(args->lhandle);
 	llhandle_new(&(args->lhandle));
-	bthandle_reset(args->thandle);
 }
 
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
@@ -148,7 +144,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 					if (mult_zero || notrailingzero(multiplicand)) {
 						vargs_iterate_local_count(args);
 						vargs_print_results(product, multiplier, multiplicand);
-						bthandle_add(args->thandle, product);
+						llhandle_add(args->lhandle, product);
 					}
 				product += product_iterator;
 				e0 += 9;
@@ -198,19 +194,16 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 				if (mult_zero || notrailingzero(multiplicand)) {
 					vargs_iterate_local_count(args);
 					vargs_print_results(product, multiplier, multiplicand);
-					bthandle_add(args->thandle, product);
+					llhandle_add(args->lhandle, product);
 				}
 vampire_exit:
 				product += product_iterator;
 			}
 
 #endif /* CACHE */
-
-			if (multiplier < max_sqrt && mult_zero)
-				bthandle_cleanup(args->thandle, args->lhandle, product);
 		}
 	}
-	bthandle_cleanup(args->thandle, args->lhandle, 0);
+	llhandle_sort(args->lhandle);
 	llhandle_getfield_size(args->lhandle, &(args->local_count));
 	return;
 }
