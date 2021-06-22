@@ -5,8 +5,6 @@
 #ifndef HELSING_HASH_H
 #define HELSING_HASH_H
 
-//#include "configuration.h"
-
 #ifdef CHECKSUM_RESULTS
 #include <stdint.h>
 #include <openssl/evp.h>

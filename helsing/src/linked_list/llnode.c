@@ -24,7 +24,7 @@
 
 #ifdef STORE_RESULTS
 
-void llnode_new(struct llnode **ptr, vamp_t size, struct llnode *next)
+static void llnode_new(struct llnode **ptr, vamp_t size, struct llnode *next)
 {
 	if (ptr == NULL)
 		return;
@@ -56,21 +56,21 @@ void llnode_free(struct llnode *node)
 	}
 }
 
-void llnode_add(struct llnode **ptr, vamp_t value, struct llnode *next)
+void llnode_add(struct llnode **ptr, vamp_t value)
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
 #endif
-	struct llnode *new;
-	if (next != NULL && next->logical_size < next->size) {
-		new = next;
-		new->data[new->logical_size] = value;
-	} else {
-		llnode_new(&new, LINK_SIZE, next);
-		new->data[0] = value;
+	if (*ptr == NULL) {
+		llnode_new(ptr, LINK_SIZE, NULL);
 	}
-	new->logical_size += 1;
-	*ptr = new;
+	else if ((*ptr)->logical_size >= (*ptr)->size) {
+		struct llnode *new;
+		llnode_new(&new, LINK_SIZE, *ptr);
+		*ptr = new;
+	}
+	(*ptr)->data[(*ptr)->logical_size] = value;
+	(*ptr)->logical_size += 1;
 }
 
 static void llnode_concat(struct llnode **ptr)
@@ -117,7 +117,7 @@ static vamp_t partition(vamp_t lo, vamp_t hi, vamp_t *arr)
 
 static void quickSort(vamp_t lo, vamp_t hi, vamp_t *arr)
 {
-	if(hi <= lo)
+	if (hi <= lo)
 		return;
 
 	vamp_t partitionPoint = partition(lo, hi, arr);

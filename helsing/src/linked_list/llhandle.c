@@ -46,7 +46,7 @@ void llhandle_add(struct llhandle *ptr, vamp_t value)
 #if SANITY_CHECK
 	assert(ptr != NULL);
 #endif
-	llnode_add(&(ptr->first), value, ptr->first);
+	llnode_add(&(ptr->first), value);
 	ptr->size += 1;
 }
 
