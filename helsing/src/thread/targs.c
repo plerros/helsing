@@ -15,6 +15,10 @@
 #include <time.h>
 #endif
 
+#if SANITY_CHECK
+#include <assert.h>
+#endif
+
 void targs_new(
 	struct targs **ptr,
 	pthread_mutex_t *read,
@@ -22,8 +26,9 @@ void targs_new(
 	struct taskboard *progress,
 	struct cache *digptr)
 {
-	if (ptr == NULL)
-		return;
+#if SANITY_CHECK
+	assert (ptr != NULL);
+#endif
 
 	struct targs *new = malloc(sizeof(struct targs));
 	if (new == NULL)

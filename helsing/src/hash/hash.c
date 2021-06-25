@@ -14,12 +14,17 @@
 #include "hash.h"
 #endif
 
+#if defined(CHECKSUM_RESULTS) && SANITY_CHECK
+#include <assert.h>
+#endif
+
 #ifdef CHECKSUM_RESULTS
 
 void hash_new(struct hash **ptr)
 {
-	if (ptr == NULL)
-		return;
+#ifdef SANITY_CHECK
+	assert(ptr != NULL);
+#endif
 
 	struct hash *new = malloc(sizeof(struct hash));
 	if (new == NULL)

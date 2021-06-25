@@ -14,10 +14,15 @@
 #include "targs.h"
 #include "targs_handle.h"
 
+#if SANITY_CHECK
+#include <assert.h>
+#endif
+
 void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *progress)
 {
-	if (ptr == NULL)
-		return;
+#if SANITY_CHECK
+	assert(ptr != NULL);
+#endif
 
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
 	if (new == NULL)

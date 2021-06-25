@@ -142,7 +142,6 @@ int main(int argc, char *argv[])
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
-		taskboard_print(thhandle->progress);
 		taskboard_reset(thhandle->progress);
 		if (lmax == max)
 			break;

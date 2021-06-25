@@ -7,8 +7,8 @@
 #define HELSING_VARGS_H
 
 #include "configuration_adv.h"
-#include "llhandle.h"
 #include "cache.h"
+#include "array.h"
 
 #ifdef DUMP_RESULTS
 #include <stdio.h>
@@ -17,7 +17,7 @@
 struct vargs /* Vampire arguments */
 {
 	struct cache *digptr;
-	struct llhandle *lhandle;
+	struct array *result;
 	vamp_t local_count;
 };
 
@@ -44,7 +44,9 @@ static inline void vargs_print_results(
 	fang_t multiplier,
 	fang_t multiplicand)
 {
+	flockfile(stdout);
 	printf("%llu = %lu x %lu\n", product, multiplier, multiplicand);
+	funlockfile(stdout);
 }
 #else /* DUMP_RESULTS */
 static inline void vargs_print_results(

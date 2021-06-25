@@ -13,6 +13,10 @@
 #include "cache.h"
 #endif
 
+#if defined(CACHE) && SANITY_CHECK
+#include <assert.h>
+#endif
+
 #if CACHE
 
 digits_t set_dig(fang_t number)
@@ -30,8 +34,9 @@ digits_t set_dig(fang_t number)
 
 void cache_new(struct cache **ptr, vamp_t max)
 {
-	if (ptr == NULL)
-		return;
+#if SANITY_CHECK
+	assert(ptr != NULL);
+#endif
 
 	struct cache *new = malloc(sizeof(struct cache));
 	if (new == NULL)
