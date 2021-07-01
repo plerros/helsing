@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 		if (touch_checkpoint(min, max))
 			return 0;
 	}
-	struct taskboard *progress;
+	struct taskboard *progress = NULL;
 	taskboard_new(&(progress));
 
 	if (argc == 1) {
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 	vamp_t lmax = get_lmax(lmin, max);
 
 	pthread_t threads[THREADS];
-	struct targs_handle *thhandle;
+	struct targs_handle *thhandle = NULL;
 	targs_handle_new(&(thhandle), max, progress);
 
 	for (; lmax <= max;) {

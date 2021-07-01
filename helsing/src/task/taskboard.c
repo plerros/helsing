@@ -22,6 +22,7 @@ void taskboard_new(struct taskboard **ptr)
 {
 #ifdef SANITY_CHECK
 	assert(ptr != NULL);
+	assert(*ptr == NULL);
 #endif
 
 	struct taskboard *new = malloc(sizeof(struct taskboard));
@@ -34,6 +35,7 @@ void taskboard_new(struct taskboard **ptr)
 	new->fmax = 0;
 	new->done = 0;
 	new->common_count = 0;
+	new->checksum = NULL;
 	hash_new(&(new->checksum));
 	*ptr = new;
 }

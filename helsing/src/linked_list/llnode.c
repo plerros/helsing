@@ -6,25 +6,26 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 
-#ifdef STORE_RESULTS
+#ifdef PROCESS_RESULTS
 #include <stdlib.h>
 #include "llnode.h"
 #endif
 
-#if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
+#if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
 #include <openssl/evp.h>
 #endif
 
-#if defined(STORE_RESULTS) && SANITY_CHECK
+#if defined(PROCESS_RESULTS) && SANITY_CHECK
 	#include <assert.h>
 #endif
 
-#ifdef STORE_RESULTS
+#ifdef PROCESS_RESULTS
 
 static void llnode_new(struct llnode **ptr, struct llnode *next)
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
+	assert(*ptr == NULL);
 #endif
 
 	struct llnode *new = malloc(sizeof(struct llnode));
@@ -57,16 +58,26 @@ void llnode_add(struct llnode **ptr, vamp_t value)
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
+	assert(value != 0);
 #endif
 	if (*ptr == NULL) {
 		llnode_new(ptr, NULL);
 	}
 	else if ((*ptr)->logical_size >= LINK_SIZE) {
-		struct llnode *new;
+		struct llnode *new = NULL;
 		llnode_new(&new, *ptr);
 		*ptr = new;
 	}
 	(*ptr)->data[(*ptr)->logical_size] = value;
 	(*ptr)->logical_size += 1;
 }
-#endif /* STORE_RESULTS */
+
+vamp_t llnode_getsize(struct llnode *ptr)
+{
+	vamp_t size = 0;
+	for (struct llnode *i = ptr; i != NULL; i = i->next)
+		size += i->logical_size;
+
+	return size;
+}
+#endif /* PROCESS_RESULTS */

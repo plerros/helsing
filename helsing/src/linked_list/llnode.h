@@ -8,7 +8,7 @@
 
 #include "configuration_adv.h"
 
-#ifdef STORE_RESULTS
+#ifdef PROCESS_RESULTS
 struct llnode
 {
 	vamp_t *data;
@@ -17,12 +17,12 @@ struct llnode
 };
 void llnode_free(struct llnode *list);
 void llnode_add(struct llnode **ptr, vamp_t value);
-#else /* STORE_RESULTS */
+vamp_t llnode_getsize(struct llnode *ptr);
+#else /* PROCESS_RESULTS */
 struct llnode
 {
 };
-static inline void llnode_free(
-	__attribute__((unused)) struct llnode *list)
+static inline void llnode_free(__attribute__((unused)) struct llnode *list)
 {
 }
 static inline void llnode_add(
@@ -30,5 +30,9 @@ static inline void llnode_add(
 	__attribute__((unused)) vamp_t value)
 {
 }
-#endif /* STORE_RESULTS */
+static inline vamp_t llnode_getsize(__attribute__((unused)) struct llnode *ptr)
+{
+	return 0;
+}
+#endif /* PROCESS_RESULTS */
 #endif /* HELSING_LLNODE_H */

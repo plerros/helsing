@@ -20,6 +20,7 @@ void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
+	assert(*ptr == NULL);
 #endif
 
 	struct task *new = malloc(sizeof(struct task));
@@ -45,6 +46,10 @@ void task_free(struct task *ptr)
 
 void task_copy_vargs(struct task *ptr, struct vargs *vamp_args)
 {
+#if SANITY_CHECK
+	assert(ptr != NULL);
+	assert(vamp_args != NULL);
+#endif
 	ptr->result = vamp_args->result;
 	ptr->count = vamp_args->local_count;
 	ptr->complete = true;

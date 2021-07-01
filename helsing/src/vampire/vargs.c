@@ -59,6 +59,7 @@ void vargs_new(struct vargs **ptr, struct cache *digptr)
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
+	assert (*ptr == NULL);
 #endif
 
 	struct vargs *new = malloc(sizeof(struct vargs));

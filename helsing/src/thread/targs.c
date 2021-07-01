@@ -28,6 +28,7 @@ void targs_new(
 {
 #if SANITY_CHECK
 	assert (ptr != NULL);
+	assert (*ptr == NULL);
 #endif
 
 	struct targs *new = malloc(sizeof(struct targs));
@@ -52,7 +53,7 @@ void *thread_function(void *void_args)
 {
 	struct targs *args = (struct targs *)void_args;
 	thread_timer_start(args);
-	struct vargs *vamp_args;
+	struct vargs *vamp_args = NULL;
 	vargs_new(&(vamp_args), args->digptr);
 	struct task *current = NULL;
 

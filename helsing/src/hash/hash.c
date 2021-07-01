@@ -24,6 +24,7 @@ void hash_new(struct hash **ptr)
 {
 #ifdef SANITY_CHECK
 	assert(ptr != NULL);
+	assert(*ptr == NULL);
 #endif
 
 	struct hash *new = malloc(sizeof(struct hash));

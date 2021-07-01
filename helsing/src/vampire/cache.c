@@ -36,6 +36,7 @@ void cache_new(struct cache **ptr, vamp_t max)
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
+	assert (*ptr == NULL);
 #endif
 
 	struct cache *new = malloc(sizeof(struct cache));

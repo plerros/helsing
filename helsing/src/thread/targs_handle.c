@@ -22,6 +22,7 @@ void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *p
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
+	assert(*ptr == NULL);
 #endif
 
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
@@ -29,6 +30,7 @@ void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *p
 		abort();
 
 	new->progress = progress;
+	new->digptr = NULL;
 	cache_new(&(new->digptr), max);
 
 	new->read = malloc(sizeof(pthread_mutex_t));
@@ -36,8 +38,10 @@ void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *p
 	new->write = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(new->write, NULL);
 
-	for (thread_t thread = 0; thread < THREADS; thread++)
+	for (thread_t thread = 0; thread < THREADS; thread++) {
+		new->targs[thread] = NULL;
 		targs_new(&(new->targs[thread]), new->read, new->write, new->progress, new->digptr);
+	}
 	*ptr = new;
 }
 
