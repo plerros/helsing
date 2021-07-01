@@ -7,11 +7,12 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "helper.h"
-#include "llhandle.h"
+#include "array.h"
 #include "task.h"
 #include "taskboard.h"
 #include "checkpoint.h"
@@ -19,8 +20,10 @@
 
 void taskboard_new(struct taskboard **ptr)
 {
-	if (ptr == NULL)
-		return;
+#ifdef SANITY_CHECK
+	assert(ptr != NULL);
+	assert(*ptr == NULL);
+#endif
 
 	struct taskboard *new = malloc(sizeof(struct taskboard));
 	if (new == NULL)
@@ -32,6 +35,7 @@ void taskboard_new(struct taskboard **ptr)
 	new->fmax = 0;
 	new->done = 0;
 	new->common_count = 0;
+	new->checksum = NULL;
 	hash_new(&(new->checksum));
 	*ptr = new;
 }
@@ -117,6 +121,7 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 
 void taskboard_reset(struct taskboard *ptr)
 {
+	assert(ptr->done == ptr->size);
 	for (vamp_t i = 0; i < ptr->size; i++)
 		task_free(ptr->tasks[i]);
 	free(ptr->tasks);
@@ -141,10 +146,12 @@ void taskboard_cleanup(struct taskboard *ptr)
 {
 	while (
 		ptr->done < ptr->size &&
-		ptr->tasks[ptr->done]->result != NULL)
+		ptr->tasks[ptr->done]->complete != false)
 	{
-		llhandle_print(ptr->tasks[ptr->done]->result, ptr->common_count);
-		llhandle_checksum(ptr->tasks[ptr->done]->result, ptr->checksum);
+		if (ptr->tasks[ptr->done]->result != NULL) {
+			array_print(ptr->tasks[ptr->done]->result, ptr->common_count);
+			array_checksum(ptr->tasks[ptr->done]->result, ptr->checksum);
+		}
 		ptr->common_count += ptr->tasks[ptr->done]->count;
 		taskboard_progress(ptr);
 		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr);
@@ -164,16 +171,6 @@ void taskboard_print_results(struct taskboard *ptr)
 #endif
 	hash_print(ptr->checksum);
 }
-
-#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
-
-void taskboard_print(struct taskboard *ptr)
-{
-	for (vamp_t i = ptr->done; i < ptr->size; i++)
-		task_print(ptr->tasks[i], &(ptr->common_count));
-}
-
-#endif /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
 
 #if DISPLAY_PROGRESS
 

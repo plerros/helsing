@@ -15,6 +15,10 @@
 #include <time.h>
 #endif
 
+#if SANITY_CHECK
+#include <assert.h>
+#endif
+
 void targs_new(
 	struct targs **ptr,
 	pthread_mutex_t *read,
@@ -22,8 +26,10 @@ void targs_new(
 	struct taskboard *progress,
 	struct cache *digptr)
 {
-	if (ptr == NULL)
-		return;
+#if SANITY_CHECK
+	assert (ptr != NULL);
+	assert (*ptr == NULL);
+#endif
 
 	struct targs *new = malloc(sizeof(struct targs));
 	if (new == NULL)
@@ -47,7 +53,7 @@ void *thread_function(void *void_args)
 {
 	struct targs *args = (struct targs *)void_args;
 	thread_timer_start(args);
-	struct vargs *vamp_args;
+	struct vargs *vamp_args = NULL;
 	vargs_new(&(vamp_args), args->digptr);
 	struct task *current = NULL;
 

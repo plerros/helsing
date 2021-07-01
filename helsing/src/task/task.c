@@ -4,21 +4,24 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "task.h"
-#include "llhandle.h"
+#include "array.h"
 #include "vargs.h"
 
-#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
+#if SANITY_CHECK
 #include <assert.h>
 #endif
 
 void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 {
-	if (ptr == NULL)
-		return;
+#if SANITY_CHECK
+	assert(ptr != NULL);
+	assert(*ptr == NULL);
+#endif
 
 	struct task *new = malloc(sizeof(struct task));
 	if (new == NULL)
@@ -28,6 +31,7 @@ void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 	new->lmax = lmax;
 	new->result = NULL;
 	new->count = 0;
+	new->complete = false;
 	*ptr = new;
 }
 
@@ -36,27 +40,19 @@ void task_free(struct task *ptr)
 	if (ptr == NULL)
 		return;
 
-	llhandle_free(ptr->result);
+	array_free(ptr->result);
 	free(ptr);
 }
 
 void task_copy_vargs(struct task *ptr, struct vargs *vamp_args)
 {
-	ptr->result = vamp_args->lhandle;
-	ptr->count = vamp_args->local_count;
-
-	vamp_args->lhandle = NULL;
-}
-
-#if defined(PROCESS_RESULTS) && defined(PRINT_RESULTS)
-
-void task_print(struct task *ptr, vamp_t *count)
-{
 #if SANITY_CHECK
 	assert(ptr != NULL);
+	assert(vamp_args != NULL);
 #endif
-	llhandle_print(ptr->result, *count);
-	*count += ptr->result->size;
-}
+	ptr->result = vamp_args->result;
+	ptr->count = vamp_args->local_count;
+	ptr->complete = true;
 
-#endif /* defined(PROCESS_RESULTS) && defined(PRINT_RESULTS) */
+	vamp_args->result = NULL;
+}

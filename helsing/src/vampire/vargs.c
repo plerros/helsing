@@ -11,9 +11,14 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "helper.h"
-#include "llhandle.h"
+#include "llnode.h"
+#include "array.h"
 #include "cache.h"
 #include "vargs.h"
+
+#if SANITY_CHECK
+#include <assert.h>
+#endif
 
 static bool notrailingzero(fang_t x)
 {
@@ -52,8 +57,10 @@ static bool con9(vamp_t x, vamp_t y)
 
 void vargs_new(struct vargs **ptr, struct cache *digptr)
 {
-	if (ptr == NULL)
-		return;
+#if SANITY_CHECK
+	assert(ptr != NULL);
+	assert (*ptr == NULL);
+#endif
 
 	struct vargs *new = malloc(sizeof(struct vargs));
 	if (new == NULL)
@@ -61,7 +68,7 @@ void vargs_new(struct vargs **ptr, struct cache *digptr)
 
 	new->digptr = digptr;
 	new->local_count = 0;
-	llhandle_new(&(new->lhandle));
+	new->result = NULL;
 	*ptr = new;
 }
 
@@ -70,19 +77,20 @@ void vargs_free(struct vargs *args)
 	if (args == NULL)
 		return;
 
-	llhandle_free(args->lhandle);
+	array_free(args->result);
 	free(args);
 }
 
 void vargs_reset(struct vargs *args)
 {
 	args->local_count = 0;
-	llhandle_free(args->lhandle);
-	llhandle_new(&(args->lhandle));
+	array_free(args->result);
+	args->result = NULL;
 }
 
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
+	struct llnode *ll = NULL;
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
@@ -144,7 +152,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 					if (mult_zero || notrailingzero(multiplicand)) {
 						vargs_iterate_local_count(args);
 						vargs_print_results(product, multiplier, multiplicand);
-						llhandle_add(args->lhandle, product);
+						llnode_add(&(ll), product);
 					}
 				product += product_iterator;
 				e0 += 9;
@@ -194,7 +202,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 				if (mult_zero || notrailingzero(multiplicand)) {
 					vargs_iterate_local_count(args);
 					vargs_print_results(product, multiplier, multiplicand);
-					llhandle_add(args->lhandle, product);
+					llnode_add(&(ll), product);
 				}
 vampire_exit:
 				product += product_iterator;
@@ -203,7 +211,7 @@ vampire_exit:
 #endif /* CACHE */
 		}
 	}
-	llhandle_sort(args->lhandle);
-	llhandle_getfield_size(args->lhandle, &(args->local_count));
+	array_new(&(args->result), ll, &(args->local_count));
+	llnode_free(ll);
 	return;
 }

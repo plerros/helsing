@@ -14,16 +14,23 @@
 #include "targs.h"
 #include "targs_handle.h"
 
+#if SANITY_CHECK
+#include <assert.h>
+#endif
+
 void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *progress)
 {
-	if (ptr == NULL)
-		return;
+#if SANITY_CHECK
+	assert(ptr != NULL);
+	assert(*ptr == NULL);
+#endif
 
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
 	if (new == NULL)
 		abort();
 
 	new->progress = progress;
+	new->digptr = NULL;
 	cache_new(&(new->digptr), max);
 
 	new->read = malloc(sizeof(pthread_mutex_t));
@@ -31,8 +38,10 @@ void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *p
 	new->write = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(new->write, NULL);
 
-	for (thread_t thread = 0; thread < THREADS; thread++)
+	for (thread_t thread = 0; thread < THREADS; thread++) {
+		new->targs[thread] = NULL;
 		targs_new(&(new->targs[thread]), new->read, new->write, new->progress, new->digptr);
+	}
 	*ptr = new;
 }
 
