@@ -23,7 +23,7 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
 
 $(TARGET_EXEC): $(OBJS) Makefile
-	$(CC) $(CFLAGS) $(LIBS) $(LFLAGS) $(OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 # c source
 $(BUILD_DIR)/%.c.o: %.c Makefile
