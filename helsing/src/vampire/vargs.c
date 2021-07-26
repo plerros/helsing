@@ -42,6 +42,9 @@ static fang_t sqrtv_floor(vamp_t x) // vamp_t sqrt to fang_t.
 
 static fang_t sqrtv_roof(vamp_t x)
 {
+	if (x == 0)
+		return 0;
+
 	fang_t root = sqrtv_floor(x);
 	if (root == fang_max)
 		return root;
