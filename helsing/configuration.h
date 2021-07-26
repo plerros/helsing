@@ -87,10 +87,11 @@
  *
  * 	Because there is no simple way to predict the amount of vampire numbers
  * for a given range, MAX_TASK_SIZE can be used to limit the memory usage of
- * the Self-balancing binary search tree.
+ * quicksort.
  *
- * The Self-balancing binary search tree shouldn't use more memory than:
- * THREADS * (sizeof(bthandle) + MAX_TASK_SIZE * sizeof(btnode))
+ * Quicksort shouldn't use more memory than:
+ * THREADS * (sizeof(array) + MAX_TASK_SIZE * sizeof(vamp_t) * max(n_fang_pairs))
+ * See https://oeis.org/A094208 for max(n_fang_pairs).
  */
 
 #define AUTO_TASK_SIZE true

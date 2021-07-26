@@ -99,7 +99,6 @@ void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
 	quickSort(0, size - 1, arr);
 
 	// filter fangs & resize
-
 	vamp_t count = 0;
 	for (vamp_t i = 0; i < size; i++) {
 		if (arr[i] == 0)
@@ -115,7 +114,6 @@ void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
 			arr[count++] = value;
 	}
 	size = count;
-
 
 #ifdef STORE_RESULTS
 	struct array *new = malloc(sizeof(struct array));
