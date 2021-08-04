@@ -107,7 +107,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	digits_t *dig = args->digptr->dig;
 #endif
 
-	for (fang_t multiplier = fmax; multiplier >= min_sqrt; multiplier--) {
+	for (fang_t multiplier = fmax; multiplier >= min_sqrt && multiplier > 0; multiplier--) {
 		if (multiplier % 3 == 1)
 			continue;
 
