@@ -128,7 +128,7 @@ static int ftomd(FILE *fp, struct hash *ptr, int *ch)
 		uint8_t byte[2] = {0};
 		for (int j = 0; j < 2; j++) {
 			*ch = fgetc(fp);
-			
+
 			if (hextobyte(*ch, &(byte[j])))
 				return -1;
 		}
@@ -164,42 +164,45 @@ static void err_conflict(vamp_t line, vamp_t item)
 	fprintf(stderr, "\n[ERROR] %s line %llu item #%llu has conflicting data:\n", CHECKPOINT_FILE, line, item);
 }
 
-static void err_unexpected_char(int ch)
+static void err_unexpected_char(FILE *fp, char ch, int line, int item)
 {
+	err_baditem(line, item);
 	fprintf(stderr, "Unexpected ");
 	switch (ch) {
 		case ' ':
-			fprintf(stderr, "space character");
+			fprintf(stderr, "space character.\n");
 			break;
 		case '\t':
-			fprintf(stderr, "tab character");
+			fprintf(stderr, "tab character.\n");
 			break;
 		case '\n':
-			fprintf(stderr, "newline character");
+			fprintf(stderr, "newline character.\n");
 			break;
 		case EOF:
-			fprintf(stderr, "end of file or missing newline.");
+			if (feof(fp))
+				fprintf(stderr, "end of file or missing newline.\n");
+			if (ferror(fp))
+				fprintf(stderr, "end of file, caused by I/O error.\n");
 			break;
 		default:
 			fprintf(stderr, "character: ");
 			if (isgraph(ch))
-				fprintf(stderr, "%c", ch);
+				fprintf(stderr, "%c\n", ch);
 			else
-				fprintf(stderr, "'%c'", ch);
+				fprintf(stderr, "'%c'\n", ch);
 			break;
 	}
-	fprintf(stderr, "\n\n");
 }
 
-static void err_switch(int err, vamp_t line, vamp_t item, int ch)
+static void err_ftov(FILE *fp, int err, char ch, vamp_t line, vamp_t item)
 {
-	err_baditem(line, item);
 	switch (err) {
 		case -1:
-			err_unexpected_char(ch);
+			err_unexpected_char(fp, ch, line, item);
 			break;
 		case -2:
-			fprintf(stderr, "Out of range: [0, %llu]\n\n", vamp_max);
+			err_baditem(line, item);
+			fprintf(stderr, "Out of range: [0, %llu]\n", vamp_max);
 			break;
 	}
 }
@@ -217,36 +220,34 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 
 	err = ftov(fp, min, &ch);
 	if (err) {
-		err_switch(err, line, item, ch);
+		err_ftov(fp, err, ch, line , item);
 		ret = 1;
-		goto load_checkpoint_exit;
+		goto out;
 	}
 	else if (ch != ' ') {
-		err_baditem(line, item);
-		err_unexpected_char(ch);
+		err_unexpected_char(fp, ch, line , item);
 		ret = 1;
-		goto load_checkpoint_exit;
+		goto out;
 	}
 	item++;
 
 	err = ftov(fp, max, &ch);
 	if (err) {
-		err_switch(err, line, item, ch);
+		err_ftov(fp, err, ch, line , item);
 		ret = 1;
-		goto load_checkpoint_exit;
+		goto out;
 	}
 	else if (ch != '\n') {
-		err_baditem(line, item);
-		err_unexpected_char(ch);
+		err_unexpected_char(fp, ch, line , item);
 		ret = 1;
-		goto load_checkpoint_exit;
+		goto out;
 	}
 
 	if (*max < *min) {
-		fclose(fp);
 		err_conflict(line, item);
-		fprintf(stderr, "max < min\n\n");
-		return 1;
+		fprintf(stderr, "max < min\n");
+		ret = 1;
+		goto out;
 	}
 
 	*current = *min;
@@ -259,71 +260,67 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		item = 1;
 
 		err = ftov(fp, current, &ch);
-		if (err == -1 && ch == EOF && feof(fp)) {
-			goto load_checkpoint_exit;
-		}
-		else if (err) {
-			err_switch(err, line, item, ch);
+		if (err == -1 && ch == EOF && feof(fp))
+			goto out;
+		if (err) {
+			err_ftov(fp, err, ch, line , item);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 		else if (ch != ' ') {
-			err_baditem(line, item);
-			err_unexpected_char(ch);
+			err_unexpected_char(fp, ch, line , item);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 
 		if (*current < *min) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu < %llu (below min)\n\n", *current, *min);
+			fprintf(stderr, "%llu < %llu (below min)\n", *current, *min);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 		if (*current > *max) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu > %llu (above max)\n\n", *current, *max);
+			fprintf(stderr, "%llu > %llu (above max)\n", *current, *max);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 		if (*current <= prev && line != 2) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu <= %llu (below previous)\n\n", *current, prev);
+			fprintf(stderr, "%llu <= %llu (below previous)\n", *current, prev);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 		item++;
 
 		err = ftov(fp, &(progress->common_count), &ch);
 		if (err) {
-			err_switch(err, line, item, ch);
+			err_ftov(fp, err, ch, line , item);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 #ifdef CHECKSUM_RESULTS
-		else if (ch != ' ')
+		else if (ch != ' ') {
 #else /* CHECKSUM_RESULTS */
-		else if (ch != '\n')
+		else if (ch != '\n') {
 #endif /* CHECKSUM_RESULTS */
-		{
-			err_baditem(line, item);
-			err_unexpected_char(ch);
+			err_unexpected_char(fp, ch, line , item);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 		if (progress->common_count < prevcount && line != 2) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu < %llu (below previous)\n\n", progress->common_count, prevcount);
+			fprintf(stderr, "%llu < %llu (below previous)\n", progress->common_count, prevcount);
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 
 #ifdef PROCESS_RESULTS
 		if (progress->common_count > 0 && progress->common_count -1 > *current - *min) {
 			err_conflict(line, item);
-			fprintf(stderr, "More vampire numbers than numbers.\n\n");
+			fprintf(stderr, "More vampire numbers than numbers.\n");
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 #endif /* PROCESS_RESULTS */
 
@@ -332,21 +329,17 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 #ifdef CHECKSUM_RESULTS
 		err = ftomd(fp, progress->checksum, &ch);
 		if (err) {
-			err_baditem(line, item);
-			switch (err) {
-				case -1:
-					err_baditem(line, item);
-					err_unexpected_char(ch);
-					breal;
-			}
+			err_unexpected_char(fp, ch, line , item);
+			if (isspace(ch))
+				fprintf(stderr, "The checksum character length is invalid; Too few characters.\n");
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 		else if (ch != '\n') {
-			err_baditem(line, item);
-			fprintf(stderr, "Invalid checksum character length or missing newline.\n");
+			err_unexpected_char(fp, ch, line , item);
+			fprintf(stderr, "The checksum character length is invalid; Too many characters or missing newline.\n");
 			ret = 1;
-			goto load_checkpoint_exit;
+			goto out;
 		}
 		item++;
 #endif /* CHECKSUM_RESULTS */
@@ -355,9 +348,10 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		prev = *current;
 		prevcount = progress->common_count;
 	}
-load_checkpoint_exit:
-
+out:
 	fclose(fp);
+	if (ret)
+		fprintf(stderr, "\n");
 	return ret;
 }
 
