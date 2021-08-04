@@ -25,7 +25,9 @@ static int atov(const char *str, vamp_t *number) // ASCII to vamp_t
 	assert(str != NULL);
 	assert(number != NULL);
 	vamp_t ret = 0;
-	for (length_t i = 0; isdigit(str[i]); i++) {
+	for (length_t i = 0; isgraph(str[i]); i++) {
+		if (!isdigit(str[i]))
+			return 1;
 		digit_t digit = str[i] - '0';
 		if (willoverflow(ret, digit))
 			return 1;
