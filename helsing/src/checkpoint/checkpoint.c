@@ -18,8 +18,6 @@
 #endif
 
 #if USE_CHECKPOINT
-// we assume ASCII / ASCII compatible
-
 /*
  * ftov return values:
  *
@@ -55,63 +53,6 @@ static int ftov(FILE *fp, vamp_t *ptr, int *ch) // file to vamp_t
 }
 
 #ifdef CHECKSUM_RESULTS
-static int hextobyte(char ch, uint8_t *hex)
-{
-	if (!isxdigit(ch))
-		return 1;
-
-	switch (ch) {
-		case '0':
-			*hex = 0;
-			break;
-		case '1':
-			*hex = 1;
-			break;
-		case '2':
-			*hex = 2;
-			break;
-		case '3':
-			*hex = 3;
-			break;
-		case '4':
-			*hex = 4;
-			break;
-		case '5':
-			*hex = 5;
-			break;
-		case '6':
-			*hex = 6;
-			break;
-		case '7':
-			*hex = 7;
-			break;
-		case '8':
-			*hex = 8;
-			break;
-		case '9':
-			*hex = 9;
-			break;
-		case 'a':
-			*hex = 10;
-			break;
-		case 'b':
-			*hex = 11;
-			break;
-		case 'c':
-			*hex = 12;
-			break;
-		case 'd':
-			*hex = 13;
-			break;
-		case 'e':
-			*hex = 14;
-			break;
-		case 'f':
-			*hex = 15;
-			break;
-	}
-	return 0;
-}
 
 /*
  * ftomd return values:
@@ -125,14 +66,14 @@ static int ftomd(FILE *fp, struct hash *ptr, int *ch)
 	assert(ptr->md_value != NULL);
 
 	for (int i = 0; i < ptr->md_size; i++) {
-		uint8_t byte[2] = {0};
+		char hex[3] = {0, 0, '\0'};
 		for (int j = 0; j < 2; j++) {
 			*ch = fgetc(fp);
-
-			if (hextobyte(*ch, &(byte[j])))
+			if (!isxdigit(*ch))
 				return -1;
+			hex[j] = *ch;
 		}
-		ptr->md_value[i] = (byte[0] << 4) | byte[1];
+		ptr->md_value[i] = strtoul(hex, NULL, 16);
 	}
 	*ch = fgetc(fp);
 	return 0;
