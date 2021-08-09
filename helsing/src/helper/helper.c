@@ -27,19 +27,19 @@ bool willoverflow(vamp_t x, digit_t digit)
 length_t length(vamp_t x)
 {
 	length_t length = 1;
-	for (; x > 9; x /= 10)
+	for (; x >= BASE; x /= BASE)
 		length++;
 	return length;
 }
 
-vamp_t pow10v(length_t exponent) // pow10 for vamp_t.
+vamp_t pow_v(length_t exponent) // pow for vamp_t.
 {
 #if SANITY_CHECK
 	assert(exponent <= length(vamp_max) - 1);
 #endif
 	vamp_t power = 1;
 	for (; exponent > 0; exponent--)
-		power *= 10;
+		power *= BASE;
 	return power;
 }
 

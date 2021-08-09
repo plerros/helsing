@@ -37,7 +37,7 @@ static vamp_t get_min(vamp_t min, vamp_t max)
 	if (length(min) % 2) {
 		length_t min_length = length(min);
 		if (min_length < length(max))
-			min = pow10v(min_length);
+			min = pow_v(min_length);
 		else
 			min = max;
 	}
@@ -49,7 +49,7 @@ static vamp_t get_max(vamp_t min, vamp_t max)
 	if (length(min) % 2) {
 		length_t max_length = length(max);
 		if (max_length > length(min))
-			max = pow10v(max_length - 1) - 1;
+			max = pow_v(max_length - 1) - 1;
 		else
 			max = min;
 	}
@@ -59,7 +59,7 @@ static vamp_t get_max(vamp_t min, vamp_t max)
 static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
 	if (length(lmin) < length(vamp_max)) {
-		vamp_t lmax = pow10v(length(lmin)) - 1;
+		vamp_t lmax = pow_v(length(lmin)) - 1;
 		if (lmax < max)
 			return lmax;
 	}

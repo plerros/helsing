@@ -22,7 +22,7 @@
 
 static bool notrailingzero(fang_t x)
 {
-	return ((x % 10) != 0);
+	return ((x % BASE) != 0);
 }
 
 static fang_t sqrtv_floor(vamp_t x) // vamp_t sqrt to fang_t.
@@ -52,10 +52,10 @@ static fang_t sqrtv_roof(vamp_t x)
 	return (x / root);
 }
 
-// Modulo 9 lack of congruence
-static bool con9(vamp_t x, vamp_t y)
+// Modulo base-1 lack of congruence
+static bool congruence_check(vamp_t x, vamp_t y)
 {
-	return ((x + y) % 9 != (x * y) % 9);
+	return ((x + y) % (BASE - 1) != (x * y) % (BASE - 1));
 }
 
 void vargs_new(struct vargs **ptr, struct cache *digptr)
@@ -103,15 +103,16 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	if (length_max < 9)
 		length_a += length_max % 3;
 
-	fang_t power_a = pow10v(length_a);
+	fang_t power_a = pow_v(length_a);
 	digits_t *dig = args->digptr->dig;
 #endif
 
 	for (fang_t multiplier = fmax; multiplier >= min_sqrt && multiplier > 0; multiplier--) {
+#if (BASE == 10)
 		if (multiplier % 3 == 1)
 			continue;
-
-		fang_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - 10^n
+#endif
+		fang_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - BASE^n
 		bool mult_zero = notrailingzero(multiplier);
 
 		fang_t multiplicand_max;
@@ -121,12 +122,12 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			multiplicand_max = multiplier;
 			// multiplicand <= multiplier: 5267275776 = 72576 * 72576.
 
-		while (multiplicand <= multiplicand_max && con9(multiplier, multiplicand))
+		while (multiplicand <= multiplicand_max && congruence_check(multiplier, multiplicand))
 			multiplicand++;
 
 		if (multiplicand <= multiplicand_max) {
 			vamp_t product_iterator = multiplier;
-			product_iterator *= 9; // <= 9 * 2^32
+			product_iterator *= BASE - 1; // <= (BASE-1) * (2^32)
 			vamp_t product = multiplier;
 			product *= multiplicand; // avoid overflow
 
@@ -150,7 +151,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			fang_t de1 = (product / power_a) % power_a;
 			fang_t de2 = (product / power_a) / power_a;
 
-			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
+			for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
 					if (mult_zero || notrailingzero(multiplicand)) {
 						vargs_iterate_local_count(args);
@@ -158,7 +159,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 						llnode_add(&(ll), product);
 					}
 				product += product_iterator;
-				e0 += 9;
+				e0 += BASE - 1;
 				if (e0 >= power_a) {
 					e0 -= power_a;
 					e1 += 1;
@@ -177,28 +178,28 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 
 #else /* CACHE */
 
-			length_t mult_array[10] = {0};
-			for (fang_t i = multiplier; i > 0; i /= 10)
-				mult_array[i % 10] += 1;
+			length_t mult_array[BASE] = {0};
+			for (fang_t i = multiplier; i > 0; i /= BASE)
+				mult_array[i % BASE] += 1;
 
 			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
-				uint16_t product_array[10] = {0};
-				for (vamp_t p = product; p > 0; p /= 10)
-					product_array[p % 10] += 1;
+				uint16_t product_array[BASE] = {0};
+				for (vamp_t p = product; p > 0; p /= BASE)
+					product_array[p % BASE] += 1;
 
-				for (digit_t i = 0; i < 10; i++)
+				for (digit_t i = 0; i < BASE; i++)
 					if (product_array[i] < mult_array[i])
 						goto vampire_exit;
 
 				digit_t temp;
-				for (fang_t m = multiplicand; m > 0; m /= 10) {
-					temp = m % 10;
+				for (fang_t m = multiplicand; m > 0; m /= BASE) {
+					temp = m % BASE;
 					if (product_array[temp] == 0)
 						goto vampire_exit;
 					else
 						product_array[temp]--;
 				}
-				for (digit_t i = 0; i < 9; i++)
+				for (digit_t i = 0; i < (BASE - 1)); i++)
 					if (product_array[i] != mult_array[i])
 						goto vampire_exit;
 
