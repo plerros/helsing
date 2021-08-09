@@ -182,7 +182,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			for (fang_t i = multiplier; i > 0; i /= BASE)
 				mult_array[i % BASE] += 1;
 
-			for (; multiplicand <= multiplicand_max; multiplicand += 9) {
+			for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
 				uint16_t product_array[BASE] = {0};
 				for (vamp_t p = product; p > 0; p /= BASE)
 					product_array[p % BASE] += 1;
@@ -199,7 +199,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 					else
 						product_array[temp]--;
 				}
-				for (digit_t i = 0; i < (BASE - 1)); i++)
+				for (digit_t i = 0; i < (BASE - 1); i++)
 					if (product_array[i] != mult_array[i])
 						goto vampire_exit;
 

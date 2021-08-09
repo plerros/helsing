@@ -20,7 +20,7 @@
 
 #if CACHE
 
-static digits_t digbase = pow(2.0, ((double)ELEMENT_BITS)/9.0);
+static digits_t digbase = pow(2.0, ((double)ELEMENT_BITS)/(double)(BASE - 1));
 
 digits_t set_dig(fang_t number)
 {
