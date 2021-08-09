@@ -80,7 +80,7 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	length_t fang_length = length(lmin) / 2;
 	if (fang_length == length(fang_max))
 		ptr->fmax = fang_max;
-	else if (fang_length <= 0)
+	else if (fang_length == 0)
 		ptr->fmax = 0;
 	else
 		ptr->fmax = pow10v(fang_length); // Max factor value.

@@ -25,13 +25,10 @@ typedef uint16_t thread_t;
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
 
-//DIG_BASE = pow(2.0, ((double)ELEMENT_BITS)/9.0)
 #if ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
-	#define DIG_BASE 11
 #elif ELEMENT_BITS == 64
 	typedef uint64_t digits_t;
-	#define DIG_BASE 138
 #endif
 
 #if MEASURE_RUNTIME

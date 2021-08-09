@@ -11,7 +11,7 @@ SRC_DIRS ?= .
 CC := $(shell if [ -z $(CC) ]; then echo $(CC); else echo "gcc"; fi)
 CFLAGS := -O2 -Wall -Wextra # compiler flags
 LFLAGS := -Wl,--gc-sections # linker flags
-LIBS := -pthread $(shell if $(CC) -dM -E -I./configuration.h ./configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
+LIBS := -pthread $(shell if $(CC) -dM -E -I$(SRC_DIRS)/configuration.h $(SRC_DIRS)/configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
 
 SRCS := $(shell find $(SRC_DIRS) -name *.c)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)

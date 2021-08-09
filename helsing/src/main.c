@@ -15,12 +15,7 @@
 #include "targs_handle.h"
 #include "checkpoint.h"
 
-static bool length_isodd(vamp_t x)
-{
-	return (length(x) % 2);
-}
-
-static int atov(const char *str, vamp_t *number) // ASCII to vamp_t
+static int strtov(const char *str, vamp_t *number) // string to vamp_t
 {
 	assert(str != NULL);
 	assert(number != NULL);
@@ -39,7 +34,7 @@ static int atov(const char *str, vamp_t *number) // ASCII to vamp_t
 
 static vamp_t get_min(vamp_t min, vamp_t max)
 {
-	if (length_isodd(min)) {
+	if (length(min) % 2) {
 		length_t min_length = length(min);
 		if (min_length < length(max))
 			min = pow10v(min_length);
@@ -51,7 +46,7 @@ static vamp_t get_min(vamp_t min, vamp_t max)
 
 static vamp_t get_max(vamp_t min, vamp_t max)
 {
-	if (length_isodd(max)) {
+	if (length(min) % 2) {
 		length_t max_length = length(max);
 		if (max_length > length(min))
 			max = pow10v(max_length - 1) - 1;
@@ -89,7 +84,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	if (argc == 3) {
-		if (atov(argv[1], &min) || atov(argv[2], &max)) {
+		if (strtov(argv[1], &min) || strtov(argv[2], &max)) {
 			fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
 			return 0;
 		}

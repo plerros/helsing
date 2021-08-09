@@ -37,10 +37,10 @@ vamp_t pow10v(length_t exponent) // pow10 for vamp_t.
 #if SANITY_CHECK
 	assert(exponent <= length(vamp_max) - 1);
 #endif
-	vamp_t base = 1;
+	vamp_t power = 1;
 	for (; exponent > 0; exponent--)
-		base *= 10;
-	return base;
+		power *= 10;
+	return power;
 }
 
 vamp_t div_roof (vamp_t x, vamp_t y)
