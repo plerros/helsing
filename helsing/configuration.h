@@ -87,6 +87,7 @@
  * checking algorithm.
  *
  * For bases above 255 adjust digit_t accordingly.
+ * If 2^(ELEMENT_BITS/(BASE-1)) < ELEMENT_BITS/log2(BASE-1), then disable CACHE.
  */
 
 #define BASE 10

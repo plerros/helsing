@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <ctype.h>	// isdigit
+#include <math.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -77,6 +78,11 @@ static bool check_argc (int argc)
 
 int main(int argc, char *argv[])
 {
+	if (CACHE && (pow(2.0, (double)ELEMENT_BITS / (double)(BASE - 1)) < (double)ELEMENT_BITS / log2(BASE - 1))) {
+		fprintf(stderr, "WARNING: the code might produce false ");
+		fprintf(stderr, "positives, please set CACHE to false.\n");
+		return 0;
+	}
 	vamp_t min, max;
 
 	if (check_argc(argc)) {
