@@ -20,7 +20,11 @@
 
 #if CACHE
 
-static digits_t digbase = pow(2.0, ((double)ELEMENT_BITS)/9.0);
+static digits_t digbase()
+{
+	return (pow(2.0, ((double)ELEMENT_BITS)/9.0));
+}
+
 
 digits_t set_dig(fang_t number)
 {
@@ -30,7 +34,7 @@ digits_t set_dig(fang_t number)
 		tmp[number % 10] += 1;
 
 	for (digit_t i = 1; i < 10; i++)
-		ret = ret * digbase + tmp[i];
+		ret = ret * digbase() + tmp[i];
 
 	return ret;
 }
