@@ -83,7 +83,7 @@
 /*
  * BASE:
  *
- *	BASE defines the base of the numerical system to be used by the vampire
+ * 	BASE defines the base of the numerical system to be used by the vampire
  * checking algorithm.
  *
  * For bases above 255 adjust digit_t accordingly.
