@@ -67,9 +67,11 @@ static bool disqualify_mult(vamp_t x)
 			ret = false;
 			break;
 		case 7:
+			{
 			int tmp = x % (BASE - 1);
 			ret = (tmp == 1 || tmp == 3 || tmp == 4 || tmp == 5);
 			break;
+			}
 		case 10:
 			ret = (x % 3 == 1);
 			break;
