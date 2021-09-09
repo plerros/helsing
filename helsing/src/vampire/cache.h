@@ -8,10 +8,7 @@
 
 #include "configuration.h"
 #include "configuration_adv.h"
-
-#if CACHE
 #include <stdbool.h>
-#endif
 
 #if CACHE
 struct cache

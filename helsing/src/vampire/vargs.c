@@ -52,6 +52,49 @@ static fang_t sqrtv_roof(vamp_t x)
 	return (x / root);
 }
 
+/*
+ * disqualify_mult:
+ *
+ * Disqualify ineligible values before congruence_check.
+ * Currently suppoted numerical bases: 2~10.
+ */
+
+static bool disqualify_mult(vamp_t x)
+{
+	bool ret = false;
+	switch (BASE) {
+		case 2:
+			ret = false;
+			break;
+		case 7:
+			int tmp = x % (BASE - 1);
+			ret = (tmp == 1 || tmp == 3 || tmp == 4 || tmp == 5);
+			break;
+		case 10:
+			ret = (x % 3 == 1);
+			break;
+		default:
+			/*
+			 * A represents the last bit of multiplier
+			 * B represents the last bit of multiplicand
+			 *
+			 * A B  A+B  A*B  Match
+			 * 0 0   0    0   true
+			 * 0 1   1    0   false
+			 * 1 0   1    0   false
+			 * 1 1 (1)0   1   false
+			 *
+			 * If BASE-1 is a power of two, we can safely disqualify
+			 * the cases where A is 1.
+			 */
+			if (((BASE - 1) & (BASE - 2)) == 0)
+				ret = x % 2;
+			else
+				ret = (x % (BASE - 1) == 1);
+	}
+	return ret;
+}
+
 // Modulo base-1 lack of congruence
 static bool congruence_check(vamp_t x, vamp_t y)
 {
@@ -108,10 +151,9 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 #endif
 
 	for (fang_t multiplier = fmax; multiplier >= min_sqrt && multiplier > 0; multiplier--) {
-#if (BASE == 10)
-		if (multiplier % 3 == 1)
+		if (disqualify_mult(multiplier))
 			continue;
-#endif
+
 		fang_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - BASE^n
 		bool mult_zero = notrailingzero(multiplier);
 
