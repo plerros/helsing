@@ -37,7 +37,7 @@ static vamp_t get_min(vamp_t min, vamp_t max)
 	if (length(min) % 2) {
 		length_t min_length = length(min);
 		if (min_length < length(max))
-			min = pow10v(min_length);
+			min = pow_v(min_length);
 		else
 			min = max;
 	}
@@ -49,7 +49,7 @@ static vamp_t get_max(vamp_t min, vamp_t max)
 	if (length(min) % 2) {
 		length_t max_length = length(max);
 		if (max_length > length(min))
-			max = pow10v(max_length - 1) - 1;
+			max = pow_v(max_length - 1) - 1;
 		else
 			max = min;
 	}
@@ -59,7 +59,7 @@ static vamp_t get_max(vamp_t min, vamp_t max)
 static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
 	if (length(lmin) < length(vamp_max)) {
-		vamp_t lmax = pow10v(length(lmin)) - 1;
+		vamp_t lmax = pow_v(length(lmin)) - 1;
 		if (lmax < max)
 			return lmax;
 	}
@@ -114,9 +114,12 @@ int main(int argc, char *argv[])
 		taskboard_free(progress);
 		return 0;
 	}
-	if (max > 9999999999 && ELEMENT_BITS == 32) {
-		fprintf(stderr, "WARNING: the code might produce false ");
-		fprintf(stderr, "positives, please set ELEMENT_BITS to 64.\n");
+	if (cache_ovf_chk(max)) {
+		fprintf(stderr, "WARNING: the code might produce false positives, ");
+		if (ELEMENT_BITS == 32)
+			fprintf(stderr, "please set ELEMENT_BITS to 64.\n");
+		else
+			fprintf(stderr, "please set CACHE to false.\n");
 		taskboard_free(progress);
 		return 0;
 	}

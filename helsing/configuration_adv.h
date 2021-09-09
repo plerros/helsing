@@ -55,4 +55,16 @@ typedef uint8_t length_t;
 	#define PRINT_RESULTS
 #endif
 
+#if (VERBOSE_LEVEL > 4)
+#error VERBOSE_LEVEL acceptable values are 0 ~ 4
+#endif
+
+#if (ELEMENT_BITS != 32 && ELEMENT_BITS != 64)
+#error ELEMENT_BITS acceptable values are 32 or 64
+#endif
+
+#if (BASE < 2)
+#error BASE should be larger than 1
+#endif
+
 #endif /* HELSING_CONFIG_ADV_H */

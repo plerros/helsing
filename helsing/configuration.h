@@ -48,7 +48,7 @@
  * 	division + 3~9 load operations.
  *
  * 	Given a product A and its fangs B & C, in order to store the sum of
- * 	each digit, we can use an array of 10 elements.	Because B & C are both
+ * 	each digit, we can use an array of BASE elements. Because B & C are both
  * 	fangs it will be always true that arr_A and arr_B + arr_C have the same
  * 	total sum of digits and therefore we can avoid storing one of the
  * 	elements. I chose not to store the 0s.
@@ -74,11 +74,23 @@
  * 	3. By using 3 * 16-bits instead of 64-bits.
  * 	   That would result in 75% array size and 121% runtime*.
  *
- * 	*Based on some of my testing. Your mileage may vary.
+ * 	*Based on some of my testing in base-10. Your mileage may vary.
  */
 
 #define CACHE true
 #define ELEMENT_BITS 64
+
+/*
+ * BASE:
+ *
+ * 	BASE defines the base of the numerical system to be used by the vampire
+ * checking algorithm.
+ *
+ * For bases above 255 adjust digit_t accordingly.
+ * If 2^(ELEMENT_BITS/(BASE-1)) < ELEMENT_BITS/log2(BASE-1), then disable CACHE.
+ */
+
+#define BASE 10
 
 /*
  * MAX_TASK_SIZE:

@@ -8,6 +8,7 @@
 
 #include "configuration.h"
 #include "configuration_adv.h"
+#include <stdbool.h>
 
 #if CACHE
 struct cache
@@ -18,6 +19,7 @@ struct cache
 digits_t set_dig(fang_t number);
 void cache_new(struct cache **ptr, vamp_t max);
 void cache_free(struct cache *ptr);
+bool cache_ovf_chk(vamp_t max);
 #else /* !CACHE */
 struct cache
 {
@@ -33,6 +35,10 @@ static inline void cache_new(
 }
 static inline void cache_free(__attribute__((unused)) struct cache *ptr)
 {
+}
+static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
+{
+	return false;
 }
 #endif /* CACHE */
 #endif /* HELSING_CACHE_H */
