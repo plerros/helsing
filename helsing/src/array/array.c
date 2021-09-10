@@ -38,37 +38,9 @@ void array_free(struct array *ptr)
 #endif
 
 #ifdef PROCESS_RESULTS
-static void swap(vamp_t x, vamp_t y, vamp_t *arr)
+int cmpvampt(const void *a, const void *b)
 {
-	vamp_t tmp = arr[x];
-	arr[x] = arr[y];
-	arr[y] = tmp;
-}
-
-static vamp_t partition(vamp_t lo, vamp_t hi, vamp_t *arr)
-{
-	vamp_t pivot = arr[hi];
-	vamp_t i = lo;
-	for (vamp_t j = lo; j <= hi; j++) {
-		if (arr[j] < pivot) {
-			swap(i, j, arr);
-			i++;
-		}
-	}
-	swap(i, hi, arr);
-	return i;
-}
-
-static void quickSort(vamp_t lo, vamp_t hi, vamp_t *arr)
-{
-	if (hi <= lo)
-		return;
-
-	vamp_t partitionPoint = partition(lo, hi, arr);
-	if (partitionPoint > 0)
-		quickSort(lo, partitionPoint-1, arr);
-	if (partitionPoint < vamp_max)
-		quickSort(partitionPoint+1, hi, arr);
+	return ((*(vamp_t *) a) > (*(vamp_t *) b));
 }
 
 void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
@@ -96,7 +68,7 @@ void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
 	}
 
 	// sort
-	quickSort(0, size - 1, arr);
+	qsort(arr, size, sizeof(vamp_t), cmpvampt);
 
 	// filter fangs & resize
 	vamp_t count = 0;
