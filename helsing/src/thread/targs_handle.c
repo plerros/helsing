@@ -54,7 +54,6 @@ void targs_handle_free(struct targs_handle *ptr)
 	free(ptr->read);
 	pthread_mutex_destroy(ptr->write);
 	free(ptr->write);
-	taskboard_free(ptr->progress);
 	cache_free(ptr->digptr);
 
 	for (thread_t thread = 0; thread < THREADS; thread++)

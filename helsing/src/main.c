@@ -78,32 +78,29 @@ static bool check_argc (int argc)
 int main(int argc, char *argv[])
 {
 	vamp_t min, max;
+	struct taskboard *progress = NULL;
 
 	if (check_argc(argc)) {
 		printf("Usage: helsing [min] [max]\n");
-		return 0;
+		goto out;
 	}
 	if (argc == 3) {
 		if (strtov(argv[1], &min) || strtov(argv[2], &max)) {
 			fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
-			return 0;
+			goto out;
 		}
 		if (touch_checkpoint(min, max))
-			return 0;
+			goto out;
 	}
-	struct taskboard *progress = NULL;
 	taskboard_new(&(progress));
 
 	if (argc == 1) {
 		vamp_t ccurrent;
-		if (load_checkpoint(&min, &max, &ccurrent, progress)) {
-			taskboard_free(progress);
-			return 0;
-		}
+		if (load_checkpoint(&min, &max, &ccurrent, progress))
+			goto out;
 		if (ccurrent == max) {
 			taskboard_print_results(progress);
-			taskboard_free(progress);
-			return 0;
+			goto out;
 		}
 		if (ccurrent > min)
 			min = ccurrent + 1;
@@ -111,8 +108,7 @@ int main(int argc, char *argv[])
 
 	if (min > max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
-		taskboard_free(progress);
-		return 0;
+		goto out;
 	}
 	if (cache_ovf_chk(max)) {
 		fprintf(stderr, "WARNING: the code might produce false positives, ");
@@ -120,8 +116,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "please set ELEMENT_BITS to 64.\n");
 		else
 			fprintf(stderr, "please set CACHE to false.\n");
-		taskboard_free(progress);
-		return 0;
+		goto out;
 	}
 
 	min = get_min(min, max);
@@ -151,5 +146,7 @@ int main(int argc, char *argv[])
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);
+out:
+	taskboard_free(progress);
 	return 0;
 }

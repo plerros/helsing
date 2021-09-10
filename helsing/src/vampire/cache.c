@@ -53,9 +53,14 @@ void cache_new(struct cache **ptr, vamp_t max)
 	struct cache *new = malloc(sizeof(struct cache));
 	if (new == NULL)
 		abort();
-
-	length_t length_a = length(max) / 3;
-	length_t length_b = length(max) - (2 * length_a);
+/*
+ * We don't do:
+ * 	length_b = length(max) - 2 * (length(max) / 3)
+ *
+ * Because it's not a monotonically nondecreasing function and could lead to out
+ * of bounds memory access.
+ */
+	length_t length_b = (length(max) + 1) / 3 + 1;
 	new->size = pow_v(length_b);
 
 	new->dig = malloc(sizeof(digits_t) * new->size);
