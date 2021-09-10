@@ -12,6 +12,7 @@ Windows isn't posix compatible. You'll need to set up a virtual machine or (if y
  - GNU make
  - findutils
  - OpenSSL (optional)
+
    Platform | Package name
    -------- | ------------
    Homebrew | openssl
