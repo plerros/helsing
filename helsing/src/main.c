@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	taskboard_new(&(progress));
 
 	if (argc == 1) {
-		vamp_t ccurrent;
+		vamp_t ccurrent = 0;
 		if (load_checkpoint(&min, &max, &ccurrent, progress))
 			goto out;
 		if (ccurrent == max) {

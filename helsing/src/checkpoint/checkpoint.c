@@ -191,7 +191,6 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		goto out;
 	}
 
-	*current = *min;
 	progress->common_count = 0;
 	line++;
 
