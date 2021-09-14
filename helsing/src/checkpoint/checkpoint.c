@@ -150,6 +150,8 @@ static void err_ftov(FILE *fp, int err, char ch, vamp_t line, vamp_t item)
 
 int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard *progress)
 {
+	assert(progress != NULL);
+
 	FILE *fp = fopen(CHECKPOINT_FILE, "r");
 	assert(fp != NULL);
 
@@ -189,6 +191,18 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		fprintf(stderr, "max < min\n");
 		ret = 1;
 		goto out;
+	}
+
+	*min = get_min(*min, *max);
+	*max = get_min(*min, *max);
+
+	if (cache_ovf_chk(*max)) {
+		fprintf(stderr, "WARNING: the code might produce false positives, ");
+		if (ELEMENT_BITS == 32)
+			fprintf(stderr, "please set ELEMENT_BITS to 64.\n");
+		else
+			fprintf(stderr, "please set CACHE to false.\n");
+		ret = 1;
 	}
 
 	progress->common_count = 0;

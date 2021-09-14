@@ -32,30 +32,6 @@ static int strtov(const char *str, vamp_t *number) // string to vamp_t
 	return 0;
 }
 
-static vamp_t get_min(vamp_t min, vamp_t max)
-{
-	if (length(min) % 2) {
-		length_t min_length = length(min);
-		if (min_length < length(max))
-			min = pow_v(min_length);
-		else
-			min = max;
-	}
-	return min;
-}
-
-static vamp_t get_max(vamp_t min, vamp_t max)
-{
-	if (length(max) % 2) {
-		length_t max_length = length(max);
-		if (max_length > length(min))
-			max = pow_v(max_length - 1) - 1;
-		else
-			max = min;
-	}
-	return max;
-}
-
 static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
 	if (length(lmin) < length(vamp_max)) {
@@ -110,6 +86,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		goto out;
 	}
+
+	min = get_min(min, max);
+	max = get_max(min, max);
+
 	if (cache_ovf_chk(max)) {
 		fprintf(stderr, "WARNING: the code might produce false positives, ");
 		if (ELEMENT_BITS == 32)
@@ -118,9 +98,6 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "please set CACHE to false.\n");
 		goto out;
 	}
-
-	min = get_min(min, max);
-	max = get_max(min, max);
 
 	vamp_t lmin = min;
 	vamp_t lmax = get_lmax(lmin, max);

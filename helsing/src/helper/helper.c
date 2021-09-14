@@ -43,6 +43,30 @@ vamp_t pow_v(length_t exponent) // pow for vamp_t.
 	return power;
 }
 
+vamp_t get_min(vamp_t min, vamp_t max)
+{
+	if (length(min) % 2) {
+		length_t min_length = length(min);
+		if (min_length < length(max))
+			min = pow_v(min_length);
+		else
+			min = max;
+	}
+	return min;
+}
+
+vamp_t get_max(vamp_t min, vamp_t max)
+{
+	if (length(max) % 2) {
+		length_t max_length = length(max);
+		if (max_length > length(min))
+			max = pow_v(max_length - 1) - 1;
+		else
+			max = min;
+	}
+	return max;
+}
+
 vamp_t div_roof (vamp_t x, vamp_t y)
 {
 	return (x/y + !!(x%y));
