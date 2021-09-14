@@ -40,7 +40,15 @@ void array_free(struct array *ptr)
 #ifdef PROCESS_RESULTS
 int cmpvampt(const void *a, const void *b)
 {
-	return ((*(vamp_t *) a) > (*(vamp_t *) b));
+	vamp_t tmp_a = (*(vamp_t *) a);
+	vamp_t tmp_b = (*(vamp_t *) b);
+
+	if(tmp_a > tmp_b)
+		return 1;
+	else if (tmp_a < tmp_b)
+		return -1;
+	else
+		return 0;
 }
 
 void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
