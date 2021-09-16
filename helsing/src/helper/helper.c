@@ -67,7 +67,7 @@ vamp_t get_max(vamp_t min, vamp_t max)
 	return max;
 }
 
-vamp_t div_roof (vamp_t x, vamp_t y)
+vamp_t div_roof(vamp_t x, vamp_t y)
 {
 	return (x/y + !!(x%y));
 }

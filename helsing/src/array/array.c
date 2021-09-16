@@ -43,7 +43,7 @@ int cmpvampt(const void *a, const void *b)
 	vamp_t tmp_a = (*(vamp_t *) a);
 	vamp_t tmp_b = (*(vamp_t *) b);
 
-	if(tmp_a > tmp_b)
+	if (tmp_a > tmp_b)
 		return 1;
 	else if (tmp_a < tmp_b)
 		return -1;

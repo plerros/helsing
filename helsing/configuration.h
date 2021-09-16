@@ -98,7 +98,7 @@
  * Maximum value: 18446744073709551615ULL (2^64 -1)
  *
  * 	Because there is no simple way to predict the amount of vampire numbers
- * for a given range, MAX_TASK_SIZE can be used to limit the memory usage of
+ * for a given interval, MAX_TASK_SIZE can be used to limit the memory usage of
  * quicksort.
  *
  * Quicksort shouldn't use more memory than:

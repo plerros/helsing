@@ -143,12 +143,12 @@ static void err_ftov(FILE *fp, int err, char ch, vamp_t line, vamp_t item)
 			break;
 		case -2:
 			err_baditem(line, item);
-			fprintf(stderr, "Out of range: [0, %llu]\n", vamp_max);
+			fprintf(stderr, "Out of interval: [0, %llu]\n", vamp_max);
 			break;
 	}
 }
 
-int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard *progress)
+int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *complete, struct taskboard *progress)
 {
 	assert(progress != NULL);
 
@@ -208,12 +208,12 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 	progress->common_count = 0;
 	line++;
 
-	vamp_t prev = *current;
+	vamp_t prev = *complete;
 	vamp_t prevcount = 0;
 	for (; !feof(fp); ) {
 		item = 1;
 
-		err = ftov(fp, current, &ch);
+		err = ftov(fp, complete, &ch);
 		if (err == -1 && ch == EOF && feof(fp))
 			goto out;
 		if (err) {
@@ -227,21 +227,21 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 			goto out;
 		}
 
-		if (*current < *min) {
+		if (*complete < *min) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu < %llu (below min)\n", *current, *min);
+			fprintf(stderr, "%llu < %llu (below min)\n", *complete, *min);
 			ret = 1;
 			goto out;
 		}
-		if (*current > *max) {
+		if (*complete > *max) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu > %llu (above max)\n", *current, *max);
+			fprintf(stderr, "%llu > %llu (above max)\n", *complete, *max);
 			ret = 1;
 			goto out;
 		}
-		if (*current <= prev && line != 2) {
+		if (*complete <= prev && line != 2) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu <= %llu (below previous)\n", *current, prev);
+			fprintf(stderr, "%llu <= %llu (below previous)\n", *complete, prev);
 			ret = 1;
 			goto out;
 		}
@@ -270,7 +270,7 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		}
 
 #ifdef PROCESS_RESULTS
-		if (progress->common_count > 0 && progress->common_count -1 > *current - *min) {
+		if (progress->common_count > 0 && progress->common_count -1 > *complete - *min) {
 			err_conflict(line, item);
 			fprintf(stderr, "More vampire numbers than numbers.\n");
 			ret = 1;
@@ -299,7 +299,7 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 #endif /* CHECKSUM_RESULTS */
 
 		line++;
-		prev = *current;
+		prev = *complete;
 		prevcount = progress->common_count;
 	}
 out:
@@ -309,10 +309,10 @@ out:
 	return ret;
 }
 
-void save_checkpoint(vamp_t current, struct taskboard *progress)
+void save_checkpoint(vamp_t complete, struct taskboard *progress)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
-	fprintf(fp, "%llu %llu", current, progress->common_count);
+	fprintf(fp, "%llu %llu", complete, progress->common_count);
 
 #ifdef CHECKSUM_RESULTS
 	fprintf(fp, " ");

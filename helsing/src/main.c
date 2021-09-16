@@ -54,6 +54,7 @@ static bool check_argc (int argc)
 int main(int argc, char *argv[])
 {
 	vamp_t min, max;
+	vamp_t complete = 0;
 	struct taskboard *progress = NULL;
 
 	if (check_argc(argc)) {
@@ -62,7 +63,7 @@ int main(int argc, char *argv[])
 	}
 	if (argc == 3) {
 		if (strtov(argv[1], &min) || strtov(argv[2], &max)) {
-			fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
+			fprintf(stderr, "Input out of interval: [0, %llu]\n", vamp_max);
 			goto out;
 		}
 		if (touch_checkpoint(min, max))
@@ -71,17 +72,13 @@ int main(int argc, char *argv[])
 	taskboard_new(&(progress));
 
 	if (argc == 1) {
-		vamp_t ccurrent = 0;
-		if (load_checkpoint(&min, &max, &ccurrent, progress))
+		if (load_checkpoint(&min, &max, &complete, progress))
 			goto out;
-		if (ccurrent == max) {
-			taskboard_print_results(progress);
-			goto out;
-		}
-		if (ccurrent > min)
-			min = ccurrent + 1;
 	}
 
+	if (complete < min)
+		complete = min - 1;
+	
 	if (min > max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		goto out;
@@ -99,27 +96,22 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	vamp_t lmin = min;
-	vamp_t lmax = get_lmax(lmin, max);
-
 	pthread_t threads[THREADS];
 	struct targs_handle *thhandle = NULL;
 	targs_handle_new(&(thhandle), max, progress);
 
-	for (; lmax <= max;) {
-		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
-		taskboard_set(thhandle->progress, lmin, lmax);
+	for (; complete < max;) {
+		vamp_t lmin = get_min(complete + 1, max);
+		vamp_t lmax = get_lmax(lmin, max);
+		taskboard_set(progress, lmin, lmax);
+		fprintf(stderr, "Checking interval: [%llu, %llu]\n", lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
-		taskboard_reset(thhandle->progress);
-		if (lmax == max)
-			break;
-
-		lmin = get_min(lmax + 1, max);
-		lmax = get_lmax(lmin, max);
+		taskboard_reset(progress);
+		complete = lmax;
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);
