@@ -14,6 +14,7 @@
 #include "taskboard.h"
 #include "targs_handle.h"
 #include "checkpoint.h"
+#include "interval.h"
 
 static int strtov(const char *str, vamp_t *number) // string to vamp_t
 {
@@ -53,10 +54,10 @@ static bool check_argc (int argc)
 
 int main(int argc, char *argv[])
 {
-	vamp_t min, max;
-	vamp_t complete = 0;
+	struct interval_t interval;
 	struct taskboard *progress = NULL;
 
+	vamp_t min, max;
 	if (check_argc(argc)) {
 		printf("Usage: helsing [min] [max]\n");
 		goto out;
@@ -66,43 +67,26 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Input out of interval: [0, %llu]\n", vamp_max);
 			goto out;
 		}
+		if (interval_set(&interval, min, max))
+			goto out;
 		if (touch_checkpoint(min, max))
 			goto out;
 	}
-	taskboard_new(&(progress));
+
+	taskboard_new(&progress, &interval);
 
 	if (argc == 1) {
-		if (load_checkpoint(&min, &max, &complete, progress))
+		if (load_checkpoint(&interval, progress))
 			goto out;
-	}
-
-	if (complete < min)
-		complete = min - 1;
-	
-	if (min > max) {
-		fprintf(stderr, "Invalid arguments, min <= max\n");
-		goto out;
-	}
-
-	min = get_min(min, max);
-	max = get_max(min, max);
-
-	if (cache_ovf_chk(max)) {
-		fprintf(stderr, "WARNING: the code might produce false positives, ");
-		if (ELEMENT_BITS == 32)
-			fprintf(stderr, "please set ELEMENT_BITS to 64.\n");
-		else
-			fprintf(stderr, "please set CACHE to false.\n");
-		goto out;
 	}
 
 	pthread_t threads[THREADS];
 	struct targs_handle *thhandle = NULL;
-	targs_handle_new(&(thhandle), max, progress);
+	targs_handle_new(&(thhandle), interval.max, progress);
 
-	for (; complete < max;) {
-		vamp_t lmin = get_min(complete + 1, max);
-		vamp_t lmax = get_lmax(lmin, max);
+	for (; interval.complete < interval.max;) {
+		vamp_t lmin = get_min(interval.complete + 1,  interval.max);
+		vamp_t lmax = get_lmax(lmin, interval.max);
 		taskboard_set(progress, lmin, lmax);
 		fprintf(stderr, "Checking interval: [%llu, %llu]\n", lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++)
@@ -110,8 +94,6 @@ int main(int argc, char *argv[])
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
-		taskboard_reset(progress);
-		complete = lmax;
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);

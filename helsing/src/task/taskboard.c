@@ -17,8 +17,9 @@
 #include "taskboard.h"
 #include "checkpoint.h"
 #include "hash.h"
+#include "interval.h"
 
-void taskboard_new(struct taskboard **ptr)
+void taskboard_new(struct taskboard **ptr, struct interval_t *interval)
 {
 #ifdef SANITY_CHECK
 	assert(ptr != NULL);
@@ -37,6 +38,7 @@ void taskboard_new(struct taskboard **ptr)
 	new->common_count = 0;
 	new->checksum = NULL;
 	hash_new(&(new->checksum));
+	new->interval = interval;
 	*ptr = new;
 }
 
@@ -72,10 +74,17 @@ static vamp_t get_interval_size(
 
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 {
-	assert(lmin <= lmax);
-	assert(ptr->tasks == NULL);
-
+	assert(ptr->done == ptr->size);
+	for (vamp_t i = 0; i < ptr->size; i++)
+		task_free(ptr->tasks[i]);
+	free(ptr->tasks);
+	ptr->tasks = NULL;
+	ptr->size = 0;
 	ptr->todo = 0;
+	ptr->done = 0;
+	ptr->fmax = 0;
+
+	assert(lmin <= lmax);
 
 	length_t fang_length = length(lmin) / 2;
 	if (fang_length == length(fang_max))
@@ -84,8 +93,6 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 		ptr->fmax = 0;
 	else
 		ptr->fmax = pow_v(fang_length); // Max factor value.
-
-	ptr->done = 0;
 
 	if (ptr->fmax < fang_max) {
 		vamp_t fmaxsquare = ptr->fmax;
@@ -121,19 +128,6 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	ptr->tasks[ptr->size - 1]->lmax = lmax;
 }
 
-void taskboard_reset(struct taskboard *ptr)
-{
-	assert(ptr->done == ptr->size);
-	for (vamp_t i = 0; i < ptr->size; i++)
-		task_free(ptr->tasks[i]);
-	free(ptr->tasks);
-	ptr->tasks = NULL;
-	ptr->size = 0;
-	ptr->todo = 0;
-	ptr->done = 0;
-	ptr->fmax = 0;
-}
-
 struct task *taskboard_get_task(struct taskboard *ptr)
 {
 	struct task *ret = NULL;
@@ -157,6 +151,7 @@ void taskboard_cleanup(struct taskboard *ptr)
 		ptr->common_count += ptr->tasks[ptr->done]->count;
 		taskboard_progress(ptr);
 		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr);
+		interval_set_complete(ptr->interval, ptr->tasks[ptr->done]->lmax);
 
 		task_free(ptr->tasks[ptr->done]);
 		ptr->tasks[ptr->done] = NULL;

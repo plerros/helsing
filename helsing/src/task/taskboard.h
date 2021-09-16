@@ -10,9 +10,11 @@
 #include "configuration_adv.h"
 #include "task.h"
 #include "hash.h"
+#include "interval.h"
 
 struct taskboard
 {
+	struct interval_t *interval;
 	struct task **tasks;
 	vamp_t size; // The size of the tasks array
 	vamp_t todo; // First task that hasn't been accepted.
@@ -22,10 +24,9 @@ struct taskboard
 	struct hash *checksum;
 };
 
-void taskboard_new(struct taskboard **ptr);
+void taskboard_new(struct taskboard **ptr, struct interval_t *interval);
 void taskboard_free(struct taskboard *ptr);
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax);
-void taskboard_reset(struct taskboard *ptr);
 struct task *taskboard_get_task(struct taskboard *ptr);
 void taskboard_cleanup(struct taskboard *ptr);
 void taskboard_print_results(struct taskboard *ptr);
