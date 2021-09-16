@@ -81,7 +81,7 @@ static int ftomd(FILE *fp, struct hash *ptr, int *ch)
 }
 #endif /* CHECKSUM_RESULTS */
 
-int touch_checkpoint(vamp_t min, vamp_t max)
+int touch_checkpoint(struct interval_t interval)
 {
 	FILE *fp;
 	fp = fopen(CHECKPOINT_FILE, "r");
@@ -91,7 +91,7 @@ int touch_checkpoint(vamp_t min, vamp_t max)
 		return 1;
 	}
 	fp = fopen(CHECKPOINT_FILE, "w+");
-	fprintf(fp, "%llu %llu\n", min, max);
+	fprintf(fp, "%llu %llu\n", interval.min, interval.max);
 	fclose(fp);
 	return 0;
 }

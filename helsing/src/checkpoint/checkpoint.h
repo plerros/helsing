@@ -12,13 +12,11 @@
 #include "interval.h"
 
 #if USE_CHECKPOINT
-int touch_checkpoint(vamp_t min, vamp_t max);
+int touch_checkpoint(struct interval_t interval);
 int load_checkpoint(struct interval_t *interval, struct taskboard *progress);
 void save_checkpoint(vamp_t complete, struct taskboard *progress);
 #else /* USE_CHECKPOINT */
-static inline int touch_checkpoint(
-	__attribute__((unused)) vamp_t min,
-	__attribute__((unused)) vamp_t max)
+static inline int touch_checkpoint(__attribute__((unused)) struct interval_t interval)
 {
 	return 0;
 }

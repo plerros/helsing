@@ -69,13 +69,13 @@ int main(int argc, char *argv[])
 		}
 		if (interval_set(&interval, min, max))
 			goto out;
-		if (touch_checkpoint(min, max))
+		if (touch_checkpoint(interval))
 			goto out;
 	}
 
 	taskboard_new(&progress, &interval);
 
-	if (argc == 1) {
+	if (USE_CHECKPOINT) {
 		if (load_checkpoint(&interval, progress))
 			goto out;
 	}

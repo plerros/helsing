@@ -40,6 +40,14 @@ int interval_set(struct interval_t *ptr, vamp_t min, vamp_t max)
 	ptr->complete = 0;
 	if (ptr->complete < ptr->min)
 		ptr->complete = ptr->min - 1;
+
+	/*
+	 * The following handles situations like [BASE^2, BASE^3 -1], where
+	 * there can be no vampire numbers within the interval.
+	 */
+	if (length(ptr->min) % 2 == 1)
+		ptr->complete = ptr->min;
+
 out:
 	return rc;
 }
