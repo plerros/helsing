@@ -54,13 +54,16 @@ out:
 
 int interval_set_complete(struct interval_t *ptr, vamp_t complete)
 {
-	if (complete < ptr->min)
+	if (complete < ptr->min) {
 		if (get_min(complete + 1, ptr->max) < ptr->min)
 			return 1;
-	if (complete > ptr->max)
+	}
+	else if (complete > ptr->max) {
 		return 1;
-	if (complete < ptr->complete)
+	}
+	else if (complete < ptr->complete) {
 		return 1;
+	}
 
 	ptr->complete = complete;
 	return 0;

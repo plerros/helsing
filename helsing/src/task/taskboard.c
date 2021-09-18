@@ -17,9 +17,8 @@
 #include "taskboard.h"
 #include "checkpoint.h"
 #include "hash.h"
-#include "interval.h"
 
-void taskboard_new(struct taskboard **ptr, struct interval_t *interval)
+void taskboard_new(struct taskboard **ptr)
 {
 #ifdef SANITY_CHECK
 	assert(ptr != NULL);
@@ -38,7 +37,6 @@ void taskboard_new(struct taskboard **ptr, struct interval_t *interval)
 	new->common_count = 0;
 	new->checksum = NULL;
 	hash_new(&(new->checksum));
-	new->interval = interval;
 	*ptr = new;
 }
 
@@ -151,7 +149,6 @@ void taskboard_cleanup(struct taskboard *ptr)
 		ptr->common_count += ptr->tasks[ptr->done]->count;
 		taskboard_progress(ptr);
 		save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr);
-		interval_set_complete(ptr->interval, ptr->tasks[ptr->done]->lmax);
 
 		task_free(ptr->tasks[ptr->done]);
 		ptr->tasks[ptr->done] = NULL;

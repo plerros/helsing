@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 			goto out;
 	}
 
-	taskboard_new(&progress, &interval);
+	taskboard_new(&progress);
 
 	if (USE_CHECKPOINT) {
 		if (load_checkpoint(&interval, progress))
@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
+		interval.complete = lmax;
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);
