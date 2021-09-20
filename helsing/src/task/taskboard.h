@@ -25,7 +25,6 @@ struct taskboard
 void taskboard_new(struct taskboard **ptr);
 void taskboard_free(struct taskboard *ptr);
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax);
-void taskboard_reset(struct taskboard *ptr);
 struct task *taskboard_get_task(struct taskboard *ptr);
 void taskboard_cleanup(struct taskboard *ptr);
 void taskboard_print_results(struct taskboard *ptr);

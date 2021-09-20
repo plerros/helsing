@@ -15,6 +15,7 @@
 #include <ctype.h>	// isdigit
 #include "helper.h"
 #include "taskboard.h"
+#include "interval.h"
 #endif
 
 #if USE_CHECKPOINT
@@ -80,7 +81,7 @@ static int ftomd(FILE *fp, struct hash *ptr, int *ch)
 }
 #endif /* CHECKSUM_RESULTS */
 
-int touch_checkpoint(vamp_t min, vamp_t max)
+int touch_checkpoint(struct interval_t interval)
 {
 	FILE *fp;
 	fp = fopen(CHECKPOINT_FILE, "r");
@@ -90,7 +91,7 @@ int touch_checkpoint(vamp_t min, vamp_t max)
 		return 1;
 	}
 	fp = fopen(CHECKPOINT_FILE, "w+");
-	fprintf(fp, "%llu %llu\n", min, max);
+	fprintf(fp, "%llu %llu\n", interval.min, interval.max);
 	fclose(fp);
 	return 0;
 }
@@ -143,12 +144,12 @@ static void err_ftov(FILE *fp, int err, char ch, vamp_t line, vamp_t item)
 			break;
 		case -2:
 			err_baditem(line, item);
-			fprintf(stderr, "Out of range: [0, %llu]\n", vamp_max);
+			fprintf(stderr, "Out of interval: [0, %llu]\n", vamp_max);
 			break;
 	}
 }
 
-int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard *progress)
+int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 {
 	assert(progress != NULL);
 
@@ -160,8 +161,10 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 	int ch = 0;
 	int ret = 0;
 	int err = 0;
+	vamp_t min;
+	vamp_t max;
 
-	err = ftov(fp, min, &ch);
+	err = ftov(fp, &min, &ch);
 	if (err) {
 		err_ftov(fp, err, ch, line , item);
 		ret = 1;
@@ -174,7 +177,7 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 	}
 	item++;
 
-	err = ftov(fp, max, &ch);
+	err = ftov(fp, &max, &ch);
 	if (err) {
 		err_ftov(fp, err, ch, line , item);
 		ret = 1;
@@ -186,34 +189,28 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		goto out;
 	}
 
-	if (*max < *min) {
+	if (max < min) {
 		err_conflict(line, item);
 		fprintf(stderr, "max < min\n");
 		ret = 1;
 		goto out;
 	}
 
-	*min = get_min(*min, *max);
-	*max = get_min(*min, *max);
-
-	if (cache_ovf_chk(*max)) {
-		fprintf(stderr, "WARNING: the code might produce false positives, ");
-		if (ELEMENT_BITS == 32)
-			fprintf(stderr, "please set ELEMENT_BITS to 64.\n");
-		else
-			fprintf(stderr, "please set CACHE to false.\n");
+	if (interval_set(interval, min, max)) {
 		ret = 1;
+		goto out;
 	}
 
 	progress->common_count = 0;
 	line++;
 
-	vamp_t prev = *current;
+	vamp_t complete = 0;
+	vamp_t prev = complete;
 	vamp_t prevcount = 0;
 	for (; !feof(fp); ) {
 		item = 1;
 
-		err = ftov(fp, current, &ch);
+		err = ftov(fp, &complete, &ch);
 		if (err == -1 && ch == EOF && feof(fp))
 			goto out;
 		if (err) {
@@ -226,22 +223,25 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 			ret = 1;
 			goto out;
 		}
-
-		if (*current < *min) {
+		if (complete < interval->min) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu < %llu (below min)\n", *current, *min);
+			fprintf(stderr, "%llu < %llu (below min)\n", complete, interval->min);
 			ret = 1;
 			goto out;
 		}
-		if (*current > *max) {
+		if (complete > interval->max) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu > %llu (above max)\n", *current, *max);
+			fprintf(stderr, "%llu > %llu (above max)\n", complete, interval->max);
 			ret = 1;
 			goto out;
 		}
-		if (*current <= prev && line != 2) {
+		if (complete <= prev && line != 2) {
 			err_conflict(line, item);
-			fprintf(stderr, "%llu <= %llu (below previous)\n", *current, prev);
+			fprintf(stderr, "%llu <= %llu (below previous)\n", complete, prev);
+			ret = 1;
+			goto out;
+		}
+		if (interval_set_complete(interval, complete)) {
 			ret = 1;
 			goto out;
 		}
@@ -270,7 +270,7 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 		}
 
 #ifdef PROCESS_RESULTS
-		if (progress->common_count > 0 && progress->common_count -1 > *current - *min) {
+		if (progress->common_count > 0 && progress->common_count -1 > interval->complete - interval->min) {
 			err_conflict(line, item);
 			fprintf(stderr, "More vampire numbers than numbers.\n");
 			ret = 1;
@@ -299,7 +299,7 @@ int load_checkpoint(vamp_t *min, vamp_t *max, vamp_t *current, struct taskboard 
 #endif /* CHECKSUM_RESULTS */
 
 		line++;
-		prev = *current;
+		prev = interval->complete;
 		prevcount = progress->common_count;
 	}
 out:
@@ -309,10 +309,10 @@ out:
 	return ret;
 }
 
-void save_checkpoint(vamp_t current, struct taskboard *progress)
+void save_checkpoint(vamp_t complete, struct taskboard *progress)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
-	fprintf(fp, "%llu %llu", current, progress->common_count);
+	fprintf(fp, "%llu %llu", complete, progress->common_count);
 
 #ifdef CHECKSUM_RESULTS
 	fprintf(fp, " ");

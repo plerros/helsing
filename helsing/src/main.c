@@ -14,6 +14,7 @@
 #include "taskboard.h"
 #include "targs_handle.h"
 #include "checkpoint.h"
+#include "interval.h"
 
 static int strtov(const char *str, vamp_t *number) // string to vamp_t
 {
@@ -53,73 +54,47 @@ static bool check_argc (int argc)
 
 int main(int argc, char *argv[])
 {
-	vamp_t min, max;
+	struct interval_t interval;
 	struct taskboard *progress = NULL;
 
+	vamp_t min, max;
 	if (check_argc(argc)) {
 		printf("Usage: helsing [min] [max]\n");
 		goto out;
 	}
 	if (argc == 3) {
 		if (strtov(argv[1], &min) || strtov(argv[2], &max)) {
-			fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
+			fprintf(stderr, "Input out of interval: [0, %llu]\n", vamp_max);
 			goto out;
 		}
-		if (touch_checkpoint(min, max))
+		if (interval_set(&interval, min, max))
+			goto out;
+		if (touch_checkpoint(interval))
 			goto out;
 	}
-	taskboard_new(&(progress));
 
-	if (argc == 1) {
-		vamp_t ccurrent = 0;
-		if (load_checkpoint(&min, &max, &ccurrent, progress))
+	taskboard_new(&progress);
+
+	if (USE_CHECKPOINT) {
+		if (load_checkpoint(&interval, progress))
 			goto out;
-		if (ccurrent == max) {
-			taskboard_print_results(progress);
-			goto out;
-		}
-		if (ccurrent > min)
-			min = ccurrent + 1;
 	}
-
-	if (min > max) {
-		fprintf(stderr, "Invalid arguments, min <= max\n");
-		goto out;
-	}
-
-	min = get_min(min, max);
-	max = get_max(min, max);
-
-	if (cache_ovf_chk(max)) {
-		fprintf(stderr, "WARNING: the code might produce false positives, ");
-		if (ELEMENT_BITS == 32)
-			fprintf(stderr, "please set ELEMENT_BITS to 64.\n");
-		else
-			fprintf(stderr, "please set CACHE to false.\n");
-		goto out;
-	}
-
-	vamp_t lmin = min;
-	vamp_t lmax = get_lmax(lmin, max);
 
 	pthread_t threads[THREADS];
 	struct targs_handle *thhandle = NULL;
-	targs_handle_new(&(thhandle), max, progress);
+	targs_handle_new(&(thhandle), interval.max, progress);
 
-	for (; lmax <= max;) {
-		fprintf(stderr, "Checking range: [%llu, %llu]\n", lmin, lmax);
-		taskboard_set(thhandle->progress, lmin, lmax);
+	for (; interval.complete < interval.max;) {
+		vamp_t lmin = get_min(interval.complete + 1,  interval.max);
+		vamp_t lmax = get_lmax(lmin, interval.max);
+		taskboard_set(progress, lmin, lmax);
+		fprintf(stderr, "Checking interval: [%llu, %llu]\n", lmin, lmax);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
 		for (thread_t thread = 0; thread < THREADS; thread++)
 			pthread_join(threads[thread], 0);
 
-		taskboard_reset(thhandle->progress);
-		if (lmax == max)
-			break;
-
-		lmin = get_min(lmax + 1, max);
-		lmax = get_lmax(lmin, max);
+		interval.complete = lmax;
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);
