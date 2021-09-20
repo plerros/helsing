@@ -4,9 +4,12 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <pthread.h>
 #include <ctype.h>	// isdigit
+#include <getopt.h>
+#include <unistd.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -43,13 +46,27 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 	return max;
 }
 
-static bool check_argc (int argc)
+static void argument_lower_bound()
 {
-#if !USE_CHECKPOINT
-	return (argc != 3);
-#else
-	return (argc != 1 && argc != 3);
+	printf("  -l [min]   interval lower bound, requires: -u\n");
+}
+
+static void argument_upper_bound()
+{
+	printf("  -u [max]   interval upper bound, requires: -l\n");
+}
+
+static void help()
+{
+	printf("Usage: helsing [options] [interval options]\n");
+	printf("\nOptions:\n");
+	printf("    --help   show help\n");
+	printf("\nInterval options:\n");
+#if USE_CHECKPOINT
+	printf("  (empty)    recover from checkpoint\n");
 #endif
+	argument_lower_bound();
+	argument_upper_bound();
 }
 
 int main(int argc, char *argv[])
@@ -58,15 +75,83 @@ int main(int argc, char *argv[])
 	struct taskboard *progress = NULL;
 
 	vamp_t min, max;
-	if (check_argc(argc)) {
-		printf("Usage: helsing [min] [max]\n");
-		goto out;
-	}
-	if (argc == 3) {
-		if (strtov(argv[1], &min) || strtov(argv[2], &max)) {
-			fprintf(stderr, "Input out of interval: [0, %llu]\n", vamp_max);
+	int err = 0;
+	static int help_flag = 0;
+	bool min_is_set = false;
+	bool max_is_set = false;
+
+	int c;
+	while (1) {
+		static struct option long_options[] = {
+			{"help", no_argument, &help_flag, 1},
+			{"lower bound", required_argument, NULL, 'l'},
+			{"upper bound", required_argument, NULL, 'u'},
+			{NULL, 0, NULL, 0}
+		};
+		int option_index = 0;
+
+		c = getopt_long(argc, argv, "l:u:", long_options, &option_index);
+
+		// Detect end of the options
+		if (c == -1)
+			break;
+
+		if (help_flag) {
+			help();
 			goto out;
 		}
+
+		switch (c) {
+			case 0:
+				abort();
+
+			case 'l':
+				err = strtov(optarg, &min);
+				if (err)
+					fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
+				else
+					min_is_set = true;
+				break;
+			case 'u':
+				err = strtov(optarg, &max);
+				if (err)
+					fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
+				else
+					max_is_set = true;
+				break;
+			case '?':
+				err = 1;
+				break;
+
+			default:
+				abort();
+		}
+		if (err)
+			goto out;
+	}
+	if (optind < argc) {
+		printf ("non-option ARGV-elements: ");
+		while (optind < argc)
+			printf ("%s ", argv[optind++]);
+
+		putchar ('\n');
+		goto out;
+	}
+
+	if (min_is_set ^ max_is_set) {
+		printf("Missing argument:\n");
+		if (max_is_set)
+			argument_lower_bound();
+		else
+			argument_upper_bound();
+		goto out;
+	}
+	if (!min_is_set && !max_is_set && !USE_CHECKPOINT) {
+		help();
+		goto out;
+	}
+
+	if (min_is_set && max_is_set) {
 		if (interval_set(&interval, min, max))
 			goto out;
 		if (touch_checkpoint(interval))

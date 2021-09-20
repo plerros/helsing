@@ -13,7 +13,7 @@
 int interval_set(struct interval_t *ptr, vamp_t min, vamp_t max)
 {
 	int rc = 0;
-	if(min > max) {
+	if (min > max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		rc = 1;
 		goto out;

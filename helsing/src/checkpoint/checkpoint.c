@@ -154,7 +154,10 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 	assert(progress != NULL);
 
 	FILE *fp = fopen(CHECKPOINT_FILE, "r");
-	assert(fp != NULL);
+	if (fp == NULL) {
+		fprintf(stderr, "%s doesn't exist\n", CHECKPOINT_FILE);
+		return 1;
+	}
 
 	vamp_t line = 1;
 	vamp_t item = 1;
@@ -312,6 +315,8 @@ out:
 void save_checkpoint(vamp_t complete, struct taskboard *progress)
 {
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
+	assert(fp != NULL);
+
 	fprintf(fp, "%llu %llu", complete, progress->common_count);
 
 #ifdef CHECKSUM_RESULTS
