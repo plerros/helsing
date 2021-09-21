@@ -40,7 +40,7 @@ static int ftov(FILE *fp, vamp_t *ptr, int *ch) // file to vamp_t
 			break;
 
 		digit_t digit = *ch - '0';
-		if (willoverflow(number, digit))
+		if (willoverflow(number, vamp_max, digit))
 			return -2;
 		number = 10 * number + digit;
 		is_empty = 0;

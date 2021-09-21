@@ -14,12 +14,12 @@
  * willoverflow:
  * Checks if (10 * x + digit) will overflow, without causing and overflow.
  */
-bool willoverflow(vamp_t x, digit_t digit)
+bool willoverflow(vamp_t x, vamp_t limit, digit_t digit)
 {
 	assert(digit < 10);
-	if (x > vamp_max / 10)
+	if (x > limit / 10)
 		return true;
-	if (x == vamp_max / 10 && digit > vamp_max % 10)
+	if (x == limit / 10 && digit > limit % 10)
 		return true;
 	return false;
 }

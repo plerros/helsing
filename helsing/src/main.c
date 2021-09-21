@@ -19,21 +19,41 @@
 #include "checkpoint.h"
 #include "interval.h"
 
-static int strtov(const char *str, vamp_t *number) // string to vamp_t
+static length_t get_max_length()
+{
+	length_t ret = 0;
+	for (vamp_t i = vamp_max; i >= BASE - 1; i /= BASE)
+		ret ++;
+	return ret;
+}
+
+static int strtov(const char *str, vamp_t min, vamp_t max, vamp_t *number) // string to vamp_t
 {
 	assert(str != NULL);
 	assert(number != NULL);
-	vamp_t ret = 0;
+	int err = 0;
+	vamp_t tmp = 0;
 	for (length_t i = 0; isgraph(str[i]); i++) {
-		if (!isdigit(str[i]))
-			return 1;
+		if (!isdigit(str[i])) {
+			err = 1;
+			goto out;
+		}
 		digit_t digit = str[i] - '0';
-		if (willoverflow(ret, digit))
-			return 1;
-		ret = 10 * ret + digit;
+		if (willoverflow(tmp, max, digit)) {
+			err = 1;
+			goto out;
+		}
+		tmp = 10 * tmp + digit;
 	}
-	*number = ret;
-	return 0;
+	if (tmp < min) {
+		err = 1;
+		goto out;
+	}
+	*number = tmp;
+out:
+	if (err)
+		fprintf(stderr, "Input out of range: [%llu, %llu]\n", min, max);
+	return err;
 }
 
 static vamp_t get_lmax(vamp_t lmin, vamp_t max)
@@ -46,27 +66,32 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 	return max;
 }
 
-static void argument_lower_bound()
+static void arg_lower_bound()
 {
-	printf("  -l [min]   interval lower bound, requires: -u\n");
+	printf("  -l [min]        set interval lower bound\n");
 }
 
-static void argument_upper_bound()
+static void arg_upper_bound()
 {
-	printf("  -u [max]   interval upper bound, requires: -l\n");
+	printf("  -u [max]        set interval upper bound\n");
 }
 
+static void arg_number_of_digits()
+{
+	printf("  -n [n digits]   set interval to [%u^(n - 1), %u^n - 1]\n", BASE, BASE);
+}
 static void help()
 {
 	printf("Usage: helsing [options] [interval options]\n");
 	printf("\nOptions:\n");
-	printf("    --help   show help\n");
+	printf("    --help        show help\n");
 	printf("\nInterval options:\n");
 #if USE_CHECKPOINT
-	printf("  (empty)    recover from checkpoint\n");
+	printf("  (empty)         recover from checkpoint\n");
 #endif
-	argument_lower_bound();
-	argument_upper_bound();
+	arg_lower_bound();
+	arg_upper_bound();
+	arg_number_of_digits();
 }
 
 int main(int argc, char *argv[])
@@ -85,12 +110,13 @@ int main(int argc, char *argv[])
 		static struct option long_options[] = {
 			{"help", no_argument, &help_flag, 1},
 			{"lower bound", required_argument, NULL, 'l'},
+			{"n digits", required_argument, NULL, 'n'},
 			{"upper bound", required_argument, NULL, 'u'},
 			{NULL, 0, NULL, 0}
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "l:u:", long_options, &option_index);
+		c = getopt_long(argc, argv, "l:n:u:", long_options, &option_index);
 
 		// Detect end of the options
 		if (c == -1)
@@ -106,18 +132,37 @@ int main(int argc, char *argv[])
 				abort();
 
 			case 'l':
-				err = strtov(optarg, &min);
-				if (err)
-					fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
-				else
+				if (min_is_set) {
+					help();
+					err = 1;
+				} else {
+					err = strtov(optarg, 0, vamp_max, &min);					
 					min_is_set = true;
+				}
+				break;
+			case 'n':
+				if (min_is_set || max_is_set) {
+					help();
+					err = 1;
+				} else {
+					vamp_t tmp;
+					err = strtov(optarg, 1, get_max_length(), &tmp);
+					if (err)
+						break;
+					min = pow_v(tmp - 1);
+					max = (min - 1) * BASE + (BASE - 1); // avoid overflow
+					min_is_set = true;
+					max_is_set = true;
+				}
 				break;
 			case 'u':
-				err = strtov(optarg, &max);
-				if (err)
-					fprintf(stderr, "Input out of range: [0, %llu]\n", vamp_max);
-				else
+				if (max_is_set) {
+					help();
+					err = 1;
+				} else {
+					err = strtov(optarg, 0, vamp_max, &max);
 					max_is_set = true;
+				}
 				break;
 			case '?':
 				err = 1;
@@ -141,9 +186,9 @@ int main(int argc, char *argv[])
 	if (min_is_set ^ max_is_set) {
 		printf("Missing argument:\n");
 		if (max_is_set)
-			argument_lower_bound();
+			arg_lower_bound();
 		else
-			argument_upper_bound();
+			arg_upper_bound();
 		goto out;
 	}
 	if (!min_is_set && !max_is_set && !USE_CHECKPOINT) {

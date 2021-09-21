@@ -88,14 +88,11 @@ void cache_free(struct cache *ptr)
 bool cache_ovf_chk(vamp_t max)
 {
 #if (BASE != 2) // avoid division by 0
-	if (log(max) / log(BASE - 1) <= digbase())
-		return false;
-#else
-	if (log2(max) <= ELEMENT_BITS)
-		return false;
+	if (log(max) / log(BASE - 1) > digbase())
+		return true;
 #endif
 
-	return true;
+	return false;
 }
 
 #endif /* CACHE */

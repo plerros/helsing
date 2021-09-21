@@ -24,6 +24,7 @@ typedef unsigned long fang_t; // fang type
 typedef uint16_t thread_t;
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
+#define length_t_max UINT8_MAX
 
 #if ELEMENT_BITS == 32
 	typedef uint32_t digits_t;

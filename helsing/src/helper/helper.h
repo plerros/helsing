@@ -10,7 +10,7 @@
 
 #include "configuration_adv.h"
 
-bool willoverflow(vamp_t x, digit_t digit);
+bool willoverflow(vamp_t x, vamp_t limit, digit_t digit);
 length_t length(vamp_t x);
 vamp_t pow_v(length_t exponent);
 vamp_t get_min(vamp_t min, vamp_t max);
