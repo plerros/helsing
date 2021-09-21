@@ -18,7 +18,7 @@
 #include "checkpoint.h"
 #include "hash.h"
 
-void taskboard_new(struct taskboard **ptr)
+void taskboard_new(struct taskboard **ptr, struct options_t options)
 {
 #ifdef SANITY_CHECK
 	assert(ptr != NULL);
@@ -29,6 +29,7 @@ void taskboard_new(struct taskboard **ptr)
 	if (new == NULL)
 		abort();
 
+	new->options = options;
 	new->tasks = NULL;
 	new->size = 0;
 	new->todo = 0;
@@ -55,13 +56,14 @@ void taskboard_free(struct taskboard *ptr)
 }
 
 static vamp_t get_interval_size(
+	struct options_t options,
 	__attribute__((unused)) vamp_t lmin,
 	__attribute__((unused)) vamp_t lmax)
 {
 	vamp_t interval_size = vamp_max;
 
 #if AUTO_TASK_SIZE
-	interval_size = (lmax - lmin) / (4 * THREADS + 2);
+	interval_size = (lmax - lmin) / (4 * options.threads + 2);
 #endif
 
 	if (interval_size > MAX_TASK_SIZE)
@@ -99,7 +101,7 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 			lmax = fmaxsquare; // Max can be bigger than fmax^2: BASE^(2n) - 1 > (BASE^n - 1) ^ 2.
 	}
 
-	vamp_t interval_size = get_interval_size(lmin, lmax);
+	vamp_t interval_size = get_interval_size(ptr->options, lmin, lmax);
 
 	ptr->size = div_roof((lmax - lmin + 1), interval_size + (interval_size < vamp_max));
 	ptr->tasks = malloc(sizeof(struct task *) * ptr->size);

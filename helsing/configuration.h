@@ -10,8 +10,6 @@
 
 // Check memory with valgrind --tool=massif
 
-#define THREADS 1
-
 /*
  * VERBOSE_LEVEL:
  * 0 - Count fang pairs
@@ -102,7 +100,7 @@
  * quicksort.
  *
  * Quicksort shouldn't use more memory than:
- * THREADS * (sizeof(array) + MAX_TASK_SIZE * sizeof(vamp_t) * max(n_fang_pairs))
+ * threads * (sizeof(array) + MAX_TASK_SIZE * sizeof(vamp_t) * max(n_fang_pairs))
  * See https://oeis.org/A094208 for max(n_fang_pairs).
  */
 

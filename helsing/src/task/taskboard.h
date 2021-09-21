@@ -9,10 +9,12 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "task.h"
+#include "options.h"
 #include "hash.h"
 
 struct taskboard
 {
+	struct options_t options;
 	struct task **tasks;
 	vamp_t size; // The size of the tasks array
 	vamp_t todo; // First task that hasn't been accepted.
@@ -22,7 +24,7 @@ struct taskboard
 	struct hash *checksum;
 };
 
-void taskboard_new(struct taskboard **ptr);
+void taskboard_new(struct taskboard **ptr, struct options_t options);
 void taskboard_free(struct taskboard *ptr);
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax);
 struct task *taskboard_get_task(struct taskboard *ptr);
