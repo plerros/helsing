@@ -167,13 +167,11 @@ void taskboard_print_results(struct taskboard *ptr)
 	hash_print(ptr->checksum);
 }
 
-#if DISPLAY_PROGRESS
-
 // taskboard_progress requires mutex lock
 void taskboard_progress(struct taskboard *ptr)
 {
-	fprintf(stderr, "%llu, %llu", ptr->tasks[ptr->done]->lmin, ptr->tasks[ptr->done]->lmax);
-	fprintf(stderr, "  %llu/%llu\n", ptr->done + 1, ptr->size);
+	if (ptr->options.display_progress) {
+		fprintf(stderr, "%llu, %llu", ptr->tasks[ptr->done]->lmin, ptr->tasks[ptr->done]->lmax);
+		fprintf(stderr, "  %llu/%llu\n", ptr->done + 1, ptr->size);
+	}
 }
-
-#endif /* DISPLAY_PROGRESS */

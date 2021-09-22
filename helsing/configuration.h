@@ -24,7 +24,6 @@
 
 #define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL > 1
 
-#define DISPLAY_PROGRESS false
 #define MEASURE_RUNTIME false
 
 /*

@@ -46,6 +46,7 @@ static void help()
 	printf("Usage: helsing [options] [interval options]\n");
 	printf("\nOptions:\n");
 	printf("    --help         show help\n");
+	printf("    --progress     display progress\n");
 	arg_manual_task_size();
 	arg_threads();
 	printf("\nInterval options:\n");
@@ -98,6 +99,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 {
 	ptr->threads = 1;
 	ptr->manual_task_size = 0;
+	ptr->display_progress = false;
 
 #ifdef _SC_NPROCESSORS_ONLN
 	ptr->threads = sysconf(_SC_NPROCESSORS_ONLN);
@@ -105,6 +107,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 
 	int rc = 0;
 	static int help_flag = 0;
+	static int display_progress = 0;
 	bool min_is_set = false;
 	bool max_is_set = false;
 
@@ -112,6 +115,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 	while (1) {
 		static struct option long_options[] = {
 			{"help", no_argument, &help_flag, 1},
+			{"progress", no_argument, &display_progress, 1},
 			{"lower bound", required_argument, NULL, 'l'},
 			{"n digits", required_argument, NULL, 'n'},
 			{"manual task size", required_argument, NULL, 's'},
@@ -227,6 +231,8 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 		rc = 1;
 		goto out;
 	}
+	if (display_progress)
+		ptr->display_progress = true;
 out:
 	return rc;
 }
