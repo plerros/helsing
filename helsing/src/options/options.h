@@ -13,6 +13,7 @@ struct options_t
 	vamp_t min;
 	vamp_t max;
 	thread_t threads;
+	vamp_t manual_task_size;
 };
 
 int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vamp_t *max);

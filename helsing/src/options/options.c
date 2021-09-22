@@ -18,26 +18,39 @@
 
 static void arg_lower_bound()
 {
-	printf("  -l [min]        set interval lower bound\n");
-}
-
-static void arg_upper_bound()
-{
-	printf("  -u [max]        set interval upper bound\n");
+	printf("  -l [min]         set interval lower bound\n");
 }
 
 static void arg_number_of_digits()
 {
-	printf("  -n [n digits]   set interval to [%u^(n - 1), %u^n - 1]\n", BASE, BASE);
+	printf("  -n [n digits]    set interval to [%u^(n - 1), %u^n - 1]\n", BASE, BASE);
 }
+
+static void arg_manual_task_size()
+{
+	printf("  -s [task size]   set task size\n");
+}
+
+static void arg_threads()
+{
+	printf("  -t [threads]     set # of threads\n");
+}
+
+static void arg_upper_bound()
+{
+	printf("  -u [max]         set interval upper bound\n");
+}
+
 static void help()
 {
 	printf("Usage: helsing [options] [interval options]\n");
 	printf("\nOptions:\n");
-	printf("    --help        show help\n");
+	printf("    --help         show help\n");
+	arg_manual_task_size();
+	arg_threads();
 	printf("\nInterval options:\n");
 #if USE_CHECKPOINT
-	printf("  (empty)         recover from checkpoint\n");
+	printf("  (empty)          recover from checkpoint\n");
 #endif
 	arg_lower_bound();
 	arg_upper_bound();
@@ -84,6 +97,7 @@ static length_t get_max_length()
 int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vamp_t *max)
 {
 	ptr->threads = 1;
+	ptr->manual_task_size = 0;
 
 #ifdef _SC_NPROCESSORS_ONLN
 	ptr->threads = sysconf(_SC_NPROCESSORS_ONLN);
@@ -100,13 +114,14 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 			{"help", no_argument, &help_flag, 1},
 			{"lower bound", required_argument, NULL, 'l'},
 			{"n digits", required_argument, NULL, 'n'},
+			{"manual task size", required_argument, NULL, 's'},
 			{"threads", required_argument, NULL, 't'},
 			{"upper bound", required_argument, NULL, 'u'},
 			{NULL, 0, NULL, 0}
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "l:n:t:u:", long_options, &option_index);
+		c = getopt_long(argc, argv, "l:n:s:t:u:", long_options, &option_index);
 
 		// Detect end of the options
 		if (c == -1)
@@ -120,7 +135,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 
 		switch (c) {
 			case 0:
-				abort();
+				break;
 
 			case 'l':
 				if (min_is_set) {
@@ -146,10 +161,22 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					max_is_set = true;
 				}
 				break;
+			case 's':
+				if (ptr->manual_task_size != 0) {
+					help();
+					rc = 1;
+				} else {
+					vamp_t tmp;
+					rc = strtov(optarg, 1, vamp_max, &tmp);
+					if (rc)
+						break;
+					ptr->manual_task_size = tmp;
+				}
+				break;
 			case 't':
 				{
 					vamp_t tmp;
-					rc = strtov(optarg, 1, UINT16_MAX, &tmp);
+					rc = strtov(optarg, 1, thread_max, &tmp);
 					if (rc)
 						break;
 					ptr->threads = tmp;

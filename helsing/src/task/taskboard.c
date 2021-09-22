@@ -55,19 +55,18 @@ void taskboard_free(struct taskboard *ptr)
 	free(ptr);
 }
 
-static vamp_t get_interval_size(
-	struct options_t options,
-	__attribute__((unused)) vamp_t lmin,
-	__attribute__((unused)) vamp_t lmax)
+static vamp_t get_interval_size(struct options_t options, vamp_t lmin, vamp_t lmax)
 {
 	vamp_t interval_size = vamp_max;
 
-#if AUTO_TASK_SIZE
-	interval_size = (lmax - lmin) / (4 * options.threads + 2);
-#endif
+	if (options.manual_task_size != 0) {
+		interval_size = options.manual_task_size;
+	} else {
+		interval_size = (lmax - lmin) / (4 * options.threads + 2);
 
-	if (interval_size > MAX_TASK_SIZE)
-		interval_size = MAX_TASK_SIZE;
+		if (interval_size > MAX_TASK_SIZE)
+			interval_size = MAX_TASK_SIZE;
+	}
 
 	return interval_size;
 }

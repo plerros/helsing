@@ -22,6 +22,7 @@ typedef unsigned long fang_t; // fang type
 #define fang_max ULONG_MAX
 
 typedef uint16_t thread_t;
+#define thread_max UINT16_MAX
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
 #define length_t_max UINT8_MAX
