@@ -10,8 +10,6 @@
 
 // Check memory with valgrind --tool=massif
 
-#define THREADS 1
-
 /*
  * VERBOSE_LEVEL:
  * 0 - Count fang pairs
@@ -26,7 +24,6 @@
 
 #define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL > 1
 
-#define DISPLAY_PROGRESS false
 #define MEASURE_RUNTIME false
 
 /*
@@ -83,7 +80,7 @@
 /*
  * BASE:
  *
- * 	BASE defines the base of the numerical system to be used by the vampire
+ * 	BASE defines the base of the numeral system to be used by the vampire
  * checking algorithm.
  *
  * For bases above 255 adjust digit_t accordingly.
@@ -102,11 +99,10 @@
  * quicksort.
  *
  * Quicksort shouldn't use more memory than:
- * THREADS * (sizeof(array) + MAX_TASK_SIZE * sizeof(vamp_t) * max(n_fang_pairs))
+ * threads * (sizeof(array) + MAX_TASK_SIZE * sizeof(vamp_t) * max(n_fang_pairs))
  * See https://oeis.org/A094208 for max(n_fang_pairs).
  */
 
-#define AUTO_TASK_SIZE true
 #define MAX_TASK_SIZE 99999999999ULL
 
 /*

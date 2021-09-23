@@ -91,7 +91,7 @@ bool cache_ovf_chk(vamp_t max)
 	if (log(max) / log(BASE - 1) <= digbase())
 		return false;
 #else
-	if (log2(max) <= ELEMENT_BITS)
+	if (log2(max) <= ELEMENT_BITS) // Always true, unless ELEMENT_BITS is 32
 		return false;
 #endif
 

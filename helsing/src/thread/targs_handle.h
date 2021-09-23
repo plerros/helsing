@@ -16,14 +16,15 @@
 
 struct targs_handle
 {
-	struct targs *targs[THREADS];
+	struct options_t options;
+	struct targs **targs;
 	struct taskboard *progress;
 	struct cache *digptr;
 	pthread_mutex_t *read;
 	pthread_mutex_t *write;
 };
 
-void targs_handle_new(struct targs_handle **ptr, vamp_t max, struct taskboard *progress);
+void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t max, struct taskboard *progress);
 void targs_handle_free(struct targs_handle *ptr);
 void targs_handle_print(struct targs_handle *ptr);
 #endif /* HELSING_TARGS_HANDLE_H */
