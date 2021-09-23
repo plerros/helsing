@@ -1,11 +1,10 @@
 # Helsing
-A POSIX vampire number generator.
-The focus of this project is performance, code readability and portability.
+A mostly POSIX-compliant utility that scans a given interval for vampire numbers.
 
-In *helsing/configuration.h* you can easily set the number of threads, select the algorithm implementation and tune it, adjust verbosity and enable resume from checkpoint.
-Be sure to read the documentation!
+In *helsing/configuration.h* you can select the algorithm implementation and tune it, adjust verbosity, change the numeral base system, set a minimum fang pairs filter, and enable resume from checkpoint.
+Be sure to read the documentation.
 
-Windows isn't posix compatible. You'll need to set up a virtual machine or (if you are on Windows10) install WSL and a linux distribution from the Windows Store.
+Windows isn't posix compatible. You'll need to install WSL and a linux distribution from the Windows Store.
 
 ## Dependencies
  - a C compiler (clang or gcc should do just fine)
@@ -20,27 +19,57 @@ Windows isn't posix compatible. You'll need to set up a virtual machine or (if y
    Fedora/RHEL | openssl-devel
    FreeBSD | openssl-devel
 
-## How to compile for GNU/Linux & Homebrew
+## Download
+```
+git clone https://github.com/plerros/helsing.git
+cd helsing
+```
+## Compile
+#### GNU/Linux, Homebrew, WSL
 ```
 cd helsing
 make
 ```
-## How to compile for FreeBSD
+#### FreeBSD
 ```
 cd helsing
 gmake
 ```
+#### OpenIndiana
+Currently the linker doesn't support gc-sections, you'll have to remove it from the Makefile.
+After that, you can follow the compilation steps for FreeBSD.
+#### HaikuOS
+In the Makefile, replace -pthread with -lpthread.
+After that, you can follow the compilation steps for Linux.
 ## Run
 ```
-./helsing min max
+./helsing -l min -u max
 ```
 Examples:
 ```
-./helsing 1260 1260
-./helsing 1 1172560176
-./helsing 18446744073709551615 18446744073709551615
+./helsing -l 1260 -u 1260
+./helsing -l 0 -u 1172560176
+./helsing -l 18446744073709551615 -u 18446744073709551615
 ```
-## Recover from checkpoint (if enabled in configuration)
+#### Run for all n-digit numbers
+```
+./helsing -n number_of_digits
+```
+examples:
+```
+./helsing -n 2
+./helsing -n 4
+./helsing -n 18
+```
+#### Set the number of threads
+```
+./helsing -t threads
+```
+#### Display progress
+```
+./helsing --progress
+```
+#### Recover from checkpoint (if enabled in configuration)
 ```
 ./helsing
 ```

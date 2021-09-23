@@ -80,7 +80,7 @@
 /*
  * BASE:
  *
- * 	BASE defines the base of the numerical system to be used by the vampire
+ * 	BASE defines the base of the numeral system to be used by the vampire
  * checking algorithm.
  *
  * For bases above 255 adjust digit_t accordingly.
@@ -103,7 +103,6 @@
  * See https://oeis.org/A094208 for max(n_fang_pairs).
  */
 
-#define AUTO_TASK_SIZE true
 #define MAX_TASK_SIZE 99999999999ULL
 
 /*
