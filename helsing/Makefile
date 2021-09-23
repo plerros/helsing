@@ -10,6 +10,8 @@ SRC_DIRS ?= .
 
 CC := $(shell if [ -z $(CC) ]; then echo $(CC); else echo "gcc"; fi)
 CFLAGS := -O2 -Wall -Wextra # compiler flags
+# If the code is underperforming, try compiling with some of these flags:
+# -falign-functions=32 -falign-loops=32 -march=native -mtune=native
 LFLAGS := -Wl,--gc-sections # linker flags
 LIBS := -pthread -lm $(shell if $(CC) -dM -E -I$(SRC_DIRS)/configuration.h $(SRC_DIRS)/configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
 
