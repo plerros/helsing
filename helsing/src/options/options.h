@@ -17,6 +17,7 @@ struct options_t
 	thread_t threads;
 	vamp_t manual_task_size;
 	bool display_progress;
+	bool load_checkpoint;
 };
 
 int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vamp_t *max);

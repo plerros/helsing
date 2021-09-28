@@ -15,6 +15,7 @@
 #include <ctype.h>	// isdigit
 #include "helper.h"
 #include "taskboard.h"
+#include "options.h"
 #include "interval.h"
 #endif
 
@@ -81,8 +82,11 @@ static int ftomd(FILE *fp, struct hash *ptr, int *ch)
 }
 #endif /* CHECKSUM_RESULTS */
 
-int touch_checkpoint(struct interval_t interval)
+int touch_checkpoint(struct options_t options, struct interval_t interval)
 {
+	if (options.load_checkpoint)
+		return 0;
+
 	FILE *fp;
 	fp = fopen(CHECKPOINT_FILE, "r");
 	if (fp != NULL) {

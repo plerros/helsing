@@ -29,7 +29,7 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 
 int main(int argc, char *argv[])
 {
-	vamp_t min, max;
+	vamp_t min = 0, max = 0;
 	struct options_t options;
 	struct interval_t interval;
 	struct taskboard *progress = NULL;
@@ -38,15 +38,13 @@ int main(int argc, char *argv[])
 		goto out;
 	if (interval_set(&interval, min, max))
 		goto out;
-	if (touch_checkpoint(interval))
+	if (touch_checkpoint(options, interval))
 		goto out;
 
 	taskboard_new(&progress, options);
 
-	if (USE_CHECKPOINT) {
-		if (load_checkpoint(&interval, progress))
-			goto out;
-	}
+	if (load_checkpoint(&interval, progress))
+		goto out;
 
 	pthread_t *threads = malloc(sizeof(pthread_t) * options.threads);
 	struct targs_handle *thhandle = NULL;

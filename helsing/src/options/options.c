@@ -100,6 +100,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 	ptr->threads = 1;
 	ptr->manual_task_size = 0;
 	ptr->display_progress = false;
+	ptr->load_checkpoint = false;
 
 #ifdef _SC_NPROCESSORS_ONLN
 	ptr->threads = sysconf(_SC_NPROCESSORS_ONLN);
@@ -226,10 +227,14 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 		rc = 1;
 		goto out;
 	}
-	if (!min_is_set && !max_is_set && !USE_CHECKPOINT) {
-		help();
-		rc = 1;
-		goto out;
+	if (!min_is_set && !max_is_set) {
+		if (USE_CHECKPOINT) {
+			ptr->load_checkpoint = true;
+		} else {
+			help();
+			rc = 1;
+			goto out;
+		}
 	}
 	if (display_progress)
 		ptr->display_progress = true;

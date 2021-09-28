@@ -9,14 +9,17 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "taskboard.h"
+#include "options.h"
 #include "interval.h"
 
 #if USE_CHECKPOINT
-int touch_checkpoint(struct interval_t interval);
+int touch_checkpoint(struct options_t options, struct interval_t interval);
 int load_checkpoint(struct interval_t *interval, struct taskboard *progress);
 void save_checkpoint(vamp_t complete, struct taskboard *progress);
 #else /* USE_CHECKPOINT */
-static inline int touch_checkpoint(__attribute__((unused)) struct interval_t interval)
+static inline int touch_checkpoint(
+	__attribute__((unused)) struct options_t options,
+	__attribute__((unused)) struct interval_t interval)
 {
 	return 0;
 }
