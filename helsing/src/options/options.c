@@ -16,6 +16,27 @@
 #include "options.h"
 #include "helper.h"
 
+static void buildconf()
+{
+	printf("  configuration:\n");
+	printf("    VERBOSE_LEVEL=%d\n", VERBOSE_LEVEL);
+	if (VERBOSE_LEVEL == 3) 
+		printf("    DIGEST_NAME=%s\n", DIGEST_NAME);
+	if (VERBOSE_LEVEL > 1) 
+		printf("    MIN_FANG_PAIRS=%d\n", MIN_FANG_PAIRS);
+	printf("    MEASURE_RUNTIME=%s\n", (MEASURE_RUNTIME ? "true" : "false"));
+	printf("    CACHE=%s\n", (CACHE ? "true" : "false"));
+	if (CACHE)
+		printf("    ELEMENT_BITS=%d\n", ELEMENT_BITS);
+	printf("    BASE=%d\n", BASE);
+	printf("    MAX_TASK_SIZE=%llu\n", MAX_TASK_SIZE);
+	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
+	if (USE_CHECKPOINT)
+		printf("    CHECKPOINT_FILE=%s\n", CHECKPOINT_FILE);
+	printf("    LINK_SIZE=%d\n", LINK_SIZE);
+	printf("    SANITY_CHECK=%s\n", (SANITY_CHECK ? "true" : "false"));
+}
+
 static void arg_lower_bound()
 {
 	printf("  -l [min]         set interval lower bound\n");
@@ -44,7 +65,9 @@ static void arg_upper_bound()
 static void help()
 {
 	printf("Usage: helsing [options] [interval options]\n");
+	printf("Scan a given interval for vampire numbers.\n");
 	printf("\nOptions:\n");
+	printf("    --buildconf    show build configuration\n");
 	printf("    --help         show help\n");
 	printf("    --progress     display progress\n");
 	arg_manual_task_size();
@@ -107,6 +130,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 #endif
 
 	int rc = 0;
+	static int buildconf_flag = 0;
 	static int help_flag = 0;
 	static int display_progress = 0;
 	bool min_is_set = false;
@@ -115,6 +139,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 	int c;
 	while (1) {
 		static struct option long_options[] = {
+			{"buildconf", no_argument, &buildconf_flag, 1},
 			{"help", no_argument, &help_flag, 1},
 			{"progress", no_argument, &display_progress, 1},
 			{"lower bound", required_argument, NULL, 'l'},
@@ -132,6 +157,11 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 		if (c == -1)
 			break;
 
+		if (buildconf_flag) {
+			buildconf();
+			rc = 1;
+			goto out;
+		}
 		if (help_flag) {
 			help();
 			rc = 1;
@@ -206,7 +236,6 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 		if (rc)
 			goto out;
 	}
-
 
 	if (optind < argc) {
 		printf ("non-option ARGV-elements: ");
