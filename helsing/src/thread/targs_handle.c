@@ -64,6 +64,7 @@ void targs_handle_free(struct targs_handle *ptr)
 	for (thread_t thread = 0; thread < ptr->options.threads; thread++)
 		targs_free(ptr->targs[thread]);
 
+	free(ptr->targs);
 	free(ptr);
 }
 
