@@ -20,67 +20,6 @@
 #endif
 
 #if USE_CHECKPOINT
-/*
- * ftov return values:
- *
- * -1: Empty
- * -2: Overflow
- */
-
-static int ftov(FILE *fp, vamp_t *ptr, int *ch) // file to vamp_t
-{
-	assert(fp != NULL);
-	assert(ptr != NULL);
-
-	vamp_t number = 0;
-	int ret = 0;
-	bool is_empty = 1;
-	while (1) {
-		*ch = fgetc(fp);
-		if (!isdigit(*ch))
-			break;
-
-		digit_t digit = *ch - '0';
-		if (willoverflow(number, vamp_max, digit))
-			return -2;
-		number = 10 * number + digit;
-		is_empty = 0;
-	}
-	if (is_empty)
-		ret = -1;
-	else
-		*ptr = number;
-
-	return ret;
-}
-
-#ifdef CHECKSUM_RESULTS
-
-/*
- * ftomd return values:
- *
- * -1: Non hex character
- */
-
-static int ftomd(FILE *fp, struct hash *ptr, int *ch)
-{
-	assert(fp != NULL);
-	assert(ptr->md_value != NULL);
-
-	for (int i = 0; i < ptr->md_size; i++) {
-		char hex[3] = {0, 0, '\0'};
-		for (int j = 0; j < 2; j++) {
-			*ch = fgetc(fp);
-			if (!isxdigit(*ch))
-				return -1;
-			hex[j] = *ch;
-		}
-		ptr->md_value[i] = strtoul(hex, NULL, 16);
-	}
-	*ch = fgetc(fp);
-	return 0;
-}
-#endif /* CHECKSUM_RESULTS */
 
 int touch_checkpoint(struct options_t options, struct interval_t interval)
 {
@@ -110,7 +49,7 @@ static void err_conflict(vamp_t line, vamp_t item)
 	fprintf(stderr, "\n[ERROR] %s line %llu item #%llu has conflicting data:\n", CHECKPOINT_FILE, line, item);
 }
 
-static void err_unexpected_char(FILE *fp, char ch, int line, int item)
+static void err_unexpected_char(int ch, vamp_t line, vamp_t item)
 {
 	err_baditem(line, item);
 	fprintf(stderr, "Unexpected ");
@@ -124,12 +63,6 @@ static void err_unexpected_char(FILE *fp, char ch, int line, int item)
 		case '\n':
 			fprintf(stderr, "newline character.\n");
 			break;
-		case EOF:
-			if (feof(fp))
-				fprintf(stderr, "end of file or missing newline.\n");
-			if (ferror(fp))
-				fprintf(stderr, "end of file, caused by I/O error.\n");
-			break;
 		default:
 			fprintf(stderr, "character: ");
 			if (isgraph(ch))
@@ -140,17 +73,86 @@ static void err_unexpected_char(FILE *fp, char ch, int line, int item)
 	}
 }
 
-static void err_ftov(FILE *fp, int err, char ch, vamp_t line, vamp_t item)
+static int concat_digit(vamp_t *number, int ch, vamp_t line, vamp_t item)
 {
-	switch (err) {
-		case -1:
-			err_unexpected_char(fp, ch, line, item);
-			break;
-		case -2:
-			err_baditem(line, item);
-			fprintf(stderr, "Out of interval: [0, %llu]\n", vamp_max);
-			break;
+	int rc = 0;
+
+	if (!isdigit(ch)) {
+		err_unexpected_char(ch, line, item);
+		rc = 1;
+		goto out;
 	}
+	digit_t digit = ch - '0';
+
+	if (willoverflow(*number, vamp_max, digit)) {
+		err_baditem(line, item);
+		fprintf(stderr, "Out of interval: [0, %llu]\n", vamp_max);
+		rc = 1;
+		goto out;
+	}
+	*number = 10 * (*number) + digit;
+
+out:
+	return rc;
+}
+
+#ifdef CHECKSUM_RESULTS
+static int hash_set(struct hash *ptr, int ch, int hash_index, vamp_t line, vamp_t item)
+{
+	int rc = 0;
+	if (hash_index == ptr->md_size * 2) {
+		err_unexpected_char(ch, line , item);
+		fprintf(stderr, "The checksum character length is invalid; Too many characters or missing newline.\n");
+		rc = 1;
+		goto out;
+	}
+	if (isspace(ch)) {
+		err_unexpected_char(ch, line , item);
+		fprintf(stderr, "The checksum character length is invalid; Too few characters.\n");
+		rc = 1;
+		goto out;
+	}
+	if (!isxdigit(ch)) {
+		err_unexpected_char(ch, line, item);
+		rc = 1;
+		goto out;
+	}
+
+	int hi, lo; // nibbles
+	{
+		char str[2] = {ch, '\0'};
+		int nibble = strtoul(str, NULL, 16);
+		if (hash_index % 2 == 0) {
+			hi = nibble;
+			lo = ptr->md_value[hash_index/2] & 0x0f;
+		} else {
+			hi = (ptr->md_value[hash_index/2] >> 4) & 0x0f;
+			lo = nibble;
+		}
+	}
+	ptr->md_value[hash_index/2] = (hi << 4) | lo;
+out:
+	return rc;
+}
+#else
+static int hash_set(
+	__attribute__((unused)) struct hash *ptr,
+	__attribute__((unused)) int ch,
+	__attribute__((unused)) int hash_index,
+	__attribute__((unused)) vamp_t line,
+	__attribute__((unused)) vamp_t item)
+{
+	return 0;
+}
+#endif
+
+static char count_end()
+{
+#ifdef CHECKSUM_RESULTS
+	return (' ');
+#else
+	return ('\n');
+#endif
 }
 
 int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
@@ -163,157 +165,124 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 		return 1;
 	}
 
+	int rc = 0;
+
+	enum types {integer, hash};
+	enum names {min, max, complete, count, checksum};
+
+	char end_char[5] = {' ', '\n', ' ', count_end(), '\n'};
+	int type[5] = {integer, integer, integer, integer, hash};
+
+	int name = min;
 	vamp_t line = 1;
 	vamp_t item = 1;
-	int ch = 0;
-	int ret = 0;
-	int err = 0;
-	vamp_t min;
-	vamp_t max;
 
-	err = ftov(fp, &min, &ch);
-	if (err) {
-		err_ftov(fp, err, ch, line , item);
-		ret = 1;
-		goto out;
-	}
-	else if (ch != ' ') {
-		err_unexpected_char(fp, ch, line , item);
-		ret = 1;
-		goto out;
-	}
-	item++;
+	bool is_empty = true;
+	vamp_t num = 0;
+	int hash_index = 0;
 
-	err = ftov(fp, &max, &ch);
-	if (err) {
-		err_ftov(fp, err, ch, line , item);
-		ret = 1;
-		goto out;
-	}
-	else if (ch != '\n') {
-		err_unexpected_char(fp, ch, line , item);
-		ret = 1;
-		goto out;
-	}
+	while (!rc) {
+		int ch = fgetc(fp);
 
-	if (max < min) {
-		err_conflict(line, item);
-		fprintf(stderr, "max < min\n");
-		ret = 1;
-		goto out;
-	}
-
-	if (interval_set(interval, min, max)) {
-		ret = 1;
-		goto out;
-	}
-
-	progress->common_count = 0;
-	line++;
-
-	vamp_t complete = 0;
-	vamp_t prev = complete;
-	vamp_t prevcount = 0;
-	for (; !feof(fp); ) {
-		item = 1;
-
-		err = ftov(fp, &complete, &ch);
-		if (err == -1 && ch == EOF && feof(fp))
-			goto out;
-		if (err) {
-			err_ftov(fp, err, ch, line , item);
-			ret = 1;
-			goto out;
-		}
-		else if (ch != ' ') {
-			err_unexpected_char(fp, ch, line , item);
-			ret = 1;
-			goto out;
-		}
-		if (complete < interval->min) {
-			err_conflict(line, item);
-			fprintf(stderr, "%llu < %llu (below min)\n", complete, interval->min);
-			ret = 1;
-			goto out;
-		}
-		if (complete > interval->max) {
-			err_conflict(line, item);
-			fprintf(stderr, "%llu > %llu (above max)\n", complete, interval->max);
-			ret = 1;
-			goto out;
-		}
-		if (complete <= prev && line != 2) {
-			err_conflict(line, item);
-			fprintf(stderr, "%llu <= %llu (below previous)\n", complete, prev);
-			ret = 1;
-			goto out;
-		}
-		if (interval_set_complete(interval, complete)) {
-			ret = 1;
-			goto out;
-		}
-		item++;
-
-		err = ftov(fp, &(progress->common_count), &ch);
-		if (err) {
-			err_ftov(fp, err, ch, line , item);
-			ret = 1;
-			goto out;
-		}
-#ifdef CHECKSUM_RESULTS
-		else if (ch != ' ') {
-#else /* CHECKSUM_RESULTS */
-		else if (ch != '\n') {
-#endif /* CHECKSUM_RESULTS */
-			err_unexpected_char(fp, ch, line , item);
-			ret = 1;
-			goto out;
-		}
-		if (progress->common_count < prevcount && line != 2) {
-			err_conflict(line, item);
-			fprintf(stderr, "%llu < %llu (below previous)\n", progress->common_count, prevcount);
-			ret = 1;
-			goto out;
+		if (ch == EOF) {
+			if (name != complete || !is_empty) {
+				err_baditem(line, item);
+				fprintf(stderr, "Unexpected ");
+				if (feof(fp))
+					fprintf(stderr, "end of file or missing newline.\n");
+				if (ferror(fp))
+					fprintf(stderr, "end of file, caused by I/O error.\n");
+				rc = 1;
+			}
+			break;
 		}
 
+		if (ch == end_char[name]) {
+			switch (name) {
+				case min:
+					rc = interval_set(interval, num, num);
+					break;
+
+				case max:
+					if (num < interval->min) {
+						err_conflict(line, item);
+						fprintf(stderr, "max < min\n");
+						rc = 1;
+					} else {
+						vamp_t tmp = interval->min;
+						rc = interval_set(interval, tmp, num);
+					}
+					break;
+
+				case complete:
+					if (num < interval->min) {
+						err_conflict(line, item);
+						fprintf(stderr, "%llu < %llu (below min)\n", num, interval->min);
+						rc = 1;
+					}
+					else if (num > interval->max) {
+						err_conflict(line, item);
+						fprintf(stderr, "%llu > %llu (above max)\n", num, interval->max);
+						rc = 1;
+					}
+					else if (num <= interval->complete && line != 2) {
+						err_conflict(line, item);
+						fprintf(stderr, "%llu <= %llu (below previous)\n", num, interval->complete);
+						rc = 1;
+					} else {
+						rc = interval_set_complete(interval, num);
+					}
+					break;
+
+				case count:
+					if (num < progress->common_count && line != 2) {
+						err_conflict(line, item);
+						fprintf(stderr, "%llu < %llu (below previous)\n", num, progress->common_count);
+						rc = 1;
+					}
 #ifdef PROCESS_RESULTS
-		if (progress->common_count > 0 && progress->common_count -1 > interval->complete - interval->min) {
-			err_conflict(line, item);
-			fprintf(stderr, "More vampire numbers than numbers.\n");
-			ret = 1;
-			goto out;
-		}
+					else if (num > 0 && num - 1 > interval->complete - interval->min) {
+						err_conflict(line, item);
+						fprintf(stderr, "More vampire numbers than numbers.\n");
+						rc = 1;
+					}
 #endif /* PROCESS_RESULTS */
-
-		item++;
-
+					progress->common_count = num;
+					break;
 #ifdef CHECKSUM_RESULTS
-		err = ftomd(fp, progress->checksum, &ch);
-		if (err) {
-			err_unexpected_char(fp, ch, line , item);
-			if (isspace(ch))
-				fprintf(stderr, "The checksum character length is invalid; Too few characters.\n");
-			ret = 1;
-			goto out;
-		}
-		else if (ch != '\n') {
-			err_unexpected_char(fp, ch, line , item);
-			fprintf(stderr, "The checksum character length is invalid; Too many characters or missing newline.\n");
-			ret = 1;
-			goto out;
-		}
-		item++;
+				case checksum:
+					if (hash_index < progress->checksum->md_size * 2) {
+						err_unexpected_char(ch, line , item);
+						fprintf(stderr, "The checksum character length is invalid; Too few characters.\n");
+						rc = 1;
+					}
+					break;
 #endif /* CHECKSUM_RESULTS */
+			}
+			num = 0;
+			hash_index = 0;
+			is_empty = true;
+			name++;
+			item++;
+		} else {
+			switch(type[name]) {
+				case integer:
+					rc = concat_digit(&num, ch, line, item);
+					break;
 
-		line++;
-		prev = interval->complete;
-		prevcount = progress->common_count;
+				case hash:
+					rc = hash_set(progress->checksum, ch, hash_index++, line, item);
+					break;
+			}
+		}
+		if (ch == '\n') {
+			name = complete;
+			line++;
+			item = 1;
+		}
 	}
-out:
 	fclose(fp);
-	if (ret)
-		fprintf(stderr, "\n");
-	return ret;
+	return rc;
 }
 
 void save_checkpoint(vamp_t complete, struct taskboard *progress)
