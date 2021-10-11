@@ -14,10 +14,12 @@ Windows isn't posix compatible. You'll need to install WSL and a linux distribut
 
    Platform | Package name
    -------- | ------------
-   Homebrew | openssl
    Debian | libssl-dev
    Fedora/RHEL | openssl-devel
    FreeBSD | openssl-devel
+   HaikuOS | (pre-installed)
+   Homebrew | openssl
+   Openindiana |
 
 ## Download
 ```
@@ -25,22 +27,16 @@ git clone https://github.com/plerros/helsing.git
 cd helsing
 ```
 ## Compile
-#### GNU/Linux, Homebrew, WSL
+#### GNU/Linux, HaikuOS, Homebrew, WSL
 ```
 cd helsing
 make
 ```
-#### FreeBSD
+#### FreeBSD, OpenIndiana
 ```
 cd helsing
 gmake
 ```
-#### OpenIndiana
-Currently the linker doesn't support gc-sections, you'll have to remove it from the Makefile.
-After that, you can follow the compilation steps for FreeBSD.
-#### HaikuOS
-In the Makefile, replace -pthread with -lpthread.
-After that, you can follow the compilation steps for Linux.
 ## Run
 ```
 ./helsing -l min -u max
