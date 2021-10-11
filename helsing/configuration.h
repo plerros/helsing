@@ -113,7 +113,7 @@
  *
  * 	The file format is text based (ASCII). The first line is like a header,
  * there we store [min] and [max], separated by a space. All the following lines
- * are optional. In those we store [current], [count] and optionally [checksum],
+ * are optional. In those we store [complete], [count] and optionally [checksum],
  * separated by a space.
  *
  * Interfacing properly with files is hard. I have made a few design decisions
