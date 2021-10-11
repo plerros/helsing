@@ -184,16 +184,18 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 	while (!rc) {
 		int ch = fgetc(fp);
 
-		if (ch == EOF) {
+		if (feof(fp)) {
 			if (name != complete || !is_empty) {
 				err_baditem(line, item);
-				fprintf(stderr, "Unexpected ");
-				if (feof(fp))
-					fprintf(stderr, "end of file or missing newline.\n");
-				if (ferror(fp))
-					fprintf(stderr, "end of file, caused by I/O error.\n");
+				fprintf(stderr, "Unexpected end of file or missing newline.\n");
 				rc = 1;
 			}
+			break;
+		}
+		if (ferror(fp)) {
+			err_baditem(line, item);
+			fprintf(stderr, "Unexpected end of file, caused by I/O error.\n");
+			rc = 1;
 			break;
 		}
 
