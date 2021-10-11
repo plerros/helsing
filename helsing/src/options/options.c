@@ -20,9 +20,9 @@ static void buildconf()
 {
 	printf("  configuration:\n");
 	printf("    VERBOSE_LEVEL=%d\n", VERBOSE_LEVEL);
-	if (VERBOSE_LEVEL == 3) 
+	if (VERBOSE_LEVEL == 3)
 		printf("    DIGEST_NAME=%s\n", DIGEST_NAME);
-	if (VERBOSE_LEVEL > 1) 
+	if (VERBOSE_LEVEL > 1)
 		printf("    MIN_FANG_PAIRS=%d\n", MIN_FANG_PAIRS);
 	printf("    MEASURE_RUNTIME=%s\n", (MEASURE_RUNTIME ? "true" : "false"));
 	printf("    CACHE=%s\n", (CACHE ? "true" : "false"));
@@ -177,7 +177,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, vamp_max, min);					
+					rc = strtov(optarg, 0, vamp_max, min);
 					min_is_set = true;
 				}
 				break;

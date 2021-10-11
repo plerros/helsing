@@ -31,7 +31,7 @@
  *
  * 	This code was originally written by Jens Kruse Andersen and is included
  * with their permission. Adjustments were made to improve runtime, memory
- * usage and access patterns, and accomodate features such as multithreading.
+ * usage and access patterns, and accommodate features such as multithreading.
  * Source: http://primerecords.dk/vampires/index.htm
  *
  * There are two things that this optimization does:
