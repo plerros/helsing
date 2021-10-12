@@ -9,8 +9,7 @@ SRC_DIRS ?= .
 CC := $(shell \
 	for compiler in cc gcc clang; \
 	do \
-		if command -v $$compiler &> /dev/null; then \
-			echo $$compiler; \
+		if command -v $$compiler; then \
 			break;\
 		fi \
 	done \

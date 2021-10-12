@@ -19,7 +19,7 @@ Windows isn't posix compatible. You'll need to install WSL and a linux distribut
    FreeBSD | openssl-devel
    HaikuOS | (pre-installed)
    Homebrew | openssl
-   Openindiana |
+   Openindiana | library/security/openssl-11
 
 ## Download
 ```
