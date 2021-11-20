@@ -30,7 +30,7 @@ typedef uint8_t length_t;
 #if ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
 #elif ELEMENT_BITS == 64
-	typedef uint64_t digits_t;
+	typedef uint32_t digits_t;
 #endif
 
 #if MEASURE_RUNTIME

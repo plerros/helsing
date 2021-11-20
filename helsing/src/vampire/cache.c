@@ -38,7 +38,7 @@ digits_t set_dig(fang_t number)
 		tmp[number % BASE] += 1;
 
 	for (digit_t i = 1; i < BASE; i++)
-		ret = ret * digbase() + tmp[i];
+		ret = ret * 8 + tmp[i];
 
 	return ret;
 }
