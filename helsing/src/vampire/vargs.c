@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <immintrin.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -19,6 +18,10 @@
 
 #if SANITY_CHECK
 #include <assert.h>
+#endif
+
+#if USE_PDEP
+#include <immintrin.h>
 #endif
 
 static bool notrailingzero(fang_t x)
@@ -197,7 +200,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			fang_t de2 = (product / power_a) / power_a;
 
 			for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
-			
+#if USE_PDEP
 				vamp_t a = 0;
 				//0x70E1C3870E1C387
 				a += _pdep_u64(digd, 0x70E1C3870E1C387);
@@ -208,7 +211,9 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 				b += _pdep_u64(dig[de1], 0x70E1C3870E1C387);
 				b += _pdep_u64(dig[de2], 0x70E1C3870E1C387);
 				if (a == b)
-				// if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
+#else
+				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
+#endif
 					if (mult_zero || notrailingzero(multiplicand)) {
 						vargs_iterate_local_count(args);
 						vargs_print_results(product, multiplier, multiplicand);

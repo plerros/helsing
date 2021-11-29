@@ -76,6 +76,7 @@
 
 #define CACHE true
 #define ELEMENT_BITS 64
+#define USE_PDEP true
 
 /*
  * BASE:

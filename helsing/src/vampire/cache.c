@@ -21,24 +21,37 @@
 
 #if CACHE
 
-static digits_t digbase()
+static vamp_t digbase()
 {
 #if (BASE == 2)
 	return 0;
+#elif USE_PDEP
+	return(1 << (ELEMENT_BITS / (BASE - 1)));
 #else
 	return(pow(2.0, ((double)ELEMENT_BITS)/(double)(BASE - 1)));
 #endif
+}
+
+static digits_t digbits()
+{
+	return (ELEMENT_BITS / 2) / (BASE - 1);
 }
 
 digits_t set_dig(fang_t number)
 {
 	digits_t ret = 0;
 	digits_t tmp[BASE] = {0};
+	digits_t numeral_base;
+#if USE_PDEP && BASE > 2
+	numeral_base = 1 << digbits();
+#else
+	numeral_base = digbase();
+#endif
 	for (; number > 0; number /= BASE)
 		tmp[number % BASE] += 1;
 
 	for (digit_t i = 1; i < BASE; i++)
-		ret = ret * 8 + tmp[i];
+		ret = ret * numeral_base + tmp[i];
 
 	return ret;
 }

@@ -27,10 +27,12 @@ typedef uint8_t digit_t;
 typedef uint8_t length_t;
 #define length_t_max UINT8_MAX
 
-#if ELEMENT_BITS == 32
+#if USE_PDEP && ELEMENT_BITS == 64
+	typedef uint32_t digits_t;
+#elif ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
 #elif ELEMENT_BITS == 64
-	typedef uint32_t digits_t;
+	typedef uint64_t digits_t;
 #endif
 
 #if MEASURE_RUNTIME
