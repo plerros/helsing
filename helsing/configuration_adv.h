@@ -11,6 +11,20 @@
 #include <time.h>
 #include "configuration.h"
 
+#if USE_PDEP && COMPARISON_BITS == 64
+	#define ELEMENT_BITS 32
+	#undef DEDICATED_BITFIELDS
+	#define DEDICATED_BITFIELDS true
+#else
+	#define ELEMENT_BITS COMPARISON_BITS
+#endif
+
+#if DEDICATED_BITFIELDS
+	#define ACTIVE_BITS (ELEMENT_BITS / (BASE - 1)) * (BASE - 1)
+#else
+	#define ACTIVE_BITS ELEMENT_BITS
+#endif
+
 /*
  * The following typedefs are used to explicate intent.
  */
@@ -61,12 +75,20 @@ typedef uint8_t length_t;
 #error VERBOSE_LEVEL acceptable values are 0 ~ 4
 #endif
 
-#if (ELEMENT_BITS != 32 && ELEMENT_BITS != 64)
-#error ELEMENT_BITS acceptable values are 32 or 64
+#if (COMPARISON_BITS != 32 && COMPARISON_BITS != 64)
+#error COMPARISON_BITS acceptable values are 32 or 64
 #endif
 
 #if (BASE < 2)
 #error BASE should be larger than 1
+#endif
+
+#if (USE_PDEP && COMPARISON_BITS != 64)
+#error PDEP requires COMPARISON_BITS 64
+#endif
+
+#if defined(DEDICATED_BITFIELDS) && (BASE > ELEMENT_BITS)
+#error BASE is too large
 #endif
 
 #endif /* HELSING_CONFIG_ADV_H */

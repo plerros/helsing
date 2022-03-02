@@ -72,10 +72,30 @@
  * 	   That would result in 75% array size and 121% runtime*.
  *
  * 	*Based on some of my testing in base-10. Your mileage may vary.
+ *
+ * CACHE Options:
+ *
+ * 1) COMPARISON_BITS:
+ * 	The #bits used for the vampire check. It can be set to 64(default) or 32.
+ * 	Setting COMPARISON_BITS to 32 will half the CACHE size and use 32-bit
+ * 	variables.
+ *
+ * 2) DEDICATED_BITFIELDS:
+ * 	This allows the use of bitshift operations instead of multiplication in
+ * 	the function set_dig().
+ *
+ * 3) PDEP:
+ * 	Use DEDICATED_BITFIELDS and half the CACHE size, then use pdep to expand
+ * 	from 32 to 64 bits.
+ *
+ * These options adjust the space of solvable intervals to avoid
+ * false-positives.
  */
 
 #define CACHE true
-#define ELEMENT_BITS 64
+#define COMPARISON_BITS 64
+#define DEDICATED_BITFIELDS false
+#define USE_PDEP false
 
 /*
  * BASE:

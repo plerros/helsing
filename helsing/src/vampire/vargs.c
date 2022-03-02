@@ -20,6 +20,26 @@
 #include <assert.h>
 #endif
 
+#if USE_PDEP
+#include <immintrin.h>
+#endif
+
+static uint64_t get_pdep_mask()
+{
+	uint64_t single_element_mask = 1;
+	single_element_mask <<= (ACTIVE_BITS - 1) / (BASE - 1);
+	single_element_mask -= 1;
+	single_element_mask <<= 1;
+	single_element_mask += 1;
+
+	uint64_t ret = single_element_mask;
+	for (int i = 1; i < BASE - 1; i++) {
+		ret <<= (COMPARISON_BITS / (BASE - 1));
+		ret += single_element_mask;
+	}
+	return ret;
+}
+
 static bool notrailingzero(fang_t x)
 {
 	return ((x % BASE) != 0);
@@ -150,6 +170,9 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 
 	fang_t power_a = pow_v(length_a);
 	digits_t *dig = args->digptr->dig;
+#if USE_PDEP
+	const uint64_t pdep_mask = get_pdep_mask();
+#endif
 #endif
 
 	for (fang_t multiplier = fmax; multiplier >= min_sqrt && multiplier > 0; multiplier--) {
@@ -196,7 +219,19 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			fang_t de2 = (product / power_a) / power_a;
 
 			for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
+#if USE_PDEP
+				uint64_t a = 0;
+				a += _pdep_u64(digd, pdep_mask);
+				a += _pdep_u64(dig[e0], pdep_mask);
+				a += _pdep_u64(dig[e1], pdep_mask);
+				uint64_t b = 0;
+				b += _pdep_u64(dig[de0], pdep_mask);
+				b += _pdep_u64(dig[de1], pdep_mask);
+				b += _pdep_u64(dig[de2], pdep_mask);
+				if (a == b)
+#else
 				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
+#endif
 					if (mult_zero || notrailingzero(multiplicand)) {
 						vargs_iterate_local_count(args);
 						vargs_print_results(product, multiplier, multiplicand);

@@ -21,14 +21,7 @@
 
 #if CACHE
 
-static digits_t digbase()
-{
-#if (BASE == 2)
-	return 0;
-#else
-	return(pow(2.0, ((double)ELEMENT_BITS)/(double)(BASE - 1)));
-#endif
-}
+#define DIGBASE(bits) ((vamp_t) pow(2.0, ((double)(bits))/(double)(BASE - 1)))
 
 digits_t set_dig(fang_t number)
 {
@@ -38,7 +31,7 @@ digits_t set_dig(fang_t number)
 		tmp[number % BASE] += 1;
 
 	for (digit_t i = 1; i < BASE; i++)
-		ret = ret * digbase() + tmp[i];
+		ret = ret * DIGBASE(ACTIVE_BITS) + tmp[i];
 
 	return ret;
 }
@@ -88,10 +81,10 @@ void cache_free(struct cache *ptr)
 bool cache_ovf_chk(vamp_t max)
 {
 #if (BASE != 2) // avoid division by 0
-	if (log(max) / log(BASE - 1) <= digbase())
+	if (log(max) / log(BASE - 1) <= DIGBASE(COMPARISON_BITS))
 		return false;
 #else
-	if (log2(max) <= ELEMENT_BITS) // Always true, unless ELEMENT_BITS is 32
+	if (log2(max) <= COMPARISON_BITS) // Always true, unless COMPARISON_BITS is 32
 		return false;
 #endif
 
