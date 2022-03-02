@@ -91,7 +91,7 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	else if (fang_length == 0)
 		ptr->fmax = 0;
 	else
-		ptr->fmax = pow_v(fang_length); // Max factor value.
+		ptr->fmax = pow_v(fang_length) - 1; // Max factor value.
 
 	if (ptr->fmax < fang_max) {
 		vamp_t fmaxsquare = ptr->fmax;
