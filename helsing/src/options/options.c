@@ -26,8 +26,11 @@ static void buildconf()
 		printf("    MIN_FANG_PAIRS=%d\n", MIN_FANG_PAIRS);
 	printf("    MEASURE_RUNTIME=%s\n", (MEASURE_RUNTIME ? "true" : "false"));
 	printf("    CACHE=%s\n", (CACHE ? "true" : "false"));
-	if (CACHE)
-		printf("    ELEMENT_BITS=%d\n", ELEMENT_BITS);
+	if (CACHE) {
+		printf("    COMPARISON_BITS=%d\n", COMPARISON_BITS);
+		printf("    DEDICATED_BITFIELDS=%s\n", (DEDICATED_BITFIELDS ? "true" : "false"));
+		printf("    USE_PDEP=%s\n", (USE_PDEP ? "true" : "false"));
+	}
 	printf("    BASE=%d\n", BASE);
 	printf("    MAX_TASK_SIZE=%llu\n", MAX_TASK_SIZE);
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));

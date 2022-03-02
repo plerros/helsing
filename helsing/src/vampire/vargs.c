@@ -201,12 +201,11 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 
 			for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
 #if USE_PDEP
-				vamp_t a = 0;
-				//0x70E1C3870E1C387
+				uint64_t a = 0;
 				a += _pdep_u64(digd, 0x70E1C3870E1C387);
 				a += _pdep_u64(dig[e0], 0x70E1C3870E1C387);
 				a += _pdep_u64(dig[e1], 0x70E1C3870E1C387);
-				vamp_t b = 0;
+				uint64_t b = 0;
 				b += _pdep_u64(dig[de0], 0x70E1C3870E1C387);
 				b += _pdep_u64(dig[de1], 0x70E1C3870E1C387);
 				b += _pdep_u64(dig[de2], 0x70E1C3870E1C387);
