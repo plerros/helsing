@@ -94,7 +94,7 @@
 
 #define CACHE true
 #define COMPARISON_BITS 64
-#define DEDICATED_BITFIELDS true
+#define DEDICATED_BITFIELDS false
 #define USE_PDEP false
 
 /*
