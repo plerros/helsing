@@ -24,6 +24,7 @@
 #include <immintrin.h>
 #endif
 
+#if USE_PDEP
 static uint64_t get_pdep_mask()
 {
 	uint64_t single_element_mask = 1;
@@ -39,6 +40,7 @@ static uint64_t get_pdep_mask()
 	}
 	return ret;
 }
+#endif
 
 static bool notrailingzero(fang_t x)
 {
@@ -86,12 +88,11 @@ static bool disqualify_mult(vamp_t x)
 		case 2:
 			ret = false;
 			break;
-		case 7:
-			{
+		case 7:	{
 			int tmp = x % (BASE - 1);
 			ret = (tmp == 1 || tmp == 3 || tmp == 4 || tmp == 5);
 			break;
-			}
+		}
 		case 10:
 			ret = (x % 3 == 1);
 			break;

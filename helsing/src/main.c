@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 	struct interval_t interval;
 	struct taskboard *progress = NULL;
 
-	if(options_init(&options, argc, argv, &min, &max))
+	if (options_init(&options, argc, argv, &min, &max))
 		goto out;
 	if (interval_set(&interval, min, max))
 		goto out;

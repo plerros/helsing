@@ -160,9 +160,9 @@ void taskboard_cleanup(struct taskboard *ptr)
 void taskboard_print_results(struct taskboard *ptr)
 {
 #if defined COUNT_RESULTS || defined DUMP_RESULTS
-	fprintf(stderr, "Found: %llu valid fang pairs.\n", ptr->common_count);
+	fprintf(stderr, "Found: %llu valid fang pair(s).\n", ptr->common_count);
 #else
-	fprintf(stderr, "Found: %llu vampire numbers.\n", ptr->common_count);
+	fprintf(stderr, "Found: %llu vampire number(s).\n", ptr->common_count);
 #endif
 	hash_print(ptr->checksum);
 }
