@@ -19,7 +19,7 @@
 
 static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
-	if (length(lmin) < length(vamp_max)) {
+	if (length(lmin) < length(VAMP_MAX)) {
 		vamp_t lmax = pow_v(length(lmin)) - 1;
 		if (lmax < max)
 			return lmax;

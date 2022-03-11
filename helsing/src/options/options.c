@@ -116,7 +116,7 @@ out:
 static length_t get_max_length()
 {
 	length_t ret = 0;
-	for (vamp_t i = vamp_max; i >= BASE - 1; i /= BASE)
+	for (vamp_t i = VAMP_MAX; i >= BASE - 1; i /= BASE)
 		ret ++;
 	return ret;
 }
@@ -180,7 +180,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, vamp_max, min);
+					rc = strtov(optarg, 0, VAMP_MAX, min);
 					min_is_set = true;
 				}
 				break;
@@ -205,7 +205,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(optarg, 1, vamp_max, &tmp);
+					rc = strtov(optarg, 1, VAMP_MAX, &tmp);
 					if (rc)
 						break;
 					ptr->manual_task_size = tmp;
@@ -214,7 +214,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 			case 't':
 				{
 					vamp_t tmp;
-					rc = strtov(optarg, 1, thread_max, &tmp);
+					rc = strtov(optarg, 1, THREAD_MAX, &tmp);
 					if (rc)
 						break;
 					ptr->threads = tmp;
@@ -225,7 +225,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, vamp_max, max);
+					rc = strtov(optarg, 0, VAMP_MAX, max);
 					max_is_set = true;
 				}
 				break;

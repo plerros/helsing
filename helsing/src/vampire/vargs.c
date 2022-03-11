@@ -68,7 +68,7 @@ static fang_t sqrtv_roof(vamp_t x)
 		return 0;
 
 	fang_t root = sqrtv_floor(x);
-	if (root == fang_max)
+	if (root == FANG_MAX)
 		return root;
 
 	return (x / root);

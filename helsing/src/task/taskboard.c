@@ -57,7 +57,7 @@ void taskboard_free(struct taskboard *ptr)
 
 static vamp_t get_interval_size(struct options_t options, vamp_t lmin, vamp_t lmax)
 {
-	vamp_t interval_size = vamp_max;
+	vamp_t interval_size = VAMP_MAX;
 
 	if (options.manual_task_size != 0) {
 		interval_size = options.manual_task_size;
@@ -86,14 +86,14 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	assert(lmin <= lmax);
 
 	length_t fang_length = length(lmin) / 2;
-	if (fang_length == length(fang_max))
-		ptr->fmax = fang_max;
+	if (fang_length == length(FANG_MAX))
+		ptr->fmax = FANG_MAX;
 	else if (fang_length == 0)
 		ptr->fmax = 0;
 	else
 		ptr->fmax = pow_v(fang_length) - 1; // Max factor value.
 
-	if (ptr->fmax < fang_max) {
+	if (ptr->fmax < FANG_MAX) {
 		vamp_t fmaxsquare = ptr->fmax;
 		fmaxsquare *= ptr->fmax;
 		if (lmax > fmaxsquare && lmin <= fmaxsquare)
@@ -102,7 +102,7 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 
 	vamp_t interval_size = get_interval_size(ptr->options, lmin, lmax);
 
-	ptr->size = div_roof((lmax - lmin + 1), interval_size + (interval_size < vamp_max));
+	ptr->size = div_roof((lmax - lmin + 1), interval_size + (interval_size < VAMP_MAX));
 	ptr->tasks = malloc(sizeof(struct task *) * ptr->size);
 	if (ptr->tasks == NULL)
 		abort();
@@ -121,7 +121,7 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 		x++;
 		if (i == lmax)
 			break;
-		if (i + iterator == vamp_max)
+		if (i + iterator == VAMP_MAX)
 			break;
 	}
 	ptr->tasks[ptr->size - 1]->lmax = lmax;

@@ -84,9 +84,9 @@ static int concat_digit(vamp_t *number, int ch, vamp_t line, vamp_t item)
 	}
 	digit_t digit = ch - '0';
 
-	if (willoverflow(*number, vamp_max, digit)) {
+	if (willoverflow(*number, VAMP_MAX, digit)) {
 		err_baditem(line, item);
-		fprintf(stderr, "Out of interval: [0, %llu]\n", vamp_max);
+		fprintf(stderr, "Out of interval: [0, %llu]\n", VAMP_MAX);
 		rc = 1;
 		goto out;
 	}

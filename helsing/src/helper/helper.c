@@ -35,7 +35,7 @@ length_t length(vamp_t x)
 vamp_t pow_v(length_t exponent) // pow for vamp_t.
 {
 #if SANITY_CHECK
-	assert(exponent <= length(vamp_max) - 1);
+	assert(exponent <= length(VAMP_MAX) - 1);
 #endif
 	vamp_t power = 1;
 	for (; exponent > 0; exponent--)

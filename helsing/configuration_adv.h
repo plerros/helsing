@@ -30,16 +30,16 @@
  */
 
 typedef unsigned long long vamp_t; // vampire type
-#define vamp_max ULLONG_MAX
+#define VAMP_MAX ULLONG_MAX
 
 typedef unsigned long fang_t; // fang type
-#define fang_max ULONG_MAX
+#define FANG_MAX ULONG_MAX
 
 typedef uint16_t thread_t;
-#define thread_max UINT16_MAX
+#define THREAD_MAX UINT16_MAX
 typedef uint8_t digit_t;
 typedef uint8_t length_t;
-#define length_t_max UINT8_MAX
+#define LENGTH_T_MAX UINT8_MAX
 
 #if ELEMENT_BITS == 32
 	typedef uint32_t digits_t;
