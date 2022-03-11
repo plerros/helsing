@@ -75,12 +75,20 @@ typedef uint8_t length_t;
 #error VERBOSE_LEVEL acceptable values are 0 ~ 4
 #endif
 
+#if (MIN_FANG_PAIRS == 0)
+#error MIN_FANG_PAIRS must be larger than 0
+#endif
+
+#if (MIN_FANG_PAIRS > 1 && VERBOSE_LEVEL <= 1)
+#error MIN_FANG_PAIRS > 1 requires VERBOSE_LEVEL 2 or higher
+#endif
+
 #if (COMPARISON_BITS != 32 && COMPARISON_BITS != 64)
 #error COMPARISON_BITS acceptable values are 32 or 64
 #endif
 
 #if (BASE < 2)
-#error BASE should be larger than 1
+#error BASE must be larger than 1
 #endif
 
 #if (USE_PDEP && COMPARISON_BITS != 64)
