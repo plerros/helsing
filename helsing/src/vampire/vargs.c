@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
  * Copyright (c) 2012 Jens Kruse Andersen
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2022 Pierro Zachareas
  */
 
 #include <stdlib.h>
