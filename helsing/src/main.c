@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2022 Pierro Zachareas
  */
 
 #include <stdio.h>
@@ -50,17 +50,19 @@ int main(int argc, char *argv[])
 	struct targs_handle *thhandle = NULL;
 	targs_handle_new(&thhandle, options, interval.max, progress);
 
-	for (; interval.complete < interval.max;) {
-		vamp_t lmin = get_min(interval.complete + 1,  interval.max);
-		vamp_t lmax = get_lmax(lmin, interval.max);
+	vamp_t lmin = 0, lmax = 0;
+	for (; interval.complete < interval.max; interval.complete = lmax) {
+		lmin = get_min(interval.complete + 1,  interval.max);
+		lmax = get_lmax(lmin, interval.max);
 		taskboard_set(progress, lmin, lmax);
+		if (progress->size == 0)
+			continue;
+
 		fprintf(stderr, "Checking interval: [%llu, %llu]\n", lmin, lmax);
 		for (thread_t thread = 0; thread < options.threads; thread++)
 			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
 		for (thread_t thread = 0; thread < options.threads; thread++)
 			pthread_join(threads[thread], 0);
-
-		interval.complete = lmax;
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);

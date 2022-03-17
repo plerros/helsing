@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2022 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -93,12 +93,12 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	else
 		ptr->fmax = pow_v(fang_length) - 1; // Max factor value.
 
-	if (ptr->fmax < FANG_MAX) {
-		vamp_t fmaxsquare = ptr->fmax;
-		fmaxsquare *= ptr->fmax;
-		if (lmax > fmaxsquare && lmin <= fmaxsquare)
-			lmax = fmaxsquare; // Max can be bigger than fmax^2: BASE^(2n) - 1 > (BASE^n - 1) ^ 2.
-	}
+	vamp_t fmaxsquare = ptr->fmax;
+	fmaxsquare *= ptr->fmax;
+	if (fmaxsquare < lmin)
+		return;
+	else if (fmaxsquare < lmax)
+		lmax = fmaxsquare; // Max can be bigger than fmax^2: BASE^(2n) - 1 > (BASE^n - 1) ^ 2
 
 	vamp_t interval_size = get_interval_size(ptr->options, lmin, lmax);
 
