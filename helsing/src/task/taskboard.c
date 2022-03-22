@@ -93,13 +93,14 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	else
 		ptr->fmax = pow_v(fang_length) - 1; // Max factor value.
 
-	vamp_t fmaxsquare = ptr->fmax;
-	fmaxsquare *= ptr->fmax;
-	if (fmaxsquare < lmin)
-		return;
-	else if (fmaxsquare < lmax)
-		lmax = fmaxsquare; // Max can be bigger than fmax^2: BASE^(2n) - 1 > (BASE^n - 1) ^ 2
-
+	if (ptr->fmax < VAMP_MAX / ptr->fmax) { // Avoid overflow
+		vamp_t fmaxsquare = ptr->fmax;
+		fmaxsquare *= ptr->fmax;
+		if (fmaxsquare < lmin)
+			return;
+		else if (fmaxsquare < lmax)
+			lmax = fmaxsquare; // Max can be bigger than fmax^2: BASE^(2n) - 1 > (BASE^n - 1) ^ 2
+	}
 	vamp_t interval_size = get_interval_size(ptr->options, lmin, lmax);
 
 	ptr->size = div_roof((lmax - lmin + 1), interval_size + (interval_size < VAMP_MAX));
