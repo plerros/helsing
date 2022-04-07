@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
 	pthread_t *threads = malloc(sizeof(pthread_t) * options.threads);
 	struct targs_handle *thhandle = NULL;
-	targs_handle_new(&thhandle, options, interval.max, progress);
+	targs_handle_new(&thhandle, options, interval.min, interval.max, progress);
 
 	vamp_t lmin = 0, lmax = 0;
 	for (; interval.complete < interval.max; interval.complete = lmax) {

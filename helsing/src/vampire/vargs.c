@@ -164,11 +164,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	fang_t max_sqrt = sqrtv_floor(max);
 
 #if CACHE
-	length_t length_max = length(max);
-	length_t length_a = length_max / 3;
-	if (length_max < 9)
-		length_a += length_max % 3;
-
+	length_t length_a = partition3(length(max));
 	fang_t power_a = pow_v(length_a);
 	digits_t *dig = args->digptr->dig;
 #if USE_PDEP

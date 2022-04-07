@@ -71,3 +71,20 @@ vamp_t div_roof(vamp_t x, vamp_t y)
 {
 	return (x/y + !!(x%y));
 }
+
+/*
+ * partition3:
+ *
+ * partition x into 3 integers so that:
+ * x = 2 * A + B
+ * and return A.
+ */
+
+length_t partition3(length_t x)
+{
+	length_t ret = x / 3;
+	if (ret == 0)
+		ret = 1;
+
+	return ret;
+}

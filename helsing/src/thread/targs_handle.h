@@ -24,7 +24,7 @@ struct targs_handle
 	pthread_mutex_t *write;
 };
 
-void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t max, struct taskboard *progress);
+void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t min, vamp_t max, struct taskboard *progress);
 void targs_handle_free(struct targs_handle *ptr);
 void targs_handle_print(struct targs_handle *ptr);
 #endif /* HELSING_TARGS_HANDLE_H */

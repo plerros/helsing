@@ -17,7 +17,7 @@ struct cache
 	fang_t size;
 };
 digits_t set_dig(fang_t number);
-void cache_new(struct cache **ptr, vamp_t max);
+void cache_new(struct cache **ptr, vamp_t min, vamp_t max);
 void cache_free(struct cache *ptr);
 bool cache_ovf_chk(vamp_t max);
 #else /* !CACHE */
@@ -30,6 +30,7 @@ static inline digits_t set_dig(__attribute__((unused)) fang_t number)
 }
 static inline void cache_new(
 	__attribute__((unused)) struct cache **ptr,
+	__attribute__((unused)) vamp_t min,
 	__attribute__((unused)) vamp_t max)
 {
 }

@@ -18,7 +18,7 @@
 #include <assert.h>
 #endif
 
-void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t max, struct taskboard *progress)
+void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t min, vamp_t max, struct taskboard *progress)
 {
 #if SANITY_CHECK
 	assert(ptr != NULL);
@@ -32,7 +32,7 @@ void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_
 	new->options = options;
 	new->progress = progress;
 	new->digptr = NULL;
-	cache_new(&(new->digptr), max);
+	cache_new(&(new->digptr), min, max);
 
 	new->targs = malloc(sizeof(struct targs *) * new->options.threads);
 	if (new->targs == NULL)
