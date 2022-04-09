@@ -164,8 +164,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	fang_t max_sqrt = sqrtv_floor(max);
 
 #if CACHE
-	length_t length_a = partition3(length(max));
-	fang_t power_a = pow_v(length_a);
+	fang_t power_a = pow_v(partition3(length(max)));
 	digits_t *dig = args->digptr->dig;
 #if USE_PDEP
 	const uint64_t pdep_mask = get_pdep_mask();
@@ -196,6 +195,49 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			product *= multiplicand; // avoid overflow
 
 #if CACHE
+			/*
+			 * We could just allocate the entire dig[] array, and then do:
+			 *
+			 * 	for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
+			 * 		if (dig[multiplier] + dig[multiplicand] == dig[product]) {
+			 * 			...
+			 * 		}
+			 * 		product += product_iterator;
+			 *		multiplicand += BASE-1;
+			 *	}
+			 *
+			 * This would work just fine.
+			 * The only problem is that the array would be way too
+			 * big to fit in most l3 caches and we would waste a
+			 * majority of time loading data from memory.
+			 *
+			 * If we 'partition' the numbers (123 -> 12, 3), we can
+			 * make the array much smaller.
+			 *
+			 * Of course, 'partitioning' requires some computation,
+			 * but we are already waiting for memory load
+			 * operations, and we might as well put the wasted
+			 * cycles to good use.
+			 *
+			 * I chose to 'partition' like this:
+			 * 	product:          de0,   de1,   de2
+			 * 	product iterator: step0, step1, step2
+			 *
+			 * 	multiplicand: e0, e1
+			 * Because it performs the best on all of my cpus.
+			 */
+
+			/*
+			 * We can improve the runtime even further by removing step2.
+			 * If step2 is always 0, we don't need it.
+			 *
+			 * step2 = (product_iterator / power_a) / power_a
+			 *
+			 * step2 has 0 digits, product_iterator has n+1, and we are going to solve for power_a:
+			 *
+			 * 0 >= (n+1 - x) - x
+			 * x >= n+1 - x
+			 */
 
 			fang_t step0 = product_iterator % power_a;
 			fang_t step1 = product_iterator / power_a;

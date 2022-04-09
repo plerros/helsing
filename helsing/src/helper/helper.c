@@ -76,13 +76,19 @@ vamp_t div_roof(vamp_t x, vamp_t y)
  * partition3:
  *
  * partition x into 3 integers so that:
- * x = 2 * A + B
+ * x <= 2 * A + B
  * and return A.
  */
 
 length_t partition3(length_t x)
 {
 	length_t ret = x / 3;
+
+	// adjust for product iterator
+	length_t n = x / 2;
+	if (ret < n + 1 - ret)
+		ret = n + 1 - ret;
+
 	if (ret == 0)
 		ret = 1;
 
