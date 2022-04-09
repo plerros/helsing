@@ -189,6 +189,9 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			multiplicand++;
 
 		if (multiplicand <= multiplicand_max) {
+			/*
+			 * If multiplier has n digits, then product_iterator has at most n+1 digits.
+			 */
 			vamp_t product_iterator = multiplier;
 			product_iterator *= BASE - 1; // <= (BASE-1) * (2^32)
 			vamp_t product = multiplier;

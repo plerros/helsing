@@ -47,6 +47,8 @@ int main(int argc, char *argv[])
 		goto out;
 
 	pthread_t *threads = malloc(sizeof(pthread_t) * options.threads);
+	if (threads == NULL)
+		abort();
 	struct targs_handle *thhandle = NULL;
 	targs_handle_new(&thhandle, options, interval.min, interval.max, progress);
 
