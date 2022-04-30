@@ -4,6 +4,9 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+
 project(helsing VERSION 1.1.1)
 
 option(ENABLE_LTO "enable link time optimization" OFF)
@@ -19,10 +22,9 @@ if(ENABLE_LTO)
     endif()
 endif()
 
-#add_compile_options(-Wall -Wextra)
+add_compile_options(-Wall -Wextra)
 add_compile_options(-march=native)
 
-string(REPLACE "-O3" "-O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 find_package(Threads)
 find_package(OpenSSL)
