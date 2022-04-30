@@ -1,30 +1,33 @@
 cmake_minimum_required(VERSION 3.13)
 
-if(NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
-endif()
+endif ()
 
-set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "Flags used by the compiler during release builds." FORCE)
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+set(CMAKE_C_FLAGS_RELEASE "-O2" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+set(CMAKE_C_FLAGS_MINSIZEREL "-Os" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
 
 project(helsing VERSION 1.1.1)
 
 option(ENABLE_LTO "enable link time optimization" OFF)
 
-if(ENABLE_LTO)
+if (ENABLE_LTO)
     include(CheckIPOSupported)
     cmake_policy(SET CMP0069 NEW)
     check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_SUPPORT_OUTPUT)
-    if(IPO_SUPPORTED)
+    if (IPO_SUPPORTED)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-    else()
+    else ()
         message(WARNING "LTO is not supported: ${IPO_SUPPORT_OUTPUT}")
-    endif()
-endif()
+    endif ()
+endif ()
 
 add_compile_options(-Wall -Wextra)
 add_compile_options(-march=native)
-
 
 find_package(Threads)
 find_package(OpenSSL)
