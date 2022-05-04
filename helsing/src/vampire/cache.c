@@ -59,7 +59,8 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 			cs = part_A;
 		if (part_B > cs)
 			cs = part_B;
-	} while (i < length(max));
+		i++;
+	} while (i <= length(max));
 	new->size = pow_v(cs);
 
 	new->dig = malloc(sizeof(digits_t) * new->size);
