@@ -152,7 +152,7 @@ void array_print(struct array *ptr, vamp_t count)
 			continue;
 
 		fprintf(stdout, "%llu %llu\n", ++count, ptr->data[i]);
-		fflush(stdout);
 	}
+	fflush(stdout);
 }
 #endif
