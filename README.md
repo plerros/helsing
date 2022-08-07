@@ -84,6 +84,16 @@ $ ./helsing -n 12
 Checking interval: [100000000000, 999999999999]
 Found: 4390670 vampire number(s).
 ```
+```
+$ ./helsing -n 14
+Checking interval: [10000000000000, 99999999999999]
+Found: 208423682 vampire number(s).
+```
+```
+$ ./helsing -n 16
+Checking interval: [1000000000000000, 9999999999999999]
+Found: 11039126154 vampire number(s).
+```
 #### Set the number of threads
 ```
 ./helsing -t threads
