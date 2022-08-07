@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "configuration.h"
 #include "cache.h"
@@ -24,7 +25,8 @@ void targs_new(
 	pthread_mutex_t *read,
 	pthread_mutex_t *write,
 	struct taskboard *progress,
-	struct cache *digptr)
+	struct cache *digptr,
+	bool dry_run)
 {
 #if SANITY_CHECK
 	assert (ptr != NULL);
@@ -40,6 +42,7 @@ void targs_new(
 	new->progress = progress;
 	new->runtime = 0.0;
 	new->digptr = digptr;
+	new->dry_run = dry_run;
 	targs_new_total(new, 0);
 	*ptr = new;
 }
@@ -68,7 +71,8 @@ void *thread_function(void *void_args)
 // Critical section end
 
 		if (current != NULL) {
-			vampire(current->lmin, current->lmax, vamp_args, args->progress->fmax);
+			if (!args->dry_run)
+				vampire(current->lmin, current->lmax, vamp_args, args->progress->fmax);
 
 // Critical section start
 			pthread_mutex_lock(args->write);

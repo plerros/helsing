@@ -7,6 +7,7 @@
 #define HELSING_TARGS_H
 
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -24,6 +25,7 @@ struct targs
 	struct taskboard *progress;
 	double	runtime;
 	struct cache *digptr;
+	bool dry_run;
 
 #if MEASURE_RUNTIME
 	struct timespec start;
@@ -36,7 +38,8 @@ void targs_new(
 	pthread_mutex_t *read,
 	pthread_mutex_t *write,
 	struct taskboard *progress,
-	struct cache *digptr);
+	struct cache *digptr,
+	bool dry_run);
 
 void targs_free(struct targs *ptr);
 void *thread_function(void *void_args);

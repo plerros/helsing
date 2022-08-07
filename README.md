@@ -137,6 +137,27 @@ Checking interval: [100000000000, 999999999999]
 900000000000, 999998000001  9/9
 Found: 4390670 vampire number(s).
 ```
+#### Dry run
+```
+./helsing --dry-run
+```
+Example:
+
+```
+$ ./helsing -l 0 -u 18446744073709551615 --dry-run
+Adjusted min from 0 to 10
+Checking interval: [10, 99]
+Checking interval: [1000, 9999]
+Checking interval: [100000, 999999]
+Checking interval: [10000000, 99999999]
+Checking interval: [1000000000, 9999999999]
+Checking interval: [100000000000, 999999999999]
+Checking interval: [10000000000000, 99999999999999]
+Checking interval: [1000000000000000, 9999999999999999]
+Checking interval: [100000000000000000, 999999999999999999]
+Checking interval: [10000000000000000000, 18446744073709551615]
+Found: 0 vampire number(s).
+```
 #### Display build configuration
 ```
 ./helsing --buildconf

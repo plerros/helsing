@@ -73,6 +73,7 @@ static void help()
 	printf("    --buildconf    show build configuration\n");
 	printf("    --help         show help\n");
 	printf("    --progress     display progress\n");
+	printf("    --dry-run      perform a trial run without any calculations\n");
 	arg_manual_task_size();
 	arg_threads();
 	printf("\nInterval options:\n");
@@ -126,6 +127,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 	ptr->threads = 1;
 	ptr->manual_task_size = 0;
 	ptr->display_progress = false;
+	ptr->dry_run = false;
 	ptr->load_checkpoint = false;
 
 #ifdef _SC_NPROCESSORS_ONLN
@@ -136,6 +138,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 	static int buildconf_flag = 0;
 	static int help_flag = 0;
 	static int display_progress = 0;
+	static int dry_run = 0;
 	bool min_is_set = false;
 	bool max_is_set = false;
 
@@ -145,6 +148,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 			{"buildconf", no_argument, &buildconf_flag, 1},
 			{"help", no_argument, &help_flag, 1},
 			{"progress", no_argument, &display_progress, 1},
+			{"dry-run", no_argument, &dry_run, 1},
 			{"lower bound", required_argument, NULL, 'l'},
 			{"n digits", required_argument, NULL, 'n'},
 			{"manual task size", required_argument, NULL, 's'},
@@ -270,6 +274,8 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 	}
 	if (display_progress)
 		ptr->display_progress = true;
+	if (dry_run)
+		ptr->dry_run = true;
 out:
 	return rc;
 }

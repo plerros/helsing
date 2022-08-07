@@ -45,7 +45,7 @@ void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_
 
 	for (thread_t thread = 0; thread < new->options.threads; thread++) {
 		new->targs[thread] = NULL;
-		targs_new(&(new->targs[thread]), new->read, new->write, new->progress, new->digptr);
+		targs_new(&(new->targs[thread]), new->read, new->write, new->progress, new->digptr, new->options.dry_run);
 	}
 	*ptr = new;
 }
