@@ -1,42 +1,82 @@
 # Helsing
-A mostly POSIX-compliant utility that scans a given interval for vampire numbers.
+Helsing is a command-line program that scans intervals for vampire numbers.
 
-In *helsing/configuration.h* you can select the algorithm implementation and tune it, adjust verbosity, change the numeral base system, set a minimum fang pairs filter, and enable resume from checkpoint.
+![helsing_gif](https://user-images.githubusercontent.com/48536508/184532048-42dbfd27-78bd-439f-8700-00e460a3a93c.gif)
+
+The default algorithm has a time complexity of $O(n)$ and a space complexity of
+$O(\sqrt{n})$.
+
+In *helsing/configuration.h* you can select the algorithm implementation and
+tune it, adjust verbosity, change the numeral base system, set a minimum fang
+pairs filter, and enable resume from checkpoint.
 Be sure to read the documentation.
 
-Windows isn't posix compatible. You'll need to install WSL and a linux distribution from the Windows Store.
+## Windows Preparation
 
-## Dependencies
- - a C compiler (clang or gcc should do just fine)
- - GNU make
- - findutils
- - OpenSSL (optional)
+Helsing uses posix threads, and since Windows isn't posix compatible, you'll
+need to [install WSL](https://docs.microsoft.com/en-us/windows/wsl/install).
 
-   Platform | Package name
-   -------- | ------------
-   Debian | libssl-dev
-   Fedora/RHEL | openssl-devel
-   FreeBSD | openssl-devel
-   HaikuOS | (pre-installed)
-   Homebrew | openssl
-   Openindiana | library/security/openssl-11
+Note that the guide above will install WSL with Ubuntu, so you'll have to follow the Ubuntu instructions.
 
-## Download
-```
-git clone https://github.com/plerros/helsing.git
-cd helsing
-```
-## Compile
-#### GNU/Linux, HaikuOS, Homebrew, WSL
-```
-cd helsing
-make
-```
-#### FreeBSD, OpenIndiana
-```
-cd helsing
-gmake
-```
+
+## MacOS Preparation
+
+On MacOS you'll have to [install homebrew](https://brew.sh/).
+
+## Installation
+1. Install dependencies
+   <table>
+       <tr>
+           <td><b>Platform</b></td>
+           <td><b>Install</b></td>
+           <td><b>Install optional</b></td>
+       </tr>
+       <tr>
+           <td>MacOS</td>
+           <td><code>brew install git gcc gmake findutils</code></td>
+           <td><code><strike>brew install openssl</strike></code> (broken)</td>
+       </tr>
+       <tr>
+           <td>Debian/Ubuntu</td>
+           <td><code>sudo apt install git gcc gmake findutils</code></td>
+           <td><code>sudo apt install libssl-dev</code></td>
+       </tr>
+       <tr>
+           <td>Fedora/RHEL</td>
+           <td><code>sudo dnf install git gcc gmake findutils</code></td>
+           <td><code>sudo dnf install openssl-devel</code></td>
+       </tr>
+       <tr>
+           <td>FreeBSD:</td>
+           <td><code>pkg install git gcc gmake findutils</code></td>
+           <td><code>pkg install openssl-devel</code></td>
+       </tr>
+       <tr>
+           <td>HaikuOS</td>
+           <td><code>pkg install git gcc gmake findutils</code></td>
+           <td>(pre-installed)</td>
+       </tr>
+       <tr>
+           <td>Openindiana</td>
+           <td><code>pkg install git gcc gmake findutils</code></td>
+           <td><code>pkg install library/security/openssl-11</code></td>
+       </tr>
+   </table>
+   You can also use clang instead of gcc
+
+2. Download
+
+ ```
+ git clone https://github.com/plerros/helsing.git
+ cd helsing
+ ```
+3. Compile
+
+ ```
+ cd helsing
+ gmake
+ ```
+
 ## Run
 ```
 ./helsing -l min -u max
@@ -47,8 +87,7 @@ Examples:
 $ ./helsing -l 1260 -u 1260
 Checking interval: [1260, 1260]
 Found: 1 vampire number(s).
-```
-```
+
 $ ./helsing -l 0 -u 1172560176
 Adjusted min from 0 to 10
 Checking interval: [10, 99]
@@ -57,8 +96,7 @@ Checking interval: [100000, 999999]
 Checking interval: [10000000, 99999999]
 Checking interval: [1000000000, 1172560176]
 Found: 10000 vampire number(s).
-```
-```
+
 $ ./helsing -l 18446744073709551615 -u 18446744073709551615
 Checking interval: [18446744073709551615, 18446744073709551615]
 Found: 0 vampire number(s).
@@ -73,23 +111,19 @@ Examples:
 $ ./helsing -n 2
 Checking interval: [10, 99]
 Found: 0 vampire number(s).
-```
-```
+
 $ ./helsing -n 4
 Checking interval: [1000, 9999]
 Found: 7 vampire number(s).
-```
-```
+
 $ ./helsing -n 12
 Checking interval: [100000000000, 999999999999]
 Found: 4390670 vampire number(s).
-```
-```
+
 $ ./helsing -n 14
 Checking interval: [10000000000000, 99999999999999]
 Found: 208423682 vampire number(s).
-```
-```
+
 $ ./helsing -n 16
 Checking interval: [1000000000000000, 9999999999999999]
 Found: 11039126154 vampire number(s).
@@ -108,8 +142,7 @@ Found: 4390670 vampire number(s).
 real	0m39.360s
 user	0m39.294s
 sys 	0m0.010s
-```
-```
+
 $ time ./helsing -n 12 -t 2
 Checking interval: [100000000000, 999999999999]
 Found: 4390670 vampire number(s).
@@ -117,8 +150,7 @@ Found: 4390670 vampire number(s).
 real	0m20.036s
 user	0m39.746s
 sys 	0m0.022s
-```
-```
+
 $ time ./helsing -n 12 -t 4
 Checking interval: [100000000000, 999999999999]
 Found: 4390670 vampire number(s).
