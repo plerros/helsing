@@ -25,57 +25,57 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 
 ## Installation
 1. Install dependencies
-   <table>
-       <tr>
-           <td><b>Platform</b></td>
-           <td><b>Install</b></td>
-           <td><b>Install optional</b></td>
-       </tr>
-       <tr>
-           <td>MacOS</td>
-           <td><code>brew install git gcc gmake findutils</code></td>
-           <td><code><strike>brew install openssl</strike></code> (broken)</td>
-       </tr>
-       <tr>
-           <td>Debian/Ubuntu</td>
-           <td><code>sudo apt install git gcc gmake findutils</code></td>
-           <td><code>sudo apt install libssl-dev</code></td>
-       </tr>
-       <tr>
-           <td>Fedora/RHEL</td>
-           <td><code>sudo dnf install git gcc gmake findutils</code></td>
-           <td><code>sudo dnf install openssl-devel</code></td>
-       </tr>
-       <tr>
-           <td>FreeBSD:</td>
-           <td><code>pkg install git gcc gmake findutils</code></td>
-           <td><code>pkg install openssl-devel</code></td>
-       </tr>
-       <tr>
-           <td>HaikuOS</td>
-           <td><code>pkg install git gcc gmake findutils</code></td>
-           <td>(pre-installed)</td>
-       </tr>
-       <tr>
-           <td>Openindiana</td>
-           <td><code>pkg install git gcc gmake findutils</code></td>
-           <td><code>pkg install library/security/openssl-11</code></td>
-       </tr>
-   </table>
-   You can also use clang instead of gcc
+	<table>
+		<tr>
+			<td><b>Platform</b></td>
+			<td><b>Install</b></td>
+			<td><b>Install optional</b></td>
+		</tr>
+		<tr>
+			<td>MacOS</td>
+			<td><code>brew install git gcc gmake findutils</code></td>
+			<td><code><strike>brew install openssl</strike></code> (broken)</td>
+		</tr>
+		<tr>
+			<td>Debian/Ubuntu</td>
+			<td><code>sudo apt install git gcc gmake findutils</code></td>
+			<td><code>sudo apt install libssl-dev</code></td>
+		</tr>
+		<tr>
+			<td>Fedora/RHEL</td>
+			<td><code>sudo dnf install git gcc gmake findutils</code></td>
+			<td><code>sudo dnf install openssl-devel</code></td>
+		</tr>
+		<tr>
+			<td>FreeBSD:</td>
+			<td><code>pkg install git gcc gmake findutils</code></td>
+			<td><code>pkg install openssl-devel</code></td>
+		</tr>
+		<tr>
+			<td>HaikuOS</td>
+			<td><code>pkg install git gcc gmake findutils</code></td>
+			<td>(pre-installed)</td>
+		</tr>
+		<tr>
+			<td>Openindiana</td>
+			<td><code>pkg install git gcc gmake findutils</code></td>
+			<td><code>pkg install library/security/openssl-11</code></td>
+		</tr>
+	</table>
+	You can also use clang instead of gcc
 
 2. Download
 
- ```
- git clone https://github.com/plerros/helsing.git
- cd helsing
- ```
+	```
+	git clone https://github.com/plerros/helsing.git
+	cd helsing
+	```
 3. Compile
 
- ```
- cd helsing
- gmake
- ```
+	```
+	cd helsing
+	gmake
+	```
 
 ## Run
 ```
