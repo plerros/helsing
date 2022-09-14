@@ -103,7 +103,7 @@ bool cache_ovf_chk(vamp_t max)
 	numeral_max = log2(max);
 #endif
 
-	return (numeral_max >= DIGBASE(ELEMENT_BITS) * (COMPARISON_BITS / ELEMENT_BITS));
+	return (numeral_max > (DIGBASE(ELEMENT_BITS) - 1) * (COMPARISON_BITS / ELEMENT_BITS));
 }
 
 #endif /* CACHE */
