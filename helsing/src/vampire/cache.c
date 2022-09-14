@@ -21,7 +21,15 @@
 
 #if CACHE
 
-#define DIGBASE(bits) ((vamp_t) pow(2.0, ((double)(bits))/(double)(BASE - 1)))
+#define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
+
+#if DEDICATED_BITFIELDS
+#define BITS_PER_NUMERAL2(bits) floor(BITS_PER_NUMERAL(bits))
+#else
+#define BITS_PER_NUMERAL2(bits) BITS_PER_NUMERAL(bits)
+#endif
+
+#define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL2(bits)))
 
 digits_t set_dig(fang_t number)
 {
@@ -87,15 +95,15 @@ void cache_free(struct cache *ptr)
 
 bool cache_ovf_chk(vamp_t max)
 {
+	double numeral_max;
+
 #if (BASE != 2) // avoid division by 0
-	if (log(max) / log(BASE - 1) <= DIGBASE(COMPARISON_BITS))
-		return false;
+	numeral_max = log(max) / log(BASE);
 #else
-	if (log2(max) <= COMPARISON_BITS) // Always true, unless COMPARISON_BITS is 32
-		return false;
+	numeral_max = log2(max);
 #endif
 
-	return true;
+	return (numeral_max >= DIGBASE(ELEMENT_BITS) * (COMPARISON_BITS / ELEMENT_BITS));
 }
 
 #endif /* CACHE */
