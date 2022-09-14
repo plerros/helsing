@@ -38,12 +38,12 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 		</tr>
 		<tr>
 			<td>Debian/Ubuntu</td>
-			<td><code>sudo apt install git gcc gmake findutils</code></td>
+			<td><code>sudo apt install git gcc make findutils</code></td>
 			<td><code>sudo apt install libssl-dev</code></td>
 		</tr>
 		<tr>
 			<td>Fedora/RHEL</td>
-			<td><code>sudo dnf install git gcc gmake findutils</code></td>
+			<td><code>sudo dnf install git gcc make findutils</code></td>
 			<td><code>sudo dnf install openssl-devel</code></td>
 		</tr>
 		<tr>
@@ -53,7 +53,7 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 		</tr>
 		<tr>
 			<td>HaikuOS</td>
-			<td><code>pkg install git gcc gmake findutils</code></td>
+			<td><code>pkgman install git gcc make findutils</code></td>
 			<td>(pre-installed)</td>
 		</tr>
 		<tr>
@@ -68,14 +68,39 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 
 	```
 	git clone https://github.com/plerros/helsing.git
-	cd helsing
+	cd helsing/helsing
 	```
 3. Compile
-
-	```
-	cd helsing
-	gmake
-	```
+	<table>
+		<tr>
+			<td><b>Platform</b></td>
+			<td><b>Compile</b></td>
+		</tr>
+		<tr>
+			<td>MacOS</td>
+			<td><code>gmake</code></td>
+		</tr>
+		<tr>
+			<td>Debian/Ubuntu</td>
+			<td><code>make</code></td>
+		</tr>
+		<tr>
+			<td>Fedora/RHEL</td>
+			<td><code>make</code></td>
+		</tr>
+		<tr>
+			<td>FreeBSD:</td>
+			<td><code>gmake</code></td>
+		</tr>
+		<tr>
+			<td>HaikuOS</td>
+			<td><code>make</code></td>
+		</tr>
+		<tr>
+			<td>Openindiana</td>
+			<td><code>gmake</code></td>
+		</tr>
+	</table>
 
 ## Run
 ```
