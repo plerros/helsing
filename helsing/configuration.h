@@ -159,6 +159,6 @@
  */
 
 #define LINK_SIZE 100
-#define SANITY_CHECK false
+#define SAFETY_CHECKS false
 
 #endif /* HELSING_CONFIG_H */

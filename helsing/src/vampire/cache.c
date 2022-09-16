@@ -15,10 +15,6 @@
 #include "cache.h"
 #endif
 
-#if defined(CACHE) && SANITY_CHECK
-#include <assert.h>
-#endif
-
 #if CACHE
 
 #define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
@@ -38,18 +34,18 @@ digits_t set_dig(fang_t number)
 	for (; number > 0; number /= BASE)
 		tmp[number % BASE] += 1;
 
-	for (digit_t i = 1; i < BASE; i++)
+	for (digit_t i = 1; i < BASE; i++) {
+		OPTIONAL_ASSERT(tmp[i] < DIGBASE(ACTIVE_BITS));
 		ret = ret * DIGBASE(ACTIVE_BITS) + tmp[i];
+	}
 
 	return ret;
 }
 
 void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert (*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct cache *new = malloc(sizeof(struct cache));
 	if (new == NULL)

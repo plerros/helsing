@@ -245,7 +245,7 @@ $ ./helsing --buildconf
     MAX_TASK_SIZE=99999999999
     USE_CHECKPOINT=false
     LINK_SIZE=100
-    SANITY_CHECK=false
+    SAFETY_CHECKS=false
 ```
 #### Recover from checkpoint (if enabled in configuration)
 ```

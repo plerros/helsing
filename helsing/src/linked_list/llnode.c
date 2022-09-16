@@ -5,6 +5,7 @@
 
 #include "configuration.h"
 #include "configuration_adv.h"
+#include "helper.h"
 
 #ifdef PROCESS_RESULTS
 #include <stdlib.h>
@@ -15,18 +16,12 @@
 #include <openssl/evp.h>
 #endif
 
-#if defined(PROCESS_RESULTS) && SANITY_CHECK
-	#include <assert.h>
-#endif
-
 #ifdef PROCESS_RESULTS
 
 static void llnode_new(struct llnode **ptr, struct llnode *next)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert(*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct llnode *new = malloc(sizeof(struct llnode));
 	if (new == NULL)
@@ -56,10 +51,9 @@ void llnode_free(struct llnode *node)
 
 void llnode_add(struct llnode **ptr, vamp_t value)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert(value != 0);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(value != 0);
+
 	if (*ptr == NULL) {
 		llnode_new(ptr, NULL);
 	}

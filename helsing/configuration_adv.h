@@ -99,4 +99,11 @@ typedef uint8_t length_t;
 #error BASE is too large
 #endif
 
+#if SAFETY_CHECKS
+#define OPTIONAL_ASSERT assert
+#include <assert.h>
+#else
+#define OPTIONAL_ASSERT no_args
+#endif
+
 #endif /* HELSING_CONFIG_ADV_H */

@@ -20,10 +20,8 @@
 
 void taskboard_new(struct taskboard **ptr, struct options_t options)
 {
-#ifdef SANITY_CHECK
-	assert(ptr != NULL);
-	assert(*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct taskboard *new = malloc(sizeof(struct taskboard));
 	if (new == NULL)

@@ -6,6 +6,8 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 
+#include "helper.h"
+
 #ifdef PROCESS_RESULTS
 #include <stdlib.h>
 #include <string.h>
@@ -16,10 +18,6 @@
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
 #include <openssl/evp.h>
 #include "hash.h"
-#endif
-
-#if defined(PROCESS_RESULTS) && SANITY_CHECK
-#include <assert.h>
 #endif
 
 #if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
@@ -53,11 +51,10 @@ int cmpvampt(const void *a, const void *b)
 
 void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert(*ptr == NULL);
-	assert(count_ptr != NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
+	OPTIONAL_ASSERT(count_ptr != NULL);
+
 	if (ll == NULL)
 		return;
 
@@ -115,10 +112,8 @@ void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
 #if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
 void array_checksum(struct array *ptr, struct hash *checksum)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert(checksum != NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(checksum != NULL);
 
 	for (vamp_t i = 0; i < ptr->size; i++) {
 		if (ptr->data[i] == 0)
@@ -143,9 +138,7 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 #if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
 void array_print(struct array *ptr, vamp_t count)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
 
 	for (vamp_t i = 0; i < ptr->size; i++) {
 		if (ptr->data[i] == 0)

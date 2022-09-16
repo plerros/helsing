@@ -8,16 +8,13 @@
 #include <stdbool.h>
 
 #include "configuration.h"
+#include "helper.h"
 #include "cache.h"
 #include "targs.h"
 #include "vargs.h"
 
 #if MEASURE_RUNTIME
 #include <time.h>
-#endif
-
-#if SANITY_CHECK
-#include <assert.h>
 #endif
 
 void targs_new(
@@ -28,10 +25,8 @@ void targs_new(
 	struct cache *digptr,
 	bool dry_run)
 {
-#if SANITY_CHECK
-	assert (ptr != NULL);
-	assert (*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct targs *new = malloc(sizeof(struct targs));
 	if (new == NULL)

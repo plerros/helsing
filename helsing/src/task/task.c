@@ -8,20 +8,15 @@
 
 #include "configuration.h"
 #include "configuration_adv.h"
+#include "helper.h"
 #include "task.h"
 #include "array.h"
 #include "vargs.h"
 
-#if SANITY_CHECK
-#include <assert.h>
-#endif
-
 void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert(*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct task *new = malloc(sizeof(struct task));
 	if (new == NULL)
@@ -46,10 +41,9 @@ void task_free(struct task *ptr)
 
 void task_copy_vargs(struct task *ptr, struct vargs *vamp_args)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert(vamp_args != NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(vamp_args != NULL);
+
 	ptr->result = vamp_args->result;
 	ptr->count = vamp_args->local_count;
 	ptr->complete = true;

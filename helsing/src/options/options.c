@@ -37,7 +37,7 @@ static void buildconf()
 	if (USE_CHECKPOINT)
 		printf("    CHECKPOINT_FILE=%s\n", CHECKPOINT_FILE);
 	printf("    LINK_SIZE=%d\n", LINK_SIZE);
-	printf("    SANITY_CHECK=%s\n", (SANITY_CHECK ? "true" : "false"));
+	printf("    SAFETY_CHECKS=%s\n", (SAFETY_CHECKS ? "true" : "false"));
 }
 
 static void arg_lower_bound()

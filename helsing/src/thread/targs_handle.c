@@ -9,21 +9,16 @@
 
 #include "configuration.h"
 #include "configuration_adv.h"
+#include "helper.h"
 #include "taskboard.h"
 #include "cache.h"
 #include "targs.h"
 #include "targs_handle.h"
 
-#if SANITY_CHECK
-#include <assert.h>
-#endif
-
 void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t min, vamp_t max, struct taskboard *progress)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert(*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct targs_handle *new = malloc(sizeof(struct targs_handle));
 	if (new == NULL)

@@ -16,10 +16,6 @@
 #include "cache.h"
 #include "vargs.h"
 
-#if SANITY_CHECK
-#include <assert.h>
-#endif
-
 #if USE_PDEP
 #include <immintrin.h>
 #endif
@@ -126,10 +122,8 @@ static bool congruence_check(vamp_t x, vamp_t y)
 
 void vargs_new(struct vargs **ptr, struct cache *digptr)
 {
-#if SANITY_CHECK
-	assert(ptr != NULL);
-	assert (*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct vargs *new = malloc(sizeof(struct vargs));
 	if (new == NULL)

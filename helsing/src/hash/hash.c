@@ -4,6 +4,7 @@
 
 #include "configuration.h"
 #include "configuration_adv.h"
+#include "helper.h"
 
 #ifdef CHECKSUM_RESULTS
 #include <stdlib.h>
@@ -14,18 +15,12 @@
 #include "hash.h"
 #endif
 
-#if defined(CHECKSUM_RESULTS) && SANITY_CHECK
-#include <assert.h>
-#endif
-
 #ifdef CHECKSUM_RESULTS
 
 void hash_new(struct hash **ptr)
 {
-#ifdef SANITY_CHECK
-	assert(ptr != NULL);
-	assert(*ptr == NULL);
-#endif
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(*ptr == NULL);
 
 	struct hash *new = malloc(sizeof(struct hash));
 	if (new == NULL)

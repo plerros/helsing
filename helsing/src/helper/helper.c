@@ -10,6 +10,8 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 
+void no_args() {};
+
 /*
  * willoverflow:
  * Checks if (10 * x + digit) will overflow, without causing and overflow.
@@ -34,9 +36,7 @@ length_t length(vamp_t x)
 
 vamp_t pow_v(length_t exponent) // pow for vamp_t.
 {
-#if SANITY_CHECK
-	assert(exponent <= length(VAMP_MAX) - 1);
-#endif
+	OPTIONAL_ASSERT(exponent <= length(VAMP_MAX) - 1);
 	vamp_t power = 1;
 	for (; exponent > 0; exponent--)
 		power *= BASE;
