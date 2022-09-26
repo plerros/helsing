@@ -18,14 +18,7 @@
 #if CACHE
 
 #define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
-
-#if DEDICATED_BITFIELDS
-#define BITS_PER_NUMERAL2(bits) floor(BITS_PER_NUMERAL(bits))
-#else
-#define BITS_PER_NUMERAL2(bits) BITS_PER_NUMERAL(bits)
-#endif
-
-#define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL2(bits)))
+#define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL(bits)))
 
 digits_t set_dig(fang_t number)
 {
@@ -100,7 +93,7 @@ bool cache_ovf_chk(vamp_t max)
 #endif
 
 	numeral_max = 2.0 * ceil(numeral_max / 2.0);
-	return (numeral_max >= (DIGBASE(ELEMENT_BITS) - 1) * (COMPARISON_BITS / ELEMENT_BITS));
+	return (numeral_max >= DIGBASE(ELEMENT_BITS) - 1);
 }
 
 #endif /* CACHE */

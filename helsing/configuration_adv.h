@@ -11,19 +11,8 @@
 #include <time.h>
 #include "configuration.h"
 
-#if USE_PDEP && COMPARISON_BITS == 64
-	#define ELEMENT_BITS 32
-	#undef DEDICATED_BITFIELDS
-	#define DEDICATED_BITFIELDS true
-#else
-	#define ELEMENT_BITS COMPARISON_BITS
-#endif
-
-#if DEDICATED_BITFIELDS
-	#define ACTIVE_BITS (ELEMENT_BITS / (BASE - 1)) * (BASE - 1)
-#else
-	#define ACTIVE_BITS ELEMENT_BITS
-#endif
+#define ELEMENT_BITS COMPARISON_BITS
+#define ACTIVE_BITS ELEMENT_BITS
 
 /*
  * The following typedefs are used to explicate intent.
@@ -89,14 +78,6 @@ typedef uint8_t length_t;
 
 #if (BASE < 2)
 #error BASE must be larger than 1
-#endif
-
-#if (USE_PDEP && COMPARISON_BITS != 64)
-#error PDEP requires COMPARISON_BITS 64
-#endif
-
-#if defined(DEDICATED_BITFIELDS) && (BASE > ELEMENT_BITS)
-#error BASE is too large
 #endif
 
 #if SAFETY_CHECKS

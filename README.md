@@ -239,8 +239,6 @@ $ ./helsing --buildconf
     MEASURE_RUNTIME=false
     CACHE=true
     COMPARISON_BITS=64
-    DEDICATED_BITFIELDS=false
-    USE_PDEP=false
     BASE=10
     MAX_TASK_SIZE=99999999999
     USE_CHECKPOINT=false

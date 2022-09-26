@@ -80,22 +80,12 @@
  * 	Setting COMPARISON_BITS to 32 will half the CACHE size and use 32-bit
  * 	variables.
  *
- * 2) DEDICATED_BITFIELDS:
- * 	This allows the use of bitshift operations instead of multiplication in
- * 	the function set_dig().
- *
- * 3) PDEP:
- * 	Use DEDICATED_BITFIELDS and half the CACHE size, then use pdep to expand
- * 	from 32 to 64 bits.
- *
  * These options adjust the space of solvable intervals to avoid
  * false-positives.
  */
 
 #define CACHE true
 #define COMPARISON_BITS 64
-#define DEDICATED_BITFIELDS false
-#define USE_PDEP false
 
 /*
  * BASE:
