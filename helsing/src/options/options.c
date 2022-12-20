@@ -25,8 +25,9 @@ static void buildconf()
 	if (VERBOSE_LEVEL > 1)
 		printf("    MIN_FANG_PAIRS=%d\n", MIN_FANG_PAIRS);
 	printf("    MEASURE_RUNTIME=%s\n", (MEASURE_RUNTIME ? "true" : "false"));
-	printf("    CACHE=%s\n", (CACHE ? "true" : "false"));
-	if (CACHE)
+	printf("    ALG_NORMAL=%s\n", (ALG_NORMAL ? "true" : "false"));
+	printf("    ALG_CACHE=%s\n", (ALG_CACHE ? "true" : "false"));
+	if (ALG_CACHE)
 		printf("    COMPARISON_BITS=%d\n", COMPARISON_BITS);
 	printf("    BASE=%d\n", BASE);
 	printf("    MAX_TASK_SIZE=%llu\n", MAX_TASK_SIZE);

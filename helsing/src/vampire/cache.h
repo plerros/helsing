@@ -10,7 +10,7 @@
 #include "configuration_adv.h"
 #include <stdbool.h>
 
-#if CACHE
+#if ALG_CACHE
 struct cache
 {
 	digits_t *dig;
@@ -20,7 +20,7 @@ digits_t set_dig(fang_t number);
 void cache_new(struct cache **ptr, vamp_t min, vamp_t max);
 void cache_free(struct cache *ptr);
 bool cache_ovf_chk(vamp_t max);
-#else /* !CACHE */
+#else /* !ALG_CACHE */
 struct cache
 {
 };
@@ -41,5 +41,5 @@ static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
 {
 	return false;
 }
-#endif /* CACHE */
+#endif /* ALG_CACHE */
 #endif /* HELSING_CACHE_H */

@@ -7,7 +7,7 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 
-#if CACHE
+#if ALG_CACHE
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
@@ -15,7 +15,7 @@
 #include "cache.h"
 #endif
 
-#if CACHE
+#if ALG_CACHE
 
 #define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
 #define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL(bits)))
@@ -96,4 +96,4 @@ bool cache_ovf_chk(vamp_t max)
 	return (numeral_max >= DIGBASE(ELEMENT_BITS) - 1);
 }
 
-#endif /* CACHE */
+#endif /* ALG_CACHE */

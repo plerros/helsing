@@ -27,7 +27,21 @@
 #define MEASURE_RUNTIME false
 
 /*
- * CACHE:
+ * ALGORITHMS:
+ *
+ * The included algorithms:
+ * 1) normal
+ * 2) cache
+ *
+ * They can be toggled individually.
+ * When more than one algorithms are enabled, the results have to satisfy only
+ * one of them.
+ */
+
+#define ALG_NORMAL false
+
+/*
+ * ALG_CACHE:
  *
  * 	This code was originally written by Jens Kruse Andersen and is included
  * with their permission. Adjustments were made to improve runtime, memory
@@ -73,18 +87,18 @@
  *
  * 	*Based on some of my testing in base-10. Your mileage may vary.
  *
- * CACHE Options:
+ * ALG_CACHE Options:
  *
  * 1) COMPARISON_BITS:
  * 	The #bits used for the vampire check. It can be set to 64(default) or 32.
- * 	Setting COMPARISON_BITS to 32 will half the CACHE size and use 32-bit
+ * 	Setting COMPARISON_BITS to 32 will half the ALG_CACHE size and use 32-bit
  * 	variables.
  *
  * These options adjust the space of solvable intervals to avoid
  * false-positives.
  */
 
-#define CACHE true
+#define ALG_CACHE true
 #define COMPARISON_BITS 64
 
 /*
@@ -94,7 +108,7 @@
  * checking algorithm.
  *
  * For bases above 255 adjust digit_t accordingly.
- * If 2^(ELEMENT_BITS/(BASE-1)) < ELEMENT_BITS/log2(BASE-1), then disable CACHE.
+ * If 2^(ELEMENT_BITS/(BASE-1)) < ELEMENT_BITS/log2(BASE-1), then disable ALG_CACHE.
  */
 
 #define BASE 10

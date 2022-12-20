@@ -29,12 +29,10 @@ int interval_set(struct interval_t *ptr, vamp_t min, vamp_t max)
 
 	if (cache_ovf_chk(ptr->max)) {
 		fprintf(stderr, "WARNING: the code might produce false positives, ");
-		if (COMPARISON_BITS == 32) {
+		if (COMPARISON_BITS == 32)
 			fprintf(stderr, "please set COMPARISON_BITS to 64.\n");
-		}
-		else {
-			fprintf(stderr, "please set CACHE to false.\n");
-		}
+		else
+			fprintf(stderr, "please set ALG_CACHE to false.\n");
 		rc = 1;
 		goto out;
 	}
