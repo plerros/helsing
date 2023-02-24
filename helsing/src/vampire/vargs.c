@@ -209,15 +209,20 @@ out:
  * Because it seems to perform pretty well.
  */
 
+struct num_part
+{
+	fang_t number;
+	fang_t iterator;
+};
+
 struct alg_cache
 {
 	fang_t mod;
 	digits_t *digits_array;
 	digits_t dig_multiplier;	// doesn't change when we iterate
-	fang_t multiplicand[2];
 	// multiplicand iterator is BASE - 1
-	fang_t product[3];
-	fang_t product_iterator[3];
+	struct num_part multiplicand[2];
+	struct num_part product[3];
 };
 
 static void alg_cache_init(struct alg_cache *ptr, fang_t mod, struct cache *cache)
@@ -227,13 +232,24 @@ static void alg_cache_init(struct alg_cache *ptr, fang_t mod, struct cache *cach
 	ptr->digits_array = cache->dig;
 }
 
-static void alg_cache_split(vamp_t number, fang_t mod, fang_t *arr, int n)
-{
-	for (int i = 0; i < n - 1; i++) {
-		arr[i] = number % mod;
+static void alg_cache_split(
+	vamp_t number,
+	fang_t mod,
+	vamp_t iterator,
+	struct num_part *arr,
+	size_t n)
+{	
+	if (n == 0)
+		return;
+
+	for (size_t i = 0; i < n - 1; i++) {
+		arr[i].number = number % mod;
 		number /= mod;
+		arr[i].iterator = iterator % mod;
+		iterator /= mod;
 	}
-	arr[n - 1] = number; // number >= number % mod
+	arr[n - 1].number = number; // number >= number % mod
+	arr[n - 1].iterator = iterator;
 }
 
 static void alg_cache_set(
@@ -250,8 +266,8 @@ static void alg_cache_set(
 	 */
 
 	ptr->dig_multiplier = set_dig(multiplier);
-	alg_cache_split(multiplicand, ptr->mod, ptr->multiplicand, 2);
-	alg_cache_split(product, ptr->mod, ptr->product, 3);
+	alg_cache_split(multiplicand, ptr->mod, BASE-1, ptr->multiplicand, 2);
+	alg_cache_split(product, ptr->mod, product_iterator, ptr->product, 3);
 
 	/*
 	 * We can improve the runtime even further by removing product_iterator[2].
@@ -265,8 +281,7 @@ static void alg_cache_set(
 	 * x >= n+1 - x
 	 */
 
-	alg_cache_split(product_iterator, ptr->mod, ptr->product_iterator, 3);
-	OPTIONAL_ASSERT(ptr->product_iterator[2] == 0);
+	OPTIONAL_ASSERT(ptr->product[3 - 1].iterator == 0);
 }
 
 static void alg_cache_check(struct alg_cache *ptr, int *result)
@@ -274,33 +289,33 @@ static void alg_cache_check(struct alg_cache *ptr, int *result)
 	const digits_t *digits_array = ptr->digits_array;
 	if (
 		ptr->dig_multiplier
-		+ digits_array[ptr->multiplicand[0]]
-		+ digits_array[ptr->multiplicand[1]]
+		+ digits_array[ptr->multiplicand[0].number]
+		+ digits_array[ptr->multiplicand[1].number]
 		==
-		digits_array[ptr->product[0]]
-		+ digits_array[ptr->product[1]]
-		+ digits_array[ptr->product[2]]
+		digits_array[ptr->product[0].number]
+		+ digits_array[ptr->product[1].number]
+		+ digits_array[ptr->product[2].number]
 	)
 		(*result) += 1;
 }
 
-static void alg_cache_iterate(
+static inline void alg_cache_iterate(
 	fang_t mod,
-	fang_t arr[2],
+	struct num_part *arr,
 	fang_t iterator)
 {
-	arr[0] += iterator;
-	if (arr[0] >= mod) {
-		arr[0] -= mod;
-		arr[1] += 1;
+	arr[0].number += iterator;
+	if (arr[0].number >= mod) {
+		arr[0].number -= mod;
+		arr[1].number += 1;
 	}
 }
 
 static void alg_cache_iterate_all(struct alg_cache *ptr)
 {
 	alg_cache_iterate(ptr->mod, ptr->multiplicand, BASE - 1);
-	alg_cache_iterate(ptr->mod, ptr->product, ptr->product_iterator[0]);
-	alg_cache_iterate(ptr->mod, &(ptr->product[1]), ptr->product_iterator[1]);
+	alg_cache_iterate(ptr->mod, ptr->product, ptr->product[0].iterator);
+	alg_cache_iterate(ptr->mod, &(ptr->product[1]), ptr->product[1].iterator);
 }
 
 #endif /* ALG_CACHE */
