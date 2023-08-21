@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
  * Copyright (c) 2012 Jens Kruse Andersen
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2023 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -229,7 +229,10 @@ static void alg_cache_init(struct alg_cache *ptr, fang_t mod, struct cache *cach
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	ptr->mod = mod;
-	ptr->digits_array = cache->dig;
+
+	ptr->digits_array = NULL;
+	if (cache != NULL)
+		ptr->digits_array = cache->dig;
 }
 
 static void alg_cache_split(
@@ -281,41 +284,46 @@ static void alg_cache_set(
 	 * x >= n+1 - x
 	 */
 
+	if (ptr->multiplicand[0].iterator != BASE-1)
+		abort();	// Let the compiler know that this is constant
 	OPTIONAL_ASSERT(ptr->product[3 - 1].iterator == 0);
 }
 
 static void alg_cache_check(struct alg_cache *ptr, int *result)
 {
 	const digits_t *digits_array = ptr->digits_array;
-	if (
-		ptr->dig_multiplier
-		+ digits_array[ptr->multiplicand[0].number]
-		+ digits_array[ptr->multiplicand[1].number]
-		==
-		digits_array[ptr->product[0].number]
-		+ digits_array[ptr->product[1].number]
-		+ digits_array[ptr->product[2].number]
-	)
+
+	digits_t a = ptr->dig_multiplier;
+	for (int i = 0; i < 2; i++)
+		a += digits_array[ptr->multiplicand[i].number];
+
+	digits_t b = digits_array[ptr->product[0].number];
+	for (int i = 1; i < 3; i++)
+		b += digits_array[ptr->product[i].number];
+
+	if (a == b)
 		(*result) += 1;
 }
 
 static inline void alg_cache_iterate(
 	fang_t mod,
 	struct num_part *arr,
-	fang_t iterator)
+	int elements)
 {
-	arr[0].number += iterator;
-	if (arr[0].number >= mod) {
-		arr[0].number -= mod;
-		arr[1].number += 1;
+	int i = 0;
+	for (; i < elements - 1; i++) {
+		arr[i].number += arr[i].iterator;
+		if (arr[i].number >= mod) {
+			arr[i].number -= mod;
+			arr[i + 1].number += 1;
+		}
 	}
 }
 
 static void alg_cache_iterate_all(struct alg_cache *ptr)
 {
-	alg_cache_iterate(ptr->mod, ptr->multiplicand, BASE - 1);
-	alg_cache_iterate(ptr->mod, ptr->product, ptr->product[0].iterator);
-	alg_cache_iterate(ptr->mod, &(ptr->product[1]), ptr->product[1].iterator);
+	alg_cache_iterate(ptr->mod, ptr->multiplicand, 2);
+	alg_cache_iterate(ptr->mod, ptr->product, 3);
 }
 
 #endif /* ALG_CACHE */
