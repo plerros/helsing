@@ -15,6 +15,7 @@ void no_args() {};
 /*
  * willoverflow:
  * Checks if (10 * x + digit) will overflow, without causing and overflow.
+ * Should only be used for input checking, where the numeral base is 10.
  */
 bool willoverflow(vamp_t x, vamp_t limit, digit_t digit)
 {

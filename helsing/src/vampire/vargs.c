@@ -276,12 +276,12 @@ static void alg_cache_set(
 	 * We can improve the runtime even further by removing product_iterator[2].
 	 * If product_iterator[2] is always 0, we don't need it.
 	 *
-	 * product_iterator[2] = (product_iterator / power_a) / power_a
+	 * product_iterator[2] = (product_iterator / (x1^BASE)) / (x2^BASE)
 	 *
 	 * product_iterator[2] has 0 digits, product_iterator has n+1, and we are going to solve for power_a:
 	 *
-	 * 0 >= (n+1 - x) - x
-	 * x >= n+1 - x
+	 * 0 >= (n+1 - x1) - x2
+	 * x1 + x2 >= n+1
 	 */
 
 	if (ptr->multiplicand[0].iterator != BASE-1)
