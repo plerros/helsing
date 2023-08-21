@@ -25,11 +25,11 @@ OPTIMIZE := -O2
 LFLAGS := # -Wl,--gc-sections
 LIBS := -lpthread -lm $(shell if $(CC) -dM -E -I$(SRC_DIRS)/configuration.h $(SRC_DIRS)/configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
 
-SRCS := $(shell find $(SRC_DIRS) -name *.c)
+SRCS := $(shell find $(SRC_DIRS) -name *.c | sort)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+INC_DIRS := $(shell find $(SRC_DIRS) -type d | sort)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
