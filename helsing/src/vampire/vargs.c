@@ -213,6 +213,7 @@ struct num_part
 {
 	fang_t number;
 	fang_t iterator;
+	fang_t carry;
 };
 
 struct alg_cache
@@ -241,7 +242,7 @@ static void alg_cache_split(
 	vamp_t iterator,
 	struct num_part *arr,
 	size_t n)
-{	
+{
 	if (n == 0)
 		return;
 
@@ -250,9 +251,11 @@ static void alg_cache_split(
 		number /= mod;
 		arr[i].iterator = iterator % mod;
 		iterator /= mod;
+		arr[i].carry = 0;
 	}
 	arr[n - 1].number = number; // number >= number % mod
 	arr[n - 1].iterator = iterator;
+	arr[n - 1].carry = 0;
 }
 
 static void alg_cache_set(
@@ -310,14 +313,20 @@ static inline void alg_cache_iterate(
 	struct num_part *arr,
 	int elements)
 {
-	int i = 0;
-	for (; i < elements - 1; i++) {
+	// Splitting the code to multiple loops seems to help compilers optimize it
+
+	for (int i = 0; i < elements - 1; i++)
 		arr[i].number += arr[i].iterator;
+
+	for (int i = 0; i < elements - 1; i++) {
+		arr[i].carry = 0;
 		if (arr[i].number >= mod) {
 			arr[i].number -= mod;
-			arr[i + 1].number += 1;
+			arr[i].carry = 1;
 		}
 	}
+	for (int i = 0; i < elements - 1; i++)
+		arr[i + 1].number += arr[i].carry;
 }
 
 static void alg_cache_iterate_all(struct alg_cache *ptr)
