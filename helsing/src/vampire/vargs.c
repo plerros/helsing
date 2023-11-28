@@ -315,20 +315,23 @@ static inline void alg_cache_iterate(
 	struct num_part *arr,
 	int elements)
 {
-	// Splitting the code to multiple loops seems to help compilers optimize it
-
-	for (int i = 0; i < elements - 1; i++)
-		arr[i].number += arr[i].iterator;
+	/*
+	 * For whatever reason, writing the code like this makes it more
+	 * optimizable by gcc and clang, while retaining correctness.
+	 */
 
 	for (int i = 0; i < elements - 1; i++) {
-		arr[i].carry = 0;
-		if (arr[i].number >= arr[i].mod) {
+		arr[i].number += arr[i].iterator;
+		arr[i + 1].carry = 0;
+		if (arr[i].number >= arr[i].mod - arr[i].carry) {
 			arr[i].number -= arr[i].mod;
-			arr[i].carry = 1;
+			arr[i + 1].carry = 1;
 		}
 	}
-	for (int i = 0; i < elements - 1; i++)
-		arr[i + 1].number += arr[i].carry;
+	for (int i = 1; i < elements - 1; i++)
+		arr[i].number += arr[i].carry;
+	
+	arr[elements - 1].number += arr[elements - 1].carry;
 }
 
 static void alg_cache_iterate_all(struct alg_cache *ptr)
