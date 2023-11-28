@@ -12,11 +12,11 @@
 
 void no_args();
 bool willoverflow(vamp_t x, vamp_t limit, digit_t digit);
-length_t length(vamp_t x);
-vamp_t pow_v(length_t exponent);
+__attribute__((const)) length_t length(vamp_t x);
+__attribute__((const)) vamp_t pow_v(length_t exponent);
 vamp_t get_min(vamp_t min, vamp_t max);
 vamp_t get_max(vamp_t min, vamp_t max);
-vamp_t div_roof(vamp_t x, vamp_t y);
-length_t partition3(length_t x);
+__attribute__((const)) vamp_t div_roof(vamp_t x, vamp_t y);
+__attribute__((const)) length_t partition3(length_t x);
 
 #endif /* HELPER_HELSING */

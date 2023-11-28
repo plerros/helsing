@@ -213,12 +213,12 @@ struct num_part
 {
 	fang_t number;
 	fang_t iterator;
+	fang_t mod;
 	fang_t carry;
 };
 
 struct alg_cache
 {
-	fang_t mod;
 	digits_t *digits_array;
 	digits_t dig_multiplier;	// doesn't change when we iterate
 	// multiplicand iterator is BASE - 1
@@ -226,19 +226,22 @@ struct alg_cache
 	struct num_part product[3];
 };
 
-static void alg_cache_init(struct alg_cache *ptr, fang_t mod, struct cache *cache)
+static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct cache *cache)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
-	ptr->mod = mod;
 
 	ptr->digits_array = NULL;
 	if (cache != NULL)
 		ptr->digits_array = cache->dig;
+	
+	for (int i = 0; i < 2; i++)
+		ptr->multiplicand[i].mod = pow_v(partition3(lenmax));
+	for (int i = 0; i < 3; i++)
+		ptr->product[i].mod = pow_v(partition3(lenmax));
 }
 
 static void alg_cache_split(
 	vamp_t number,
-	fang_t mod,
 	vamp_t iterator,
 	struct num_part *arr,
 	size_t n)
@@ -247,10 +250,10 @@ static void alg_cache_split(
 		return;
 
 	for (size_t i = 0; i < n - 1; i++) {
-		arr[i].number = number % mod;
-		number /= mod;
-		arr[i].iterator = iterator % mod;
-		iterator /= mod;
+		arr[i].number = number % arr[i].mod;
+		number /= arr[i].mod;
+		arr[i].iterator = iterator % arr[i].mod;
+		iterator /= arr[i].mod;
 		arr[i].carry = 0;
 	}
 	arr[n - 1].number = number; // number >= number % mod
@@ -272,8 +275,8 @@ static void alg_cache_set(
 	 */
 
 	ptr->dig_multiplier = set_dig(multiplier);
-	alg_cache_split(multiplicand, ptr->mod, BASE-1, ptr->multiplicand, 2);
-	alg_cache_split(product, ptr->mod, product_iterator, ptr->product, 3);
+	alg_cache_split(multiplicand, BASE-1, ptr->multiplicand, 2);
+	alg_cache_split(product, product_iterator, ptr->product, 3);
 
 	/*
 	 * We can improve the runtime even further by removing product_iterator[2].
@@ -309,7 +312,6 @@ static void alg_cache_check(struct alg_cache *ptr, int *result)
 }
 
 static inline void alg_cache_iterate(
-	fang_t mod,
 	struct num_part *arr,
 	int elements)
 {
@@ -320,8 +322,8 @@ static inline void alg_cache_iterate(
 
 	for (int i = 0; i < elements - 1; i++) {
 		arr[i].carry = 0;
-		if (arr[i].number >= mod) {
-			arr[i].number -= mod;
+		if (arr[i].number >= arr[i].mod) {
+			arr[i].number -= arr[i].mod;
 			arr[i].carry = 1;
 		}
 	}
@@ -331,8 +333,8 @@ static inline void alg_cache_iterate(
 
 static void alg_cache_iterate_all(struct alg_cache *ptr)
 {
-	alg_cache_iterate(ptr->mod, ptr->multiplicand, 2);
-	alg_cache_iterate(ptr->mod, ptr->product, 3);
+	alg_cache_iterate(ptr->multiplicand, 2);
+	alg_cache_iterate(ptr->product, 3);
 }
 
 #endif /* ALG_CACHE */
@@ -345,7 +347,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	fang_t max_sqrt = sqrtv_floor(max);
 
 	struct alg_cache ag_data;
-	alg_cache_init(&ag_data, pow_v(partition3(length(max))), args->digptr);
+	alg_cache_init(&ag_data, length(max), args->digptr);
 
 	length_t mult_array[BASE];
 
