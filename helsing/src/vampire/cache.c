@@ -46,12 +46,27 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 
 	length_t cs = 0;
 	length_t i = length(min);
-	do {
-		length_t part_A = partition3(i);
-		length_t part_B = 0;
-		if (i / 2 > part_A)
-			part_B = i - 2 * part_A;
 
+	struct partdata_t data;
+	struct partdata_const_t data_const = {
+		.idx_n = false
+	};
+	struct partdata_global_t data_glob = {
+		.multiplicand_parts = 2,
+		.product_parts = 3
+	};
+
+	do {
+		data_glob.multiplicand_length = div_roof(i, 2);
+		data_glob.product_length = i;
+
+		data_glob.multiplicand_iterator = length(BASE - 1);
+		data_glob.product_iterator = data_glob.multiplicand_length + length(BASE - 1);
+
+		data_const.idx_n = false;
+		length_t part_A = part_scsg_3(data, data_const, data_glob);
+		data_const.idx_n = true;
+		length_t part_B = part_scsg_3(data, data_const, data_glob);
 		if (part_A > cs)
 			cs = part_A;
 		if (part_B > cs)
@@ -94,6 +109,57 @@ bool cache_ovf_chk(vamp_t max)
 
 	numeral_max = 2.0 * ceil(numeral_max / 2.0);
 	return (numeral_max >= DIGBASE(ELEMENT_BITS) - 1);
+}
+
+/*
+ * part_scsg_3:
+ * (semi-constant, semi-global)
+ *
+ * partition x into 3 integers so that:
+ * x <= 2 * A + B
+ * if data_const.idx_n is:
+ * 	0, return A
+ * 	1, return B
+ */
+
+length_t part_scsg_3(
+	__attribute__((unused)) struct partdata_t data,
+	struct partdata_const_t data_const,
+	struct partdata_global_t data_glob)
+{
+	length_t x = data_glob.product_length;
+
+	length_t B = x;
+	length_t multiplicand_maxB = 0;
+	if (data_glob.multiplicand_length > data_glob.multiplicand_iterator)
+		multiplicand_maxB = data_glob.multiplicand_length - data_glob.multiplicand_iterator;
+	length_t product_maxB = 0;
+	if (data_glob.product_length > data_glob.product_iterator)
+		product_maxB = data_glob.product_length - data_glob.product_iterator;
+
+	if (B > multiplicand_maxB)
+		B = multiplicand_maxB;
+
+	if (B > product_maxB)
+		B = product_maxB;
+
+	length_t max = data_glob.multiplicand_parts;
+	if (max < data_glob.product_parts)
+		max = data_glob.product_parts;
+
+	length_t remainder = (x - B) % (max - 1);
+	if (remainder > 0) {
+		length_t adjust = (max - 1) - remainder;
+		if (B >= adjust)
+			B -= adjust;
+		else
+			x += adjust;
+	}
+	if (data_const.idx_n)
+		return B;
+
+	length_t A = (x - B) / 2;
+	return A;
 }
 
 #endif /* ALG_CACHE */

@@ -233,11 +233,25 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	ptr->digits_array = NULL;
 	if (cache != NULL)
 		ptr->digits_array = cache->dig;
-	
-	for (int i = 0; i < 2; i++)
-		ptr->multiplicand[i].mod = pow_v(partition3(lenmax));
-	for (int i = 0; i < 3; i++)
-		ptr->product[i].mod = pow_v(partition3(lenmax));
+
+	struct partdata_t data;
+	struct partdata_const_t data_const = {
+		.idx_n = false
+	};
+	length_t multiplicand_length =  div_roof(lenmax, 2);
+	struct partdata_global_t data_glob = {
+		.multiplicand_parts = 2,
+		.multiplicand_length = multiplicand_length,
+		.product_parts = 3,
+		.product_length = lenmax,
+		.multiplicand_iterator = length(BASE - 1),
+		.product_iterator = multiplicand_length + length(BASE - 1)
+	};
+
+	for (int i = 0; i < 2 - 1; i++)
+		ptr->multiplicand[i].mod = pow_v(part_scsg_3(data, data_const, data_glob));
+	for (int i = 0; i < 3 - 1; i++)
+		ptr->product[i].mod = pow_v(part_scsg_3(data, data_const, data_glob));
 }
 
 static void alg_cache_split(

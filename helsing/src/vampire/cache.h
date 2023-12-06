@@ -42,4 +42,98 @@ static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
 	return false;
 }
 #endif /* ALG_CACHE */
+
+
+#if ALG_CACHE
+/*
+ * Partition
+ *
+ * We are tasked to partition numbers.
+ * For example if we wanted 3 partitions of the number 12345678, we could do two
+ * partitions of length 3 and one of length 2:
+ * 12345678 -> 123, 456, 78
+ * (8)         (3)  (3)  (2)
+ *
+ * We can partition the numbers for loose or exact fit
+ * 	1) loose fit, length(number) <= sum(partitions)
+ * 	2) exact fit, length(number) == sum(partitions)
+ *
+ * The rest of the code assumes loose, and works with either.
+ *
+ * In helsing, the numbers we partition are the multiplicand and the product.
+ * Let's partition them as such:
+ * 	mult[0], mult[1], ... mult[n]
+ * 	prod[0], prod[1], ... prod[m]
+ *
+ * The partitioning methods can be constant, semi-constant & non-constant:
+ * 	number:	n partitions
+ * 	1) constant:
+ * 		number[0] = number[1] = ... = number[n]
+ *
+ * 	2) semi-constant:
+ * 		number[0] = number[1] = ... = number[n-1]
+ *
+ * 	3) non-constant
+ *
+ * The partitioning methods can be global, semi-global & non-global:
+ * 	mult:	n partitions
+ * 	prod:	m partitions
+ * 	k = min(n, m)
+ *
+ * 	1) global:
+ * 		mult[0] = prod[0]
+ * 		mult[1] = prod[1]
+ * 		...
+ * 		mult[k] = prod[k]
+ *
+ * 	2) semi-global:
+ * 		mult[0] = prod[0]
+ * 		mult[1] = prod[1]
+ * 		...
+ * 		mult[k-1] = prod[k-1]
+ *
+ * 	3) non-global
+ *
+ * Assuming that m,n > 1, all constant, semi-constant, global and semi-global
+ * methods are loose-fit.
+ */
+
+struct partdata_t
+{
+};
+
+struct partdata_const_t
+{
+	bool idx_n; // is index == n?
+};
+
+struct partdata_nonconst_t
+{
+	length_t index;
+};
+
+struct partdata_global_t
+{
+	length_t multiplicand_parts;
+	length_t multiplicand_length;
+	length_t multiplicand_iterator;
+	length_t product_parts;
+	length_t product_length;
+	length_t product_iterator;
+};
+
+struct partdata_nonglobal_t
+{
+	length_t parts;
+	length_t length;
+	length_t iterator;
+};
+
+// Semi-Constant & Semi-Global
+__attribute__((const))
+length_t part_scsg_3(
+	struct partdata_t data,
+	struct partdata_const_t data_const,
+	struct partdata_global_t data_glob);
+#endif /* ALG_CACHE */
 #endif /* HELSING_CACHE_H */
