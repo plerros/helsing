@@ -234,12 +234,12 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	if (cache != NULL)
 		ptr->digits_array = cache->dig;
 
-	struct partdata_t data;
-	struct partdata_const_t data_const = {
+	struct partdata_all_t data;
+	struct partdata_constant_t data_constant = {
 		.idx_n = false
 	};
 	length_t multiplicand_length =  div_roof(lenmax, 2);
-	struct partdata_global_t data_glob = {
+	struct partdata_global_t data_global = {
 		.multiplicand_parts = 2,
 		.multiplicand_length = multiplicand_length,
 		.product_parts = 3,
@@ -249,9 +249,9 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	};
 
 	for (int i = 0; i < 2 - 1; i++)
-		ptr->multiplicand[i].mod = pow_v(part_scsg_3(data, data_const, data_glob));
+		ptr->multiplicand[i].mod = pow_v(part_scsg_3(data_constant, data_global));
 	for (int i = 0; i < 3 - 1; i++)
-		ptr->product[i].mod = pow_v(part_scsg_3(data, data_const, data_glob));
+		ptr->product[i].mod = pow_v(part_scsg_3(data_constant, data_global));
 }
 
 static void alg_cache_split(

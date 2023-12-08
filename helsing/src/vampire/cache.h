@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2023 Pierro Zachareas
  */
 
 #ifndef HELSING_CACHE_H
@@ -65,7 +65,7 @@ static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
  * 	mult[0], mult[1], ... mult[n]
  * 	prod[0], prod[1], ... prod[m]
  *
- * The partitioning methods can be constant, semi-constant & non-constant:
+ * The partitioning methods can be constant, semi-constant & variable:
  * 	number:	n partitions
  * 	1) constant:
  * 		number[0] = number[1] = ... = number[n]
@@ -73,9 +73,9 @@ static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
  * 	2) semi-constant:
  * 		number[0] = number[1] = ... = number[n-1]
  *
- * 	3) non-constant
+ * 	3) variable
  *
- * The partitioning methods can be global, semi-global & non-global:
+ * The partitioning methods can be global, semi-global & local:
  * 	mult:	n partitions
  * 	prod:	m partitions
  * 	k = min(n, m)
@@ -92,7 +92,7 @@ static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
  * 		...
  * 		mult[k-1] = prod[k-1]
  *
- * 	3) non-global
+ * 	3) local
  *
  * Assuming that m,n > 1, all constant, semi-constant, global and semi-global
  * methods are loose-fit.
@@ -102,12 +102,12 @@ struct partdata_t
 {
 };
 
-struct partdata_const_t
+struct partdata_constant_t
 {
 	bool idx_n; // is index == n?
 };
 
-struct partdata_nonconst_t
+struct partdata_variable_t
 {
 	length_t index;
 };
@@ -122,18 +122,30 @@ struct partdata_global_t
 	length_t product_iterator;
 };
 
-struct partdata_nonglobal_t
+struct partdata_local_t
 {
 	length_t parts;
 	length_t length;
 	length_t iterator;
 };
 
+struct partdata_other_t
+{
+};
+
+struct partdata_all_t
+{
+	struct partdata_constant_t	constant;
+	struct partdata_variable_t	variable;
+	struct partdata_global_t  	global;
+	struct partdata_local_t   	local;
+	struct partdata_other_t   	other;
+};
+
 // Semi-Constant & Semi-Global
 __attribute__((const))
 length_t part_scsg_3(
-	struct partdata_t data,
-	struct partdata_const_t data_const,
+	struct partdata_constant_t data_const,
 	struct partdata_global_t data_glob);
 #endif /* ALG_CACHE */
 #endif /* HELSING_CACHE_H */

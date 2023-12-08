@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
  * Copyright (c) 2012 Jens Kruse Andersen
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2023 Pierro Zachareas
  */
 
 #include "configuration.h"
@@ -47,26 +47,26 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 	length_t cs = 0;
 	length_t i = length(min);
 
-	struct partdata_t data;
-	struct partdata_const_t data_const = {
+	struct partdata_all_t data;
+	struct partdata_constant_t data_constant = {
 		.idx_n = false
 	};
-	struct partdata_global_t data_glob = {
+	struct partdata_global_t data_global = {
 		.multiplicand_parts = 2,
 		.product_parts = 3
 	};
 
 	do {
-		data_glob.multiplicand_length = div_roof(i, 2);
-		data_glob.product_length = i;
+		data_global.multiplicand_length = div_roof(i, 2);
+		data_global.product_length = i;
 
-		data_glob.multiplicand_iterator = length(BASE - 1);
-		data_glob.product_iterator = data_glob.multiplicand_length + length(BASE - 1);
+		data_global.multiplicand_iterator = length(BASE - 1);
+		data_global.product_iterator = data_global.multiplicand_length + length(BASE - 1);
 
-		data_const.idx_n = false;
-		length_t part_A = part_scsg_3(data, data_const, data_glob);
-		data_const.idx_n = true;
-		length_t part_B = part_scsg_3(data, data_const, data_glob);
+		data_constant.idx_n = false;
+		length_t part_A = part_scsg_3(data_constant, data_global);
+		data_constant.idx_n = true;
+		length_t part_B = part_scsg_3(data_constant, data_global);
 		if (part_A > cs)
 			cs = part_A;
 		if (part_B > cs)
@@ -123,19 +123,18 @@ bool cache_ovf_chk(vamp_t max)
  */
 
 length_t part_scsg_3(
-	__attribute__((unused)) struct partdata_t data,
-	struct partdata_const_t data_const,
-	struct partdata_global_t data_glob)
+	struct partdata_constant_t data_constant,
+	struct partdata_global_t data_global)
 {
-	length_t x = data_glob.product_length;
+	length_t x = data_global.product_length;
 
 	length_t B = x;
 	length_t multiplicand_maxB = 0;
-	if (data_glob.multiplicand_length > data_glob.multiplicand_iterator)
-		multiplicand_maxB = data_glob.multiplicand_length - data_glob.multiplicand_iterator;
+	if (data_global.multiplicand_length > data_global.multiplicand_iterator)
+		multiplicand_maxB = data_global.multiplicand_length - data_global.multiplicand_iterator;
 	length_t product_maxB = 0;
-	if (data_glob.product_length > data_glob.product_iterator)
-		product_maxB = data_glob.product_length - data_glob.product_iterator;
+	if (data_global.product_length > data_global.product_iterator)
+		product_maxB = data_global.product_length - data_global.product_iterator;
 
 	if (B > multiplicand_maxB)
 		B = multiplicand_maxB;
@@ -143,9 +142,9 @@ length_t part_scsg_3(
 	if (B > product_maxB)
 		B = product_maxB;
 
-	length_t max = data_glob.multiplicand_parts;
-	if (max < data_glob.product_parts)
-		max = data_glob.product_parts;
+	length_t max = data_global.multiplicand_parts;
+	if (max < data_global.product_parts)
+		max = data_global.product_parts;
 
 	length_t remainder = (x - B) % (max - 1);
 	if (remainder > 0) {
@@ -155,7 +154,7 @@ length_t part_scsg_3(
 		else
 			x += adjust;
 	}
-	if (data_const.idx_n)
+	if (data_constant.idx_n)
 		return B;
 
 	length_t A = (x - B) / 2;
