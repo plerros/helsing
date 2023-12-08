@@ -6,9 +6,9 @@ Helsing is a command-line program that scans intervals for vampire numbers.
 The default algorithm has a time complexity of $O(n)$ and a space complexity of
 $O(\sqrt{n})$.
 
-In *helsing/configuration.h* you can select the algorithm implementation and
-tune it, adjust verbosity, change the numeral base system, set a minimum fang
-pairs filter, and enable resume from checkpoint.
+In *helsing/configuration.h* you can toggle the algorithms and tune them,
+adjust verbosity, change the numeral base system, set a minimum fang pairs
+filter, and enable resume from checkpoint.
 Be sure to read the documentation.
 
 ## Windows Preparation
@@ -237,10 +237,9 @@ $ ./helsing --buildconf
     VERBOSE_LEVEL=2
     MIN_FANG_PAIRS=1
     MEASURE_RUNTIME=false
-    CACHE=true
+    ALG_NORMAL=false
+    ALG_CACHE=true
     COMPARISON_BITS=64
-    DEDICATED_BITFIELDS=false
-    USE_PDEP=false
     BASE=10
     MAX_TASK_SIZE=99999999999
     USE_CHECKPOINT=false

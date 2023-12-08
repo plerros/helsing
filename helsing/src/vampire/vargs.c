@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
  * Copyright (c) 2012 Jens Kruse Andersen
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2023 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -15,28 +15,6 @@
 #include "array.h"
 #include "cache.h"
 #include "vargs.h"
-
-#if USE_PDEP
-#include <immintrin.h>
-#endif
-
-#if USE_PDEP
-static uint64_t get_pdep_mask()
-{
-	uint64_t single_element_mask = 1;
-	single_element_mask <<= (ACTIVE_BITS - 1) / (BASE - 1);
-	single_element_mask -= 1;
-	single_element_mask <<= 1;
-	single_element_mask += 1;
-
-	uint64_t ret = single_element_mask;
-	for (int i = 1; i < BASE - 1; i++) {
-		ret <<= (COMPARISON_BITS / (BASE - 1));
-		ret += single_element_mask;
-	}
-	return ret;
-}
-#endif
 
 static bool notrailingzero(fang_t x)
 {
@@ -151,19 +129,244 @@ void vargs_reset(struct vargs *args)
 	args->result = NULL;
 }
 
+#if ALG_NORMAL // when false we use the empty functions in vargs.h
+
+static void alg_normal_set(fang_t multiplier, length_t (*mult_array)[BASE])
+{
+	for (digit_t i = 0; i < BASE; i++)
+		(*mult_array)[i] = 0;
+
+	for (fang_t i = multiplier; i > 0; i /= BASE)
+		(*mult_array)[i % BASE] += 1;
+}
+
+static void alg_normal_check(
+	length_t mult_array[BASE],
+	fang_t multiplicand,
+	vamp_t product,
+	int *result)
+{
+	uint16_t product_array[BASE] = {0};
+	for (vamp_t p = product; p > 0; p /= BASE)
+		product_array[p % BASE] += 1;
+
+	for (digit_t i = 0; i < BASE; i++)
+		if (product_array[i] < mult_array[i])
+			goto out;
+
+	digit_t temp;
+	for (fang_t m = multiplicand; m > 0; m /= BASE) {
+		temp = m % BASE;
+		if (product_array[temp] == 0)
+			goto out;
+		else
+			product_array[temp]--;
+	}
+	for (digit_t i = 0; i < (BASE - 1); i++)
+		if (product_array[i] != mult_array[i])
+			goto out;
+
+	(*result) += 1;
+out:
+	return;
+}
+
+#endif /* ALG_NORMAL */
+
+#if ALG_CACHE // when false we use the empty functions in vargs.h
+
+/*
+ * We could just allocate the entire dig[] array, and then do:
+ *
+ * 	for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
+ * 		if (dig[multiplier] + dig[multiplicand] == dig[product]) {
+ * 			...
+ * 		}
+ * 		product += product_iterator;
+ *		multiplicand += BASE-1;
+ *	}
+ *
+ * This would work just fine.
+ * The only problem is that the array would be way too
+ * big to fit in most l3 caches and we would waste a
+ * majority of time loading data from memory.
+ *
+ * If we 'partition' the numbers (123 -> 12, 3), we can
+ * make the array much smaller.
+ *
+ * Of course, 'partitioning' requires some computation,
+ * but we are already waiting for memory load
+ * operations, and we might as well put the wasted
+ * cycles to good use.
+ *
+ * We 'partition' like this:
+ * 	multiplier: multiplier[0]
+ * 	multiplicand: multiplicand[0], multiplicand[1]
+ *
+ * 	product:          product[0],   product[1],   product[2]
+ * 	product iterator: product_iterator[0], product_iterator[1], product_iterator[2]
+ *
+ * Because it seems to perform pretty well.
+ */
+
+struct num_part
+{
+	fang_t number;
+	fang_t iterator;
+	fang_t mod;
+	fang_t carry;
+};
+
+struct alg_cache
+{
+	digits_t *digits_array;
+	digits_t dig_multiplier;	// doesn't change when we iterate
+	// multiplicand iterator is BASE - 1
+	struct num_part multiplicand[2];
+	struct num_part product[3];
+};
+
+static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct cache *cache)
+{
+	OPTIONAL_ASSERT(ptr != NULL);
+
+	ptr->digits_array = NULL;
+	if (cache != NULL)
+		ptr->digits_array = cache->dig;
+
+	struct partdata_all_t data;
+	struct partdata_constant_t data_constant = {
+		.idx_n = false
+	};
+	length_t multiplicand_length =  div_roof(lenmax, 2);
+	struct partdata_global_t data_global = {
+		.multiplicand_parts = 2,
+		.multiplicand_length = multiplicand_length,
+		.product_parts = 3,
+		.product_length = lenmax,
+		.multiplicand_iterator = length(BASE - 1),
+		.product_iterator = multiplicand_length + length(BASE - 1)
+	};
+
+	for (int i = 0; i < 2 - 1; i++)
+		ptr->multiplicand[i].mod = pow_v(part_scsg_3(data_constant, data_global));
+	for (int i = 0; i < 3 - 1; i++)
+		ptr->product[i].mod = pow_v(part_scsg_3(data_constant, data_global));
+}
+
+static void alg_cache_split(
+	vamp_t number,
+	vamp_t iterator,
+	struct num_part *arr,
+	size_t n)
+{
+	if (n == 0)
+		return;
+
+	for (size_t i = 0; i < n - 1; i++) {
+		arr[i].number = number % arr[i].mod;
+		number /= arr[i].mod;
+		arr[i].iterator = iterator % arr[i].mod;
+		iterator /= arr[i].mod;
+		arr[i].carry = 0;
+	}
+	arr[n - 1].number = number; // number >= number % mod
+	arr[n - 1].iterator = iterator;
+	arr[n - 1].carry = 0;
+}
+
+static void alg_cache_set(
+	struct alg_cache *ptr,
+	fang_t multiplier,
+	fang_t multiplicand,
+	vamp_t product,
+	vamp_t product_iterator)
+{
+	/*
+	 * dig_multiplier = digits_array[multiplier];
+	 * Each dig_multiplier is calculated and accessed only once, we don't need to store them in memory.
+	 * We can calculate dig_multiplier on the spot and make the dig array 10 times smaller.
+	 */
+
+	ptr->dig_multiplier = set_dig(multiplier);
+	alg_cache_split(multiplicand, BASE-1, ptr->multiplicand, 2);
+	alg_cache_split(product, product_iterator, ptr->product, 3);
+
+	/*
+	 * We can improve the runtime even further by removing product_iterator[2].
+	 * If product_iterator[2] is always 0, we don't need it.
+	 *
+	 * product_iterator[2] = (product_iterator / (x1^BASE)) / (x2^BASE)
+	 *
+	 * product_iterator[2] has 0 digits, product_iterator has n+1, and we are going to solve for power_a:
+	 *
+	 * 0 >= (n+1 - x1) - x2
+	 * x1 + x2 >= n+1
+	 */
+
+	if (ptr->multiplicand[0].iterator != BASE-1)
+		abort();	// Let the compiler know that this is constant
+	OPTIONAL_ASSERT(ptr->product[3 - 1].iterator == 0);
+}
+
+static void alg_cache_check(struct alg_cache *ptr, int *result)
+{
+	const digits_t *digits_array = ptr->digits_array;
+
+	digits_t a = ptr->dig_multiplier;
+	for (int i = 0; i < 2; i++)
+		a += digits_array[ptr->multiplicand[i].number];
+
+	digits_t b = digits_array[ptr->product[0].number];
+	for (int i = 1; i < 3; i++)
+		b += digits_array[ptr->product[i].number];
+
+	if (a == b)
+		(*result) += 1;
+}
+
+static inline void alg_cache_iterate(
+	struct num_part *arr,
+	int elements)
+{
+	/*
+	 * For whatever reason, writing the code like this makes it more
+	 * optimizable by gcc and clang, while retaining correctness.
+	 */
+
+	for (int i = 0; i < elements - 1; i++) {
+		arr[i].number += arr[i].iterator;
+		arr[i + 1].carry = 0;
+		if (arr[i].number >= arr[i].mod - arr[i].carry) {
+			arr[i].number -= arr[i].mod;
+			arr[i + 1].carry = 1;
+		}
+	}
+	for (int i = 1; i < elements - 1; i++)
+		arr[i].number += arr[i].carry;
+	
+	arr[elements - 1].number += arr[elements - 1].carry;
+}
+
+static void alg_cache_iterate_all(struct alg_cache *ptr)
+{
+	alg_cache_iterate(ptr->multiplicand, 2);
+	alg_cache_iterate(ptr->product, 3);
+}
+
+#endif /* ALG_CACHE */
+
+
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	struct llnode *ll = NULL;
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
 
-#if CACHE
-	fang_t power_a = pow_v(partition3(length(max)));
-	digits_t *dig = args->digptr->dig;
-#if USE_PDEP
-	const uint64_t pdep_mask = get_pdep_mask();
-#endif
-#endif
+	struct alg_cache ag_data;
+	alg_cache_init(&ag_data, length(max), args->digptr);
+
+	length_t mult_array[BASE];
 
 	for (fang_t multiplier = fmax; multiplier >= min_sqrt && multiplier > 0; multiplier--) {
 		if (disqualify_mult(multiplier))
@@ -182,152 +385,33 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 		while (multiplicand <= multiplicand_max && congruence_check(multiplier, multiplicand))
 			multiplicand++;
 
-		if (multiplicand <= multiplicand_max) {
-			/*
-			 * If multiplier has n digits, then product_iterator has at most n+1 digits.
-			 */
-			vamp_t product_iterator = multiplier;
-			product_iterator *= BASE - 1; // <= (BASE-1) * (2^32)
-			vamp_t product = multiplier;
-			product *= multiplicand; // avoid overflow
+		if (multiplicand > multiplicand_max)
+			continue;
+		/*
+		 * If multiplier has n digits, then product_iterator has at most n+1 digits.
+		 */
+		vamp_t product_iterator = multiplier;
+		product_iterator *= BASE - 1; // <= (BASE-1) * (2^32)
+		vamp_t product = multiplier;
+		product *= multiplicand; // avoid overflow
 
-#if CACHE
-			/*
-			 * We could just allocate the entire dig[] array, and then do:
-			 *
-			 * 	for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
-			 * 		if (dig[multiplier] + dig[multiplicand] == dig[product]) {
-			 * 			...
-			 * 		}
-			 * 		product += product_iterator;
-			 *		multiplicand += BASE-1;
-			 *	}
-			 *
-			 * This would work just fine.
-			 * The only problem is that the array would be way too
-			 * big to fit in most l3 caches and we would waste a
-			 * majority of time loading data from memory.
-			 *
-			 * If we 'partition' the numbers (123 -> 12, 3), we can
-			 * make the array much smaller.
-			 *
-			 * Of course, 'partitioning' requires some computation,
-			 * but we are already waiting for memory load
-			 * operations, and we might as well put the wasted
-			 * cycles to good use.
-			 *
-			 * I chose to 'partition' like this:
-			 * 	product:          de0,   de1,   de2
-			 * 	product iterator: step0, step1, step2
-			 *
-			 * 	multiplicand: e0, e1
-			 * Because it performs the best on all of my cpus.
-			 */
+		alg_cache_set(&ag_data, multiplier, multiplicand, product, product_iterator);
 
-			/*
-			 * We can improve the runtime even further by removing step2.
-			 * If step2 is always 0, we don't need it.
-			 *
-			 * step2 = (product_iterator / power_a) / power_a
-			 *
-			 * step2 has 0 digits, product_iterator has n+1, and we are going to solve for power_a:
-			 *
-			 * 0 >= (n+1 - x) - x
-			 * x >= n+1 - x
-			 */
+		alg_normal_set(multiplier, &mult_array);
 
-			fang_t step0 = product_iterator % power_a;
-			fang_t step1 = product_iterator / power_a;
+		for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
+			int result = 0;
 
-			/*
-			 * digd = dig[multiplier];
-			 * Each digd is calculated and accessed only once, we don't need to store them in memory.
-			 * We can calculate digd on the spot and make the dig array 10 times smaller.
-			 */
+			alg_normal_check(mult_array, multiplicand, product, &result);
+			alg_cache_check(&ag_data, &result);
 
-			digits_t digd = set_dig(multiplier);
-
-			fang_t e0 = multiplicand % power_a;
-			fang_t e1 = multiplicand / power_a;
-
-			fang_t de0 = product % power_a;
-			fang_t de1 = (product / power_a) % power_a;
-			fang_t de2 = (product / power_a) / power_a;
-
-			for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
-#if USE_PDEP
-				uint64_t a = 0;
-				a += _pdep_u64(digd, pdep_mask);
-				a += _pdep_u64(dig[e0], pdep_mask);
-				a += _pdep_u64(dig[e1], pdep_mask);
-				uint64_t b = 0;
-				b += _pdep_u64(dig[de0], pdep_mask);
-				b += _pdep_u64(dig[de1], pdep_mask);
-				b += _pdep_u64(dig[de2], pdep_mask);
-				if (a == b)
-#else
-				if (digd + dig[e0] + dig[e1] == dig[de0] + dig[de1] + dig[de2])
-#endif
-					if (mult_zero || notrailingzero(multiplicand)) {
-						vargs_iterate_local_count(args);
-						vargs_print_results(product, multiplier, multiplicand);
-						llnode_add(&(ll), product);
-					}
-				product += product_iterator;
-				e0 += BASE - 1;
-				if (e0 >= power_a) {
-					e0 -= power_a;
-					e1 += 1;
-				}
-				de0 += step0;
-				if (de0 >= power_a) {
-					de0 -= power_a;
-					de1 += 1;
-				}
-				de1 += step1;
-				if (de1 >= power_a) {
-					de1 -= power_a;
-					de2 += 1;
-				}
+			if (result && (mult_zero || notrailingzero(multiplicand))) {
+				vargs_iterate_local_count(args);
+				vargs_print_results(product, multiplier, multiplicand);
+				llnode_add(&(ll), product);
 			}
-
-#else /* CACHE */
-
-			length_t mult_array[BASE] = {0};
-			for (fang_t i = multiplier; i > 0; i /= BASE)
-				mult_array[i % BASE] += 1;
-
-			for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
-				uint16_t product_array[BASE] = {0};
-				for (vamp_t p = product; p > 0; p /= BASE)
-					product_array[p % BASE] += 1;
-
-				for (digit_t i = 0; i < BASE; i++)
-					if (product_array[i] < mult_array[i])
-						goto vampire_exit;
-
-				digit_t temp;
-				for (fang_t m = multiplicand; m > 0; m /= BASE) {
-					temp = m % BASE;
-					if (product_array[temp] == 0)
-						goto vampire_exit;
-					else
-						product_array[temp]--;
-				}
-				for (digit_t i = 0; i < (BASE - 1); i++)
-					if (product_array[i] != mult_array[i])
-						goto vampire_exit;
-
-				if (mult_zero || notrailingzero(multiplicand)) {
-					vargs_iterate_local_count(args);
-					vargs_print_results(product, multiplier, multiplicand);
-					llnode_add(&(ll), product);
-				}
-vampire_exit:
-				product += product_iterator;
-			}
-
-#endif /* CACHE */
+			alg_cache_iterate_all(&ag_data);
+			product += product_iterator;
 		}
 	}
 	array_new(&(args->result), ll, &(args->local_count));

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
  * Copyright (c) 2012 Jens Kruse Andersen
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2023 Pierro Zachareas
  */
 
 #include "configuration.h"
 #include "configuration_adv.h"
 
-#if CACHE
+#if ALG_CACHE
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
@@ -15,17 +15,10 @@
 #include "cache.h"
 #endif
 
-#if CACHE
+#if ALG_CACHE
 
 #define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
-
-#if DEDICATED_BITFIELDS
-#define BITS_PER_NUMERAL2(bits) floor(BITS_PER_NUMERAL(bits))
-#else
-#define BITS_PER_NUMERAL2(bits) BITS_PER_NUMERAL(bits)
-#endif
-
-#define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL2(bits)))
+#define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL(bits)))
 
 digits_t set_dig(fang_t number)
 {
@@ -53,12 +46,27 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 
 	length_t cs = 0;
 	length_t i = length(min);
-	do {
-		length_t part_A = partition3(i);
-		length_t part_B = 0;
-		if (i / 2 > part_A)
-			part_B = i - 2 * part_A;
 
+	struct partdata_all_t data;
+	struct partdata_constant_t data_constant = {
+		.idx_n = false
+	};
+	struct partdata_global_t data_global = {
+		.multiplicand_parts = 2,
+		.product_parts = 3
+	};
+
+	do {
+		data_global.multiplicand_length = div_roof(i, 2);
+		data_global.product_length = i;
+
+		data_global.multiplicand_iterator = length(BASE - 1);
+		data_global.product_iterator = data_global.multiplicand_length + length(BASE - 1);
+
+		data_constant.idx_n = false;
+		length_t part_A = part_scsg_3(data_constant, data_global);
+		data_constant.idx_n = true;
+		length_t part_B = part_scsg_3(data_constant, data_global);
 		if (part_A > cs)
 			cs = part_A;
 		if (part_B > cs)
@@ -100,7 +108,57 @@ bool cache_ovf_chk(vamp_t max)
 #endif
 
 	numeral_max = 2.0 * ceil(numeral_max / 2.0);
-	return (numeral_max >= (DIGBASE(ELEMENT_BITS) - 1) * (COMPARISON_BITS / ELEMENT_BITS));
+	return (numeral_max >= DIGBASE(ELEMENT_BITS) - 1);
 }
 
-#endif /* CACHE */
+/*
+ * part_scsg_3:
+ * (semi-constant, semi-global)
+ *
+ * partition x into 3 integers so that:
+ * x <= 2 * A + B
+ * if data_const.idx_n is:
+ * 	0, return A
+ * 	1, return B
+ */
+
+length_t part_scsg_3(
+	struct partdata_constant_t data_constant,
+	struct partdata_global_t data_global)
+{
+	length_t x = data_global.product_length;
+
+	length_t B = x;
+	length_t multiplicand_maxB = 0;
+	if (data_global.multiplicand_length > data_global.multiplicand_iterator)
+		multiplicand_maxB = data_global.multiplicand_length - data_global.multiplicand_iterator;
+	length_t product_maxB = 0;
+	if (data_global.product_length > data_global.product_iterator)
+		product_maxB = data_global.product_length - data_global.product_iterator;
+
+	if (B > multiplicand_maxB)
+		B = multiplicand_maxB;
+
+	if (B > product_maxB)
+		B = product_maxB;
+
+	length_t max = data_global.multiplicand_parts;
+	if (max < data_global.product_parts)
+		max = data_global.product_parts;
+
+	length_t remainder = (x - B) % (max - 1);
+	if (remainder > 0) {
+		length_t adjust = (max - 1) - remainder;
+		if (B >= adjust)
+			B -= adjust;
+		else
+			x += adjust;
+	}
+	if (data_constant.idx_n)
+		return B;
+
+	length_t A = (x - B) / 2;
+	return A;
+}
+
+#endif /* ALG_CACHE */

@@ -56,4 +56,48 @@ static inline void vargs_print_results(
 {
 }
 #endif /* DUMP_RESULTS */
+
+#if !(ALG_NORMAL)
+static inline void alg_normal_set(
+	__attribute__((unused)) fang_t multiplier,
+	__attribute__((unused)) length_t (*mult_array)[BASE])
+{
+}
+static inline void alg_normal_check(
+	__attribute__((unused)) length_t mult_array[BASE],
+	__attribute__((unused)) fang_t multiplicand,
+	__attribute__((unused)) vamp_t product,
+	__attribute__((unused)) int *result)
+{
+}
+#endif /* !ALG_NORMAL */
+
+#if !(ALG_CACHE)
+struct alg_cache
+{
+};
+static inline void alg_cache_init(
+	__attribute__((unused)) struct alg_cache *ptr,
+	__attribute__((unused)) fang_t mod,
+	__attribute__((unused)) struct cache *cache)
+{
+}
+static inline void alg_cache_set(
+	__attribute__((unused)) struct alg_cache *ptr,
+	__attribute__((unused)) fang_t multiplier,
+	__attribute__((unused)) fang_t multiplicand,
+	__attribute__((unused)) vamp_t product,
+	__attribute__((unused)) vamp_t product_iterator)
+{
+}
+static inline void alg_cache_check(
+	__attribute__((unused)) struct alg_cache *ptr,
+	__attribute__((unused)) int *result)
+{
+}
+static inline void alg_cache_iterate_all(__attribute__((unused)) struct alg_cache *ptr)
+{
+}
+#endif /* !ALG_CACHE */
+
 #endif /* HELSING_VARGS_H */

@@ -15,6 +15,7 @@ void no_args() {};
 /*
  * willoverflow:
  * Checks if (10 * x + digit) will overflow, without causing and overflow.
+ * Should only be used for input checking, where the numeral base is 10.
  */
 bool willoverflow(vamp_t x, vamp_t limit, digit_t digit)
 {
@@ -70,27 +71,4 @@ vamp_t get_max(vamp_t min, vamp_t max)
 vamp_t div_roof(vamp_t x, vamp_t y)
 {
 	return (x/y + !!(x%y));
-}
-
-/*
- * partition3:
- *
- * partition x into 3 integers so that:
- * x <= 2 * A + B
- * and return A.
- */
-
-length_t partition3(length_t x)
-{
-	length_t ret = x / 3;
-
-	// adjust for product iterator
-	length_t n = x / 2;
-	if (ret < n + 1 - ret)
-		ret = n + 1 - ret;
-
-	if (ret == 0)
-		ret = 1;
-
-	return ret;
 }
