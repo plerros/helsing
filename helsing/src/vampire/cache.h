@@ -98,10 +98,6 @@ static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
  * methods are loose-fit.
  */
 
-struct partdata_t
-{
-};
-
 struct partdata_constant_t
 {
 	bool idx_n; // is index == n?
@@ -110,6 +106,9 @@ struct partdata_constant_t
 struct partdata_variable_t
 {
 	length_t index;
+
+	// Method specific
+	length_t reserve;
 };
 
 struct partdata_global_t
@@ -147,5 +146,38 @@ __attribute__((const))
 length_t part_scsg_3(
 	struct partdata_constant_t data_const,
 	struct partdata_global_t data_glob);
+
+// Non-Constant & Non-Global
+length_t part_vl_lr(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local);
+length_t part_vl_rl(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local);
+length_t part_vl_l1r(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local);
+length_t part_vl_r1l(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local);
+
+// PARTITION_METHOD allows the compiler to do specific optimizations
+#if   (PARTITION_METHOD == 0)
+	#define PARTITION(data) part_scsg_3(data.constant, data.global)
+#elif (PARTITION_METHOD == 1)
+	#define PARTITION(data) part_vl_lr (data.variable, data.local)
+#elif (PARTITION_METHOD == 2)
+	#define PARTITION(data) part_vl_rl (data.variable, data.local)
+#elif (PARTITION_METHOD == 3)
+	#define PARTITION(data) part_vl_l1r(data.variable, data.local)
+#elif (PARTITION_METHOD == 4)
+	#define PARTITION(data) part_vl_r1l(data.variable, data.local)
+#else
+	#error PARTITION_METHOD bad value
+#endif
+
+length_t partition_loose(struct partdata_all_t data, int method);
+length_t partition_exact(struct partdata_all_t data, int method);
+
 #endif /* ALG_CACHE */
 #endif /* HELSING_CACHE_H */

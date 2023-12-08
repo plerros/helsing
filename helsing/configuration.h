@@ -94,12 +94,19 @@
  * 	Setting COMPARISON_BITS to 32 will half the ALG_CACHE size and use 32-bit
  * 	variables.
  *
+ * 2) PARTITION_METHOD:
+ * 	0 - partition to 3
+ * 	1 - left right
+ * 	2 - right left
+ * 	3 - left right, reserve
+ * 	4 - right left, reserve
  * These options adjust the space of solvable intervals to avoid
  * false-positives.
  */
 
 #define ALG_CACHE true
 #define COMPARISON_BITS 64
+#define PARTITION_METHOD 0
 
 /*
  * BASE:

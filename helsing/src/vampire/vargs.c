@@ -234,24 +234,49 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	if (cache != NULL)
 		ptr->digits_array = cache->dig;
 
-	struct partdata_all_t data;
-	struct partdata_constant_t data_constant = {
-		.idx_n = false
-	};
+
 	length_t multiplicand_length =  div_roof(lenmax, 2);
-	struct partdata_global_t data_global = {
-		.multiplicand_parts = 2,
-		.multiplicand_length = multiplicand_length,
-		.product_parts = 3,
-		.product_length = lenmax,
-		.multiplicand_iterator = length(BASE - 1),
-		.product_iterator = multiplicand_length + length(BASE - 1)
+
+	struct partdata_all_t data = {
+		.constant = {
+			.idx_n = false
+		},
+		.variable = {
+			.index = 0,
+			.reserve = 1
+		},
+		.global = {
+			.multiplicand_parts = 2,
+			.multiplicand_length = multiplicand_length,
+			.product_parts = 3,
+			.product_length = lenmax,
+			.multiplicand_iterator = length(BASE - 1),
+			.product_iterator = multiplicand_length + length(BASE - 1)
+		},
+		.local = {
+			.parts = 0,
+			.length = 0,
+			.iterator = 0
+		}
 	};
 
-	for (int i = 0; i < 2 - 1; i++)
-		ptr->multiplicand[i].mod = pow_v(part_scsg_3(data_constant, data_global));
-	for (int i = 0; i < 3 - 1; i++)
-		ptr->product[i].mod = pow_v(part_scsg_3(data_constant, data_global));
+	data.local.parts    = data.global.multiplicand_parts;
+	data.local.length   = data.global.multiplicand_length;
+	data.local.iterator = data.global.multiplicand_iterator;
+	for (int i = 0; i < 2 - 1; i++) {
+		data.constant.idx_n = (i == 2-1);
+		data.variable.index = i;
+		ptr->multiplicand[i].mod = pow_v(part_scsg_3(data.constant, data.global));
+	}
+
+	data.local.parts    = data.global.product_parts;
+	data.local.length   = data.global.product_length;
+	data.local.iterator = data.global.product_iterator;
+	for (int i = 0; i < 3 - 1; i++) {
+		data.constant.idx_n = (i == 3-1);
+		data.variable.index = i;
+		ptr->product[i].mod = pow_v(part_scsg_3(data.constant, data.global));
+	}
 }
 
 static void alg_cache_split(

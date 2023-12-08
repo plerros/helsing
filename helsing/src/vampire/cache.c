@@ -47,30 +47,52 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 	length_t cs = 0;
 	length_t i = length(min);
 
-	struct partdata_all_t data;
-	struct partdata_constant_t data_constant = {
-		.idx_n = false
-	};
-	struct partdata_global_t data_global = {
-		.multiplicand_parts = 2,
-		.product_parts = 3
-	};
-
 	do {
-		data_global.multiplicand_length = div_roof(i, 2);
-		data_global.product_length = i;
+		length_t multiplicand_length =  div_roof(i, 2);
+		struct partdata_all_t data = {
+			.constant = {
+				.idx_n = false
+			},
+			.variable = {
+				.index = 0,
+				.reserve = 1
+			},
+			.global = {
+				.multiplicand_parts = 2,
+				.multiplicand_length = multiplicand_length,
+				.product_parts = 3,
+				.product_length = i,
+				.multiplicand_iterator = length(BASE - 1),
+				.product_iterator = multiplicand_length + length(BASE - 1)
+			},
+			.local = {
+				.parts = 0,
+				.length = 0,
+				.iterator = 0
+			}
+		};
 
-		data_global.multiplicand_iterator = length(BASE - 1);
-		data_global.product_iterator = data_global.multiplicand_length + length(BASE - 1);
+		data.local.parts    = data.global.multiplicand_parts;
+		data.local.length   = data.global.multiplicand_length;
+		data.local.iterator = data.global.multiplicand_iterator;
+		for (int i = 0; i < 2; i++) {
+			data.constant.idx_n = (i == 2-1);
+			data.variable.index = i;
+			length_t tmp = partition_exact(data, PARTITION_METHOD);
+			if (tmp > cs)
+				cs = tmp;
+		}
 
-		data_constant.idx_n = false;
-		length_t part_A = part_scsg_3(data_constant, data_global);
-		data_constant.idx_n = true;
-		length_t part_B = part_scsg_3(data_constant, data_global);
-		if (part_A > cs)
-			cs = part_A;
-		if (part_B > cs)
-			cs = part_B;
+		data.local.parts    = data.global.product_parts;
+		data.local.length   = data.global.product_length;
+		data.local.iterator = data.global.product_iterator;
+		for (int i = 0; i < 3; i++) {
+			data.constant.idx_n = (i == 3-1);
+			data.variable.index = i;
+			length_t tmp = partition_exact(data, PARTITION_METHOD);
+			if (tmp > cs)
+				cs = tmp;
+		}
 		i++;
 	} while (i <= length(max));
 	new->size = pow_v(cs);
@@ -159,6 +181,93 @@ length_t part_scsg_3(
 
 	length_t A = (x - B) / 2;
 	return A;
+}
+
+length_t part_vl_lr(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local)
+{
+	if (data_local.parts == 0)
+		return 0;
+
+	length_t ret = data_local.length / data_local.parts;
+	if (data_variable.index < data_local.length % data_local.parts)
+		ret += 1;
+
+	return ret;
+}
+
+length_t part_vl_rl(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local)
+{
+	data_variable.index = data_local.parts - data_variable.index -1;
+	return(part_vl_lr(data_variable, data_local));
+}
+
+length_t part_vl_l1r(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local)
+{
+	if (data_variable.reserve > data_local.length)
+		data_variable.reserve = data_local.length;
+
+	length_t ret = 0;
+	data_local.length -= data_variable.reserve;
+	ret += part_vl_lr(data_variable, data_local);
+	data_local.length = data_variable.reserve;
+	ret += part_vl_lr(data_variable, data_local);
+	return(ret);
+}
+
+length_t part_vl_r1l(
+	struct partdata_variable_t data_variable,
+	struct partdata_local_t data_local)
+{
+	data_variable.index = data_local.parts - data_variable.index -1;
+	return(part_vl_l1r(data_variable, data_local));
+}
+
+length_t partition_loose(struct partdata_all_t data, int method)
+{
+	switch(method) {
+		case 0:
+			return part_scsg_3(data.constant, data.global);
+		case 1:
+			return part_vl_lr(data.variable, data.local);
+		case 2:
+			return part_vl_rl(data.variable, data.local);
+		case 3:
+			return part_vl_l1r(data.variable, data.local);
+		case 4:
+			return part_vl_r1l(data.variable, data.local);
+		default:
+			abort();
+	}
+}
+
+length_t partition_exact(struct partdata_all_t data, int method)
+{
+	length_t remainder = data.local.length;
+	length_t max = data.variable.index;
+	length_t ret = 0;
+	for (length_t i = 0; i <= max; i++) {
+		data.constant.idx_n = (i == data.local.parts - 1);
+		data.variable.index = i;
+		ret = partition_loose(data, method);
+
+		if (i == max)
+			break;
+
+		if (ret > remainder)
+			remainder = 0;
+		else
+			remainder -= ret;
+	}
+	if (remainder < ret)
+		return remainder;
+
+	return ret;
 }
 
 #endif /* ALG_CACHE */
