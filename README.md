@@ -164,25 +164,41 @@ $ time ./helsing -n 12 -t 1
 Checking interval: [100000000000, 999999999999]
 Found: 4390670 vampire number(s).
 
-real	0m39.360s
-user	0m39.294s
-sys 	0m0.010s
+real	0m36.781s
+user	0m36.678s
+sys	0m0.025s
 
 $ time ./helsing -n 12 -t 2
 Checking interval: [100000000000, 999999999999]
 Found: 4390670 vampire number(s).
 
-real	0m20.036s
-user	0m39.746s
-sys 	0m0.022s
+real	0m18.592s
+user	0m36.581s
+sys	0m0.037s
 
 $ time ./helsing -n 12 -t 4
 Checking interval: [100000000000, 999999999999]
 Found: 4390670 vampire number(s).
 
-real	0m10.514s
-user	0m41.624s
-sys 	0m0.022s
+real	0m9.402s
+user	0m37.361s
+sys	0m0.041s
+
+time ./helsing -n 12 -t 8
+Checking interval: [100000000000, 999999999999]
+Found: 4390670 vampire number(s).
+
+real	0m4.913s
+user	0m38.510s
+sys	0m0.044s
+
+time ./helsing -n 12 -t 12
+Checking interval: [100000000000, 999999999999]
+Found: 4390670 vampire number(s).
+
+real	0m3.344s
+user	0m39.233s
+sys	0m0.030s
 ```
 #### Display progress
 ```
@@ -240,6 +256,7 @@ $ ./helsing --buildconf
     ALG_NORMAL=false
     ALG_CACHE=true
     COMPARISON_BITS=64
+    PARTITION_METHOD=0
     BASE=10
     MAX_TASK_SIZE=99999999999
     USE_CHECKPOINT=false
