@@ -21,6 +21,6 @@ struct options_t
 	bool dry_run;
 };
 
-int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vamp_t *max);
+int options_init(struct options_t* ptr, int argc, char *argv[]);
 
 #endif /* HELSING_OPTIONS_H */

@@ -8,24 +8,25 @@
 #include "configuration_adv.h"
 #include "helper.h"
 #include "interval.h"
+#include "options.h"
 #include "cache.h"
 
-int interval_set(struct interval_t *ptr, vamp_t min, vamp_t max)
+int interval_set(struct interval_t *ptr, struct options_t options)
 {
 	int rc = 0;
-	if (min > max) {
+	if (options.min > options.max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
 		rc = 1;
 		goto out;
 	}
 
-	ptr->min = get_min(min, max);
-	if (min != ptr->min)
-		fprintf(stderr, "Adjusted min from %llu to %llu\n", min, ptr->min);
+	ptr->min = get_min(options.min, options.max);
+	if (options.min != ptr->min)
+		fprintf(stderr, "Adjusted min from %llu to %llu\n", options.min, ptr->min);
 
-	ptr->max = get_max(ptr->min, max);
-	if (max != ptr->max)
-		fprintf(stderr, "Adjusted max from %llu to %llu\n", max, ptr->max);
+	ptr->max = get_max(ptr->min, options.max);
+	if (options.max != ptr->max)
+		fprintf(stderr, "Adjusted max from %llu to %llu\n", options.max, ptr->max);
 
 	if (cache_ovf_chk(ptr->max)) {
 		fprintf(stderr, "WARNING: the code might produce false positives, ");

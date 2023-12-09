@@ -122,7 +122,7 @@ static length_t get_max_length()
 	return ret;
 }
 
-int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vamp_t *max)
+int options_init(struct options_t* ptr, int argc, char *argv[])
 {
 	ptr->threads = 1;
 	ptr->manual_task_size = 0;
@@ -184,7 +184,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, VAMP_MAX, min);
+					rc = strtov(optarg, 0, VAMP_MAX, &(ptr->min));
 					min_is_set = true;
 				}
 				break;
@@ -197,8 +197,8 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					rc = strtov(optarg, 1, get_max_length(), &tmp);
 					if (rc)
 						break;
-					*min = pow_v(tmp - 1);
-					*max = (*min - 1) * BASE + (BASE - 1); // avoid overflow
+					ptr->min = pow_v(tmp - 1);
+					ptr->max = (ptr->min - 1) * BASE + (BASE - 1); // avoid overflow
 					min_is_set = true;
 					max_is_set = true;
 				}
@@ -229,7 +229,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[], vamp_t *min, vam
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, VAMP_MAX, max);
+					rc = strtov(optarg, 0, VAMP_MAX, &(ptr->max));
 					max_is_set = true;
 				}
 				break;

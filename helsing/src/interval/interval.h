@@ -8,6 +8,8 @@
 
 #include "configuration_adv.h"
 
+#include "options.h"
+
 struct interval_t
 {
 	vamp_t min;
@@ -15,7 +17,7 @@ struct interval_t
 	vamp_t complete;
 };
 
-int interval_set(struct interval_t *ptr, vamp_t min, vamp_t max);
+int interval_set(struct interval_t *ptr, struct options_t options);
 int interval_set_complete(struct interval_t *ptr, vamp_t complete);
 
 #endif /* HELSING_INTERVAL_H */

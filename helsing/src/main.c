@@ -29,14 +29,13 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 
 int main(int argc, char *argv[])
 {
-	vamp_t min = 0, max = 0;
 	struct options_t options;
 	struct interval_t interval;
 	struct taskboard *progress = NULL;
 
-	if (options_init(&options, argc, argv, &min, &max))
+	if (options_init(&options, argc, argv))
 		goto out;
-	if (interval_set(&interval, min, max))
+	if (interval_set(&interval, options))
 		goto out;
 	if (touch_checkpoint(options, interval))
 		goto out;
