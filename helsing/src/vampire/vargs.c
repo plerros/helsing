@@ -266,7 +266,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	for (int i = 0; i < 2 - 1; i++) {
 		data.constant.idx_n = (i == 2-1);
 		data.variable.index = i;
-		ptr->multiplicand[i].mod = pow_v(part_scsg_3(data.constant, data.global));
+		ptr->multiplicand[i].mod = pow_v(PARTITION(data));
 	}
 
 	data.local.parts    = data.global.product_parts;
@@ -275,7 +275,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	for (int i = 0; i < 3 - 1; i++) {
 		data.constant.idx_n = (i == 3-1);
 		data.variable.index = i;
-		ptr->product[i].mod = pow_v(part_scsg_3(data.constant, data.global));
+		ptr->product[i].mod = pow_v(PARTITION(data));
 	}
 }
 

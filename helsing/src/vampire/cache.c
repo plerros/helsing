@@ -134,56 +134,35 @@ bool cache_ovf_chk(vamp_t max)
 }
 
 /*
- * part_scsg_3:
+ * part_scsg_rl:
  * (semi-constant, semi-global)
  *
- * partition x into 3 integers so that:
- * x <= 2 * A + B
- * if data_const.idx_n is:
+ * partition x into n parts so that:
+ * x <= (n-1) * A + B
+ * if data_constant.idx_n is:
  * 	0, return A
  * 	1, return B
  */
 
-length_t part_scsg_3(
+static inline length_t part_scsg_rl_internal(
 	struct partdata_constant_t data_constant,
 	struct partdata_global_t data_global)
 {
-	length_t x = data_global.product_length;
+	length_t ret_multiplicand = data_global.multiplicand_length / data_global.multiplicand_parts;
+	length_t ret_product = data_global.product_length / data_global.product_parts;
 
-	length_t B = x;
-	length_t multiplicand_maxB = 0;
-	if (data_global.multiplicand_length > data_global.multiplicand_iterator)
-		multiplicand_maxB = data_global.multiplicand_length - data_global.multiplicand_iterator;
-	length_t product_maxB = 0;
-	if (data_global.product_length > data_global.product_iterator)
-		product_maxB = data_global.product_length - data_global.product_iterator;
-
-	if (B > multiplicand_maxB)
-		B = multiplicand_maxB;
-
-	if (B > product_maxB)
-		B = product_maxB;
-
-	length_t max = data_global.multiplicand_parts;
-	if (max < data_global.product_parts)
-		max = data_global.product_parts;
-
-	length_t remainder = (x - B) % (max - 1);
-	if (remainder > 0) {
-		length_t adjust = (max - 1) - remainder;
-		if (B >= adjust)
-			B -= adjust;
-		else
-			x += adjust;
+	if (data_constant.idx_n == true) {
+		ret_multiplicand = data_global.multiplicand_length - ((data_global.multiplicand_parts - 1) * ret_multiplicand);
+		ret_product = data_global.product_length - ((data_global.product_parts - 1) * ret_product);
 	}
-	if (data_constant.idx_n)
-		return B;
+	length_t ret = ret_multiplicand;
+	if (ret < ret_product)
+		ret = ret_product;
 
-	length_t A = (x - B) / 2;
-	return A;
+	return ret;
 }
 
-length_t part_vl_lr(
+static inline length_t part_vl_lr_internal(
 	struct partdata_variable_t data_variable,
 	struct partdata_local_t data_local)
 {
@@ -197,15 +176,15 @@ length_t part_vl_lr(
 	return ret;
 }
 
-length_t part_vl_rl(
+static inline length_t part_vl_rl_internal(
 	struct partdata_variable_t data_variable,
 	struct partdata_local_t data_local)
 {
 	data_variable.index = data_local.parts - data_variable.index -1;
-	return(part_vl_lr(data_variable, data_local));
+	return(part_vl_lr_internal(data_variable, data_local));
 }
 
-length_t part_vl_l1r(
+static inline length_t part_vl_l1r_internal(
 	struct partdata_variable_t data_variable,
 	struct partdata_local_t data_local)
 {
@@ -214,25 +193,82 @@ length_t part_vl_l1r(
 
 	length_t ret = 0;
 	data_local.length -= data_variable.reserve;
-	ret += part_vl_lr(data_variable, data_local);
+	ret += part_vl_lr_internal(data_variable, data_local);
 	data_local.length = data_variable.reserve;
-	ret += part_vl_lr(data_variable, data_local);
+	ret += part_vl_lr_internal(data_variable, data_local);
 	return(ret);
 }
 
-length_t part_vl_r1l(
+static inline length_t part_vl_r1l_internal(
 	struct partdata_variable_t data_variable,
 	struct partdata_local_t data_local)
 {
 	data_variable.index = data_local.parts - data_variable.index -1;
-	return(part_vl_l1r(data_variable, data_local));
+	return(part_vl_l1r_internal(data_variable, data_local));
 }
+
+#define PART_CG_BLUEPRINT(function_name, function_name_internal)                              \
+length_t function_name(                                                                       \
+	struct partdata_constant_t data_constant,                                             \
+	struct partdata_global_t data_global)                                                 \
+{                                                                                             \
+	struct partdata_constant_t nth = data_constant;                                       \
+	nth.idx_n = true;                                                                     \
+	length_t part_n = function_name_internal(nth, data_global);                           \
+                                                                                              \
+	if (part_n > data_global.multiplicand_length - data_global.multiplicand_iterator)     \
+		part_n = data_global.multiplicand_length - data_global.multiplicand_iterator; \
+	if (part_n > data_global.product_length - data_global.product_iterator)               \
+		part_n = data_global.product_length - data_global.product_iterator;           \
+                                                                                              \
+	if (data_constant.idx_n == true)                                                      \
+		return part_n;                                                                \
+                                                                                              \
+	data_global.multiplicand_length -= part_n;                                            \
+	data_global.multiplicand_parts -= 1;                                                  \
+	data_global.product_length -= part_n;                                                 \
+	data_global.product_parts -= 1;                                                       \
+                                                                                              \
+	data_constant.idx_n = false;                                                          \
+	length_t ret = function_name_internal(data_constant, data_global);                    \
+	data_constant.idx_n = true;                                                           \
+	length_t ret2 = function_name_internal(data_constant, data_global);                   \
+	if (ret2 > ret)                                                                       \
+		ret = ret2;                                                                   \
+	return ret;                                                                           \
+}
+
+#define PART_VL_BLUEPRINT(function_name, function_name_internal)   \
+length_t function_name(                                            \
+	struct partdata_variable_t data_variable,                  \
+	struct partdata_local_t data_local)                        \
+{                                                                  \
+	struct partdata_variable_t nth = data_variable;            \
+	nth.index = data_local.parts - 1;                          \
+	length_t part_n = function_name_internal(nth, data_local); \
+                                                                   \
+	if (part_n > data_local.length - data_local.iterator)      \
+		part_n = data_local.length - data_local.iterator;  \
+                                                                   \
+	if (data_variable.index == nth.index)                      \
+		return part_n;                                     \
+                                                                   \
+	data_local.length -= part_n;                               \
+	data_local.parts -= 1;                                     \
+	return function_name_internal(data_variable, data_local);  \
+}
+
+PART_CG_BLUEPRINT(part_scsg_rl, part_scsg_rl_internal)
+PART_VL_BLUEPRINT(part_vl_lr, part_vl_lr_internal)
+PART_VL_BLUEPRINT(part_vl_rl, part_vl_rl_internal)
+PART_VL_BLUEPRINT(part_vl_l1r, part_vl_l1r_internal)
+PART_VL_BLUEPRINT(part_vl_r1l, part_vl_r1l_internal)
 
 length_t partition_loose(struct partdata_all_t data, int method)
 {
 	switch(method) {
 		case 0:
-			return part_scsg_3(data.constant, data.global);
+			return part_scsg_rl(data.constant, data.global);
 		case 1:
 			return part_vl_lr(data.variable, data.local);
 		case 2:

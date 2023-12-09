@@ -143,7 +143,7 @@ struct partdata_all_t
 
 // Semi-Constant & Semi-Global
 __attribute__((const))
-length_t part_scsg_3(
+length_t part_scsg_rl(
 	struct partdata_constant_t data_const,
 	struct partdata_global_t data_glob);
 
@@ -163,7 +163,7 @@ length_t part_vl_r1l(
 
 // PARTITION_METHOD allows the compiler to do specific optimizations
 #if   (PARTITION_METHOD == 0)
-	#define PARTITION(data) part_scsg_3(data.constant, data.global)
+	#define PARTITION(data) part_scsg_rl(data.constant, data.global)
 #elif (PARTITION_METHOD == 1)
 	#define PARTITION(data) part_vl_lr (data.variable, data.local)
 #elif (PARTITION_METHOD == 2)

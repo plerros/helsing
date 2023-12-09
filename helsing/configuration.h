@@ -95,7 +95,10 @@
  * 	variables.
  *
  * 2) PARTITION_METHOD:
- * 	0 - partition to 3
+ * 	Type: Semi-Constant, Semi-Global
+ * 	0 - right left
+ *
+ * 	Type: Variable & Local
  * 	1 - left right
  * 	2 - right left
  * 	3 - left right, reserve
