@@ -81,10 +81,10 @@ typedef uint8_t length_t;
 #endif
 
 #if SAFETY_CHECKS
-#define OPTIONAL_ASSERT assert
+#define OPTIONAL_ASSERT(x) assert(x)
 #include <assert.h>
 #else
-#define OPTIONAL_ASSERT no_args
+#define OPTIONAL_ASSERT(x) if(!(x)) {no_args();}
 #endif
 
 #endif /* HELSING_CONFIG_ADV_H */
