@@ -94,6 +94,8 @@
  * 	Setting COMPARISON_BITS to 32 will half the ALG_CACHE size and use 32-bit
  * 	variables.
  *
+ * 	This option adjusts the space of solvable intervals to avoid
+ * 	false-positives.
  *
  * 2) PARTITION_METHOD:
  * 	Type: Semi-Constant, Semi-Global
@@ -114,9 +116,6 @@
  * 	poorly and uses a disproportionally large amount of memory.
  *
  * 	The default values of 2 and 3 are almost always the fastest.
- *
- * These options adjust the space of solvable intervals to avoid
- * false-positives.
  */
 
 #define ALG_CACHE true
