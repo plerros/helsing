@@ -94,6 +94,7 @@
  * 	Setting COMPARISON_BITS to 32 will half the ALG_CACHE size and use 32-bit
  * 	variables.
  *
+ *
  * 2) PARTITION_METHOD:
  * 	Type: Semi-Constant, Semi-Global
  * 	0 - right left
@@ -103,6 +104,17 @@
  * 	2 - right left
  * 	3 - left right, reserve
  * 	4 - right left, reserve
+ *
+ * 3) MULTIPLICAND_PARTITIONS, PRODUCT_PARTITIONS
+ * 	The number will be split into this amount of partitions.
+ * 	The value must be 1 or larger.
+ *
+ * 	A value of 1 means the number isn't split. It's processed whole like in
+ * 	ALG_NORMAL. It's not recommended to use a value of 1 since it performs
+ * 	poorly and uses a disproportionally large amount of memory.
+ *
+ * 	The default values of 2 and 3 are almost always the fastest.
+ *
  * These options adjust the space of solvable intervals to avoid
  * false-positives.
  */
@@ -110,6 +122,8 @@
 #define ALG_CACHE true
 #define COMPARISON_BITS 64
 #define PARTITION_METHOD 0
+#define MULTIPLICAND_PARTITIONS 2
+#define PRODUCT_PARTITIONS 3
 
 /*
  * BASE:

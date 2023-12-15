@@ -30,6 +30,8 @@ static void buildconf()
 	if (ALG_CACHE) {
 		printf("    COMPARISON_BITS=%d\n", COMPARISON_BITS);
 		printf("    PARTITION_METHOD=%d\n", PARTITION_METHOD);
+		printf("    MULTIPLICAND_PARTITIONS=%d\n", MULTIPLICAND_PARTITIONS);
+		printf("    PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
 	}
 	printf("    BASE=%d\n", BASE);
 	printf("    MAX_TASK_SIZE=%llu\n", MAX_TASK_SIZE);

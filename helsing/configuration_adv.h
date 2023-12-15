@@ -76,6 +76,18 @@ typedef uint8_t length_t;
 #error COMPARISON_BITS acceptable values are 32 or 64
 #endif
 
+#if (MULTIPLICAND_PARTITIONS == 0)
+	#error MULTIPLICAND_PARTITIONS must be larger than 0
+#endif
+
+#if (PRODUCT_PARTITIONS == 0)
+	#error MULTIPLICAND_PARTITIONS must be larger than 0
+#endif
+
+#if (MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS)
+	//#warning MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS -- performance will suffer
+#endif
+
 #if (BASE < 2)
 #error BASE must be larger than 1
 #endif

@@ -58,9 +58,9 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 				.reserve = 1
 			},
 			.global = {
-				.multiplicand_parts = 2,
+				.multiplicand_parts = MULTIPLICAND_PARTITIONS,
 				.multiplicand_length = multiplicand_length,
-				.product_parts = 3,
+				.product_parts = PRODUCT_PARTITIONS,
 				.product_length = i,
 				.multiplicand_iterator = length(BASE - 1),
 				.product_iterator = multiplicand_length + length(BASE - 1)
@@ -75,8 +75,8 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 		data.local.parts    = data.global.multiplicand_parts;
 		data.local.length   = data.global.multiplicand_length;
 		data.local.iterator = data.global.multiplicand_iterator;
-		for (int i = 0; i < 2; i++) {
-			data.constant.idx_n = (i == 2-1);
+		for (int i = 0; i < data.local.parts; i++) {
+			data.constant.idx_n = (i == data.local.parts-1);
 			data.variable.index = i;
 			length_t tmp = partition_exact(data, PARTITION_METHOD);
 			if (tmp > cs)
@@ -86,8 +86,8 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 		data.local.parts    = data.global.product_parts;
 		data.local.length   = data.global.product_length;
 		data.local.iterator = data.global.product_iterator;
-		for (int i = 0; i < 3; i++) {
-			data.constant.idx_n = (i == 3-1);
+		for (int i = 0; i < data.local.parts; i++) {
+			data.constant.idx_n = (i == data.local.parts-1);
 			data.variable.index = i;
 			length_t tmp = partition_exact(data, PARTITION_METHOD);
 			if (tmp > cs)
@@ -216,10 +216,14 @@ length_t function_name(                                                         
 	nth.idx_n = true;                                                                     \
 	length_t part_n = function_name_internal(nth, data_global);                           \
                                                                                               \
-	if (part_n > data_global.multiplicand_length - data_global.multiplicand_iterator)     \
-		part_n = data_global.multiplicand_length - data_global.multiplicand_iterator; \
-	if (part_n > data_global.product_length - data_global.product_iterator)               \
-		part_n = data_global.product_length - data_global.product_iterator;           \
+	length_t multiplicand_limit = data_global.multiplicand_length;                        \
+	multiplicand_limit -= data_global.multiplicand_iterator;                              \
+	length_t product_limit = data_global.product_length;                                  \
+	product_limit -= data_global.product_iterator;                                        \
+	if ((data_global.multiplicand_parts > 1) && (part_n > multiplicand_limit))            \
+		part_n = multiplicand_limit;                                                  \
+	if ((data_global.product_parts > 1) && (part_n > product_limit))                      \
+		part_n = product_limit;                                                       \
                                                                                               \
 	if (data_constant.idx_n == true)                                                      \
 		return part_n;                                                                \
@@ -247,8 +251,10 @@ length_t function_name(                                            \
 	nth.index = data_local.parts - 1;                          \
 	length_t part_n = function_name_internal(nth, data_local); \
                                                                    \
-	if (part_n > data_local.length - data_local.iterator)      \
-		part_n = data_local.length - data_local.iterator;  \
+	length_t local_limit = data_local.length;                  \
+	local_limit -= data_local.iterator;                        \
+	if ((data_local.parts > 1) && (part_n > local_limit))      \
+		part_n = local_limit;                              \
                                                                    \
 	if (data_variable.index == nth.index)                      \
 		return part_n;                                     \

@@ -222,8 +222,8 @@ struct alg_cache
 	digits_t *digits_array;
 	digits_t dig_multiplier;	// doesn't change when we iterate
 	// multiplicand iterator is BASE - 1
-	struct num_part multiplicand[2];
-	struct num_part product[3];
+	struct num_part multiplicand[MULTIPLICAND_PARTITIONS];
+	struct num_part product[PRODUCT_PARTITIONS];
 };
 
 static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct cache *cache)
@@ -246,9 +246,9 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 			.reserve = 1
 		},
 		.global = {
-			.multiplicand_parts = 2,
+			.multiplicand_parts = MULTIPLICAND_PARTITIONS,
 			.multiplicand_length = multiplicand_length,
-			.product_parts = 3,
+			.product_parts = PRODUCT_PARTITIONS,
 			.product_length = lenmax,
 			.multiplicand_iterator = length(BASE - 1),
 			.product_iterator = multiplicand_length + length(BASE - 1)
@@ -263,8 +263,8 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	data.local.parts    = data.global.multiplicand_parts;
 	data.local.length   = data.global.multiplicand_length;
 	data.local.iterator = data.global.multiplicand_iterator;
-	for (int i = 0; i < 2 - 1; i++) {
-		data.constant.idx_n = (i == 2-1);
+	for (int i = 0; i < data.local.parts - 1; i++) {
+		data.constant.idx_n = (i == data.local.parts - 1);
 		data.variable.index = i;
 		ptr->multiplicand[i].mod = pow_v(PARTITION(data));
 	}
@@ -272,8 +272,8 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	data.local.parts    = data.global.product_parts;
 	data.local.length   = data.global.product_length;
 	data.local.iterator = data.global.product_iterator;
-	for (int i = 0; i < 3 - 1; i++) {
-		data.constant.idx_n = (i == 3-1);
+	for (int i = 0; i < data.local.parts - 1; i++) {
+		data.constant.idx_n = (i == data.local.parts - 1);
 		data.variable.index = i;
 		ptr->product[i].mod = pow_v(PARTITION(data));
 	}
@@ -314,8 +314,8 @@ static void alg_cache_set(
 	 */
 
 	ptr->dig_multiplier = set_dig(multiplier);
-	alg_cache_split(multiplicand, BASE-1, ptr->multiplicand, 2);
-	alg_cache_split(product, product_iterator, ptr->product, 3);
+	alg_cache_split(multiplicand, BASE-1, ptr->multiplicand, MULTIPLICAND_PARTITIONS);
+	alg_cache_split(product, product_iterator, ptr->product, PRODUCT_PARTITIONS);
 
 	/*
 	 * We can improve the runtime even further by removing product_iterator[2].
@@ -331,7 +331,7 @@ static void alg_cache_set(
 
 	if (ptr->multiplicand[0].iterator != BASE-1)
 		abort();	// Let the compiler know that this is constant
-	OPTIONAL_ASSERT(ptr->product[3 - 1].iterator == 0);
+	OPTIONAL_ASSERT(ptr->product[PRODUCT_PARTITIONS - 1].iterator == 0);
 }
 
 static void alg_cache_check(struct alg_cache *ptr, int *result)
@@ -339,11 +339,11 @@ static void alg_cache_check(struct alg_cache *ptr, int *result)
 	const digits_t *digits_array = ptr->digits_array;
 
 	digits_t a = ptr->dig_multiplier;
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < MULTIPLICAND_PARTITIONS; i++)
 		a += digits_array[ptr->multiplicand[i].number];
 
 	digits_t b = digits_array[ptr->product[0].number];
-	for (int i = 1; i < 3; i++)
+	for (int i = 1; i < PRODUCT_PARTITIONS; i++)
 		b += digits_array[ptr->product[i].number];
 
 	if (a == b)
@@ -375,8 +375,8 @@ static inline void alg_cache_iterate(
 
 static void alg_cache_iterate_all(struct alg_cache *ptr)
 {
-	alg_cache_iterate(ptr->multiplicand, 2);
-	alg_cache_iterate(ptr->product, 3);
+	alg_cache_iterate(ptr->multiplicand, MULTIPLICAND_PARTITIONS);
+	alg_cache_iterate(ptr->product, PRODUCT_PARTITIONS);
 }
 
 #endif /* ALG_CACHE */
