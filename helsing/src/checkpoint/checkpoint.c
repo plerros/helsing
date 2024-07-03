@@ -180,6 +180,7 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 	bool is_empty = true;
 	vamp_t num = 0;
 	int hash_index = 0;
+	struct options_t options;
 
 	while (!rc) {
 		int ch = fgetc(fp);
@@ -202,7 +203,9 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 		if (ch == end_char[name]) {
 			switch (name) {
 				case min:
-					rc = interval_set(interval, num, num);
+					options.min = num;
+					options.max = num;
+					rc = interval_set(interval, options);
 					break;
 
 				case max:
@@ -212,7 +215,9 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 						rc = 1;
 					} else {
 						vamp_t tmp = interval->min;
-						rc = interval_set(interval, tmp, num);
+						options.min = tmp;
+						options.max = num;
+						rc = interval_set(interval, options);
 					}
 					break;
 
