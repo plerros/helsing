@@ -275,10 +275,12 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 			switch(type[name]) {
 				case integer:
 					rc = concat_digit(&num, ch, line, item);
+					is_empty = false;
 					break;
 
 				case hash:
 					rc = hash_set(progress->checksum, ch, hash_index++, line, item);
+					is_empty = false;
 					break;
 			}
 		}
