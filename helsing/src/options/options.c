@@ -131,6 +131,8 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 	ptr->display_progress = false;
 	ptr->dry_run = false;
 	ptr->load_checkpoint = false;
+	ptr->min = 0;
+	ptr->max = 0;
 
 #ifdef _SC_NPROCESSORS_ONLN
 	ptr->threads = sysconf(_SC_NPROCESSORS_ONLN);
