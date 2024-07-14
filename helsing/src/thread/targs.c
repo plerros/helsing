@@ -74,7 +74,7 @@ void *thread_function(void *void_args)
 
 			task_copy_vargs(current, vamp_args);
 #if MEASURE_RUNTIME
-			args->total += current->count;
+			args->total += current->count[0];
 #endif
 			taskboard_cleanup(args->progress);
 

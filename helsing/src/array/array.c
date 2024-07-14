@@ -30,7 +30,8 @@ void array_free(struct array *ptr)
 	if (ptr == NULL)
 		return;
 
-	free(ptr->data);
+	free(ptr->number);
+	free(ptr->fangs);
 	free(ptr);
 }
 #endif
@@ -49,7 +50,10 @@ int cmpvampt(const void *a, const void *b)
 		return 0;
 }
 
-void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
+void array_new(
+	struct array **ptr,
+	struct llnode *ll,
+	vamp_t (*count_ptr)[MAX_FANG_PAIRS])
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(*ptr == NULL);
@@ -62,49 +66,71 @@ void array_new(struct array **ptr, struct llnode *ll, vamp_t *count_ptr)
 	if (size == 0)
 		return;
 
-	vamp_t *arr = malloc(sizeof(vamp_t) * size);
-	if (arr == NULL)
+	vamp_t *number = malloc(sizeof(vamp_t) * size);
+	if (number == NULL)
+		abort();
+
+	vamp_t *fangs = malloc(sizeof(vamp_t) * size);
+	if (fangs == NULL)
 		abort();
 
 	// copy
 	for (vamp_t i = 0; ll != NULL; ll = ll->next) {
-		memcpy(&(arr[i]), ll->data, (ll->logical_size) * sizeof(vamp_t));
+		memcpy(&(number[i]), ll->data, (ll->logical_size) * sizeof(vamp_t));
 		i += ll->logical_size;
 	}
 
 	// sort
-	qsort(arr, size, sizeof(vamp_t), cmpvampt);
+	qsort(number, size, sizeof(vamp_t), cmpvampt);
 
 	// filter fangs & resize
-	vamp_t count = 0;
-	for (vamp_t i = 0; i < size; i++) {
-		if (arr[i] == 0)
+	vamp_t count[MAX_FANG_PAIRS];
+	memset(count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
+
+	// Initialize the fangs array
+	for (vamp_t i = 0; i < size; i++)
+		fangs[i] = 1;
+
+
+	// Combine duplicate entries
+	for (vamp_t i = 1; i < size; i++) {
+		if (number[i - 1] != number[i])
 			continue;
 
-		vamp_t value = arr[i];
-		vamp_t fang_pairs = 1;
+		fangs[i] += fangs[i - 1];
+		fangs[i - 1] = 0;
+		number[i - 1] = 0;
 
-		while (i + fang_pairs < size && arr[i + fang_pairs] == value)
-			fang_pairs++;
-		memset(&(arr[i]), 0, sizeof(vamp_t) * fang_pairs);
-		if (fang_pairs >= MIN_FANG_PAIRS)
-			arr[count++] = value;
+		if (fangs[i] > MAX_FANG_PAIRS)
+			fangs[i] = MAX_FANG_PAIRS;
 	}
-	size = count;
+
+	// Filter out with MIN_FANG_PAIRS & count the results
+	for (vamp_t i = 0; i < size; i++) {
+		if (fangs[i] < MIN_FANG_PAIRS) {
+			number[i] = 0;
+			fangs[i] = 0;
+			continue;
+		}
+		for (vamp_t j = MIN_FANG_PAIRS - 1; j < fangs[i]; j++)
+			count[j]++;
+	}
 
 #ifdef STORE_RESULTS
 	struct array *new = malloc(sizeof(struct array));
 	if (new == NULL)
 		abort();
 
-	new->data = arr;
+	new->number = number;
+	new->fangs = fangs;
 	new->size = size;
 	*ptr = new;
 #else
-	free(arr);
+	free(number);
+	free(fangs);
 	*ptr = NULL;
 #endif
-	*count_ptr = count;
+	memcpy(count_ptr, count, MAX_FANG_PAIRS * sizeof(vamp_t));
 	return;
 }
 #endif /* PROCESS_RESULTS */
@@ -116,10 +142,10 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 	OPTIONAL_ASSERT(checksum != NULL);
 
 	for (vamp_t i = 0; i < ptr->size; i++) {
-		if (ptr->data[i] == 0)
+		if (ptr->number[i] == 0)
 			continue;
 
-		vamp_t tmp = ptr->data[i];
+		vamp_t tmp = ptr->number[i];
 
 		#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 		tmp = __builtin_bswap64(tmp);
@@ -136,15 +162,23 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 #endif
 
 #if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
-void array_print(struct array *ptr, vamp_t count)
+void array_print(struct array *ptr, vamp_t count[MAX_FANG_PAIRS])
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 
+	vamp_t local_count[MAX_FANG_PAIRS];
+	memcpy(local_count, count, MAX_FANG_PAIRS * sizeof(vamp_t));
+
 	for (vamp_t i = 0; i < ptr->size; i++) {
-		if (ptr->data[i] == 0)
+		if (ptr->number[i] == 0)
 			continue;
 
-		fprintf(stdout, "%llu %llu\n", ++count, ptr->data[i]);
+		for (size_t j = MIN_FANG_PAIRS - 1; j < MAX_FANG_PAIRS && j < ptr->fangs[i]; j++) {
+			for (size_t k = MIN_FANG_PAIRS - 1; k < j; k++)
+				fprintf(stdout, "\t");
+
+			fprintf(stdout, "%llu %llu\n", ++local_count[j], ptr->number[i]);
+		}
 	}
 	fflush(stdout);
 }

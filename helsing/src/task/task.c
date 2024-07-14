@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -25,7 +26,7 @@ void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 	new->lmin = lmin;
 	new->lmax = lmax;
 	new->result = NULL;
-	new->count = 0;
+	memset(new->count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
 	new->complete = false;
 	*ptr = new;
 }
@@ -45,7 +46,7 @@ void task_copy_vargs(struct task *ptr, struct vargs *vamp_args)
 	OPTIONAL_ASSERT(vamp_args != NULL);
 
 	ptr->result = vamp_args->result;
-	ptr->count = vamp_args->local_count;
+	memcpy(ptr->count, vamp_args->local_count, MAX_FANG_PAIRS * sizeof(vamp_t));
 	ptr->complete = true;
 
 	vamp_args->result = NULL;

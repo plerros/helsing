@@ -20,7 +20,7 @@ struct taskboard
 	vamp_t todo; // First task that hasn't been accepted.
 	vamp_t done; // Last task that's completed, but isn't yet processed. (print, hash, checksum...)
 	fang_t fmax;
-	vamp_t common_count;
+	vamp_t common_count[MAX_FANG_PAIRS];
 	struct hash *checksum;
 };
 

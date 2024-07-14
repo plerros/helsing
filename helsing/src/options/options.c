@@ -22,8 +22,10 @@ static void buildconf()
 	printf("    VERBOSE_LEVEL=%d\n", VERBOSE_LEVEL);
 	if (VERBOSE_LEVEL == 3)
 		printf("    DIGEST_NAME=%s\n", DIGEST_NAME);
-	if (VERBOSE_LEVEL > 1)
+	if (VERBOSE_LEVEL > 1) {
 		printf("    MIN_FANG_PAIRS=%d\n", MIN_FANG_PAIRS);
+		printf("    MAX_FANG_PAIRS=%d\n", MAX_FANG_PAIRS);
+	}
 	printf("    MEASURE_RUNTIME=%s\n", (MEASURE_RUNTIME ? "true" : "false"));
 	printf("    ALG_NORMAL=%s\n", (ALG_NORMAL ? "true" : "false"));
 	printf("    ALG_CACHE=%s\n", (ALG_CACHE ? "true" : "false"));

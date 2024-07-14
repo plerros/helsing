@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -33,7 +34,7 @@ void taskboard_new(struct taskboard **ptr, struct options_t options)
 	new->todo = 0;
 	new->fmax = 0;
 	new->done = 0;
-	new->common_count = 0;
+	memset(new->common_count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
 	new->checksum = NULL;
 	hash_new(&(new->checksum));
 	*ptr = new;
@@ -146,7 +147,8 @@ void taskboard_cleanup(struct taskboard *ptr)
 			array_print(ptr->tasks[ptr->done]->result, ptr->common_count);
 			array_checksum(ptr->tasks[ptr->done]->result, ptr->checksum);
 		}
-		ptr->common_count += ptr->tasks[ptr->done]->count;
+		for (size_t i = 0; i < MAX_FANG_PAIRS; i++)
+			ptr->common_count[i] += ptr->tasks[ptr->done]->count[i];
 		taskboard_progress(ptr);
 		if (!ptr->options.dry_run)
 			save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr);
@@ -159,11 +161,21 @@ void taskboard_cleanup(struct taskboard *ptr)
 
 void taskboard_print_results(struct taskboard *ptr)
 {
-#if defined COUNT_RESULTS || defined DUMP_RESULTS
-	fprintf(stderr, "Found: %llu valid fang pair(s).\n", ptr->common_count);
-#else
-	fprintf(stderr, "Found: %llu vampire number(s).\n", ptr->common_count);
-#endif
+	#if defined COUNT_RESULTS || defined DUMP_RESULTS
+		fprintf(stderr, "Found: %llu valid fang pair(s).\n", ptr->common_count[0]);
+	#else
+		fprintf(stderr, "Found: %llu vampire number(s).\n", ptr->common_count[MIN_FANG_PAIRS - 1]);
+	#endif
+	for (size_t i = MIN_FANG_PAIRS; i < MAX_FANG_PAIRS; i++) {
+		if (ptr->common_count[i] == 0)
+			continue;
+
+		if (i == MIN_FANG_PAIRS)
+			fprintf(stderr, "Out of which:\n");
+
+
+		fprintf(stderr, "\t%llu\thave at least %lu fang pair(s)\n", ptr->common_count[i], i+1);
+	}
 	hash_print(ptr->checksum);
 }
 

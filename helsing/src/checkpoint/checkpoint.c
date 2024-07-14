@@ -168,10 +168,18 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 	int rc = 0;
 
 	enum types {integer, hash};
-	enum names {min, max, complete, count, checksum};
+	enum names {min, max, complete, count, checksum = count + MAX_FANG_PAIRS};
 
-	char end_char[5] = {' ', '\n', ' ', count_end(), '\n'};
-	int type[5] = {integer, integer, integer, integer, hash};
+	char end_char[4 + MAX_FANG_PAIRS] = {' ', '\n', ' '};
+	for (size_t i = 0; i < MAX_FANG_PAIRS - 1; i++)
+		end_char[3 + i] = ' ';
+	end_char[2 + MAX_FANG_PAIRS] = count_end();
+	end_char[3 + MAX_FANG_PAIRS] = '\n';
+
+	int type[4 + MAX_FANG_PAIRS] = {integer, integer, integer};
+	for (size_t i = 0; i < MAX_FANG_PAIRS; i++)
+		type[3 + i] = integer;
+	type[3 + MAX_FANG_PAIRS] = hash;
 
 	int name = min;
 	vamp_t line = 1;
@@ -241,10 +249,14 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 					}
 					break;
 
+				default:
+					if (name < count || name > checksum)
+						break;
+					// Allow count+1, count+2, ... count+n to fall through
 				case count:
-					if (num < progress->common_count && line != 2) {
+					if (num < progress->common_count[name - count] && line != 2) {
 						err_conflict(line, item);
-						fprintf(stderr, "%llu < %llu (below previous)\n", num, progress->common_count);
+						fprintf(stderr, "%llu < %llu (below previous)\n", num, progress->common_count[name - count]);
 						rc = 1;
 					}
 #ifdef PROCESS_RESULTS
@@ -254,7 +266,7 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 						rc = 1;
 					}
 #endif /* PROCESS_RESULTS */
-					progress->common_count = num;
+					progress->common_count[name - count] = num;
 					break;
 #ifdef CHECKSUM_RESULTS
 				case checksum:
@@ -299,7 +311,10 @@ void save_checkpoint(vamp_t complete, struct taskboard *progress)
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
 	assert(fp != NULL);
 
-	fprintf(fp, "%llu %llu", complete, progress->common_count);
+	fprintf(fp, "%llu", complete);
+	for (size_t i = 0; i < MAX_FANG_PAIRS; i++)
+		fprintf(fp, " %llu", progress->common_count[i]);
+
 
 #ifdef CHECKSUM_RESULTS
 	fprintf(fp, " ");

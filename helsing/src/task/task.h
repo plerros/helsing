@@ -23,7 +23,7 @@ struct task
 	vamp_t lmin; // local minimum
 	vamp_t lmax; // local maximum
 	struct array *result;
-	vamp_t count;
+	vamp_t count[MAX_FANG_PAIRS];
 	bool complete;
 };
 

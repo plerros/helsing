@@ -18,7 +18,7 @@ struct vargs /* Vampire arguments */
 {
 	struct cache *digptr;
 	struct array *result;
-	vamp_t local_count;
+	vamp_t local_count[MAX_FANG_PAIRS];
 };
 
 void vargs_new(struct vargs **ptr, struct cache *digptr);
@@ -29,7 +29,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax);
 #if defined COUNT_RESULTS || defined DUMP_RESULTS
 static inline void vargs_iterate_local_count(struct vargs *ptr)
 {
-	ptr->local_count += 1;
+	ptr->local_count[0] += 1;
 }
 #else /* defined COUNT_RESULTS || defined DUMP_RESULTS */
 static inline void vargs_iterate_local_count(

@@ -22,7 +22,51 @@
 #define VERBOSE_LEVEL 2
 #define DIGEST_NAME "sha512" // requires VERBOSE_LEVEL 3
 
-#define MIN_FANG_PAIRS 1 // requires VERBOSE_LEVEL > 1
+/*
+ * MIN_FANG_PAIRS:
+ *
+ * 	Filter out vampire numbers whose fang pair count is < MIN_FANG_PAIRS.
+ * Requires VERBOSE_LEVEL > 1.
+ *
+ * MAX_FANG_PAIRS:
+ *
+ * 	For each n within the [MIN_FANG_PAIRS, MAX_FANG_PAIRS], print results
+ * separately. Also requires VERBOSE_LEVEL > 1.
+ *
+ * When VERBOSE_LEVEL=4 we have n lists to print out. 1 for each possible value
+ * within the [MIN_FANG_PAIRS, MAX_FANG_PAIRS] range. However we only have 1
+ * file stream for output.
+ *
+ * It would't be possible with the current code architecture to store the
+ * results and print the lists consecutively:
+ * 	A(1)
+ * 	A(2)
+ * 	...
+ * 	A(N)
+ *
+ * 	B(1)
+ * 	B(2)
+ * 	...
+ * 	B(N)
+ *
+ * As a compromise the lists are interleaved as such:
+ * 	A(1)
+ * 	A(2)
+ * 	...
+ * 	A(k)
+ * 		B(1)
+ * 	A(k+1)
+ * 	...
+ * 		B(2)
+ * 	...
+ * 		...
+ * 	A(N)
+ *
+ * Elements from the n-th list have n tabs before them.
+ */
+
+#define MIN_FANG_PAIRS 1
+#define MAX_FANG_PAIRS 1
 
 #define MEASURE_RUNTIME false
 

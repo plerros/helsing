@@ -16,6 +16,7 @@ int interval_set(struct interval_t *ptr, struct options_t options)
 	int rc = 0;
 	if (options.min > options.max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
+		fprintf(stderr, "Invalid arguments, %llu <= %llu\n", options.min, options.max);
 		rc = 1;
 		goto out;
 	}

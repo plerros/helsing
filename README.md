@@ -252,6 +252,7 @@ $ ./helsing --buildconf
   configuration:
     VERBOSE_LEVEL=2
     MIN_FANG_PAIRS=1
+    MAX_FANG_PAIRS=1
     MEASURE_RUNTIME=false
     ALG_NORMAL=false
     ALG_CACHE=true

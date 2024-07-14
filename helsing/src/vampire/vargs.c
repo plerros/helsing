@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -108,7 +109,7 @@ void vargs_new(struct vargs **ptr, struct cache *digptr)
 		abort();
 
 	new->digptr = digptr;
-	new->local_count = 0;
+	memset(new->local_count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
 	new->result = NULL;
 	*ptr = new;
 }
@@ -124,7 +125,7 @@ void vargs_free(struct vargs *args)
 
 void vargs_reset(struct vargs *args)
 {
-	args->local_count = 0;
+	memset(args->local_count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
 	array_free(args->result);
 	args->result = NULL;
 }
