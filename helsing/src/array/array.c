@@ -87,13 +87,11 @@ void array_new(
 	vamp_t count[MAX_FANG_PAIRS];
 	memset(count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
 
-	// Initialize the fangs array
-	for (vamp_t i = 0; i < size; i++)
-		fangs[i] = 1;
-
-
+	if (size > 0)
+		fangs[0] = 1;
 	// Combine duplicate entries
 	for (vamp_t i = 1; i < size; i++) {
+		fangs[i] = 1;
 		if (number[i - 1] != number[i])
 			continue;
 
