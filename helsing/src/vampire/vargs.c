@@ -360,6 +360,11 @@ static inline void alg_cache_iterate(
 	 * optimizable by gcc and clang, while retaining correctness.
 	 */
 
+	if (elements == 1) {
+		arr[0].number += arr[0].iterator;
+		arr[0].carry = 0;
+	}
+
 	for (int i = 0; i < elements - 1; i++) {
 		arr[i].number += arr[i].iterator;
 		arr[i + 1].carry = 0;

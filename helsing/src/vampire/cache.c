@@ -228,10 +228,14 @@ length_t function_name(                                                         
 	if (data_constant.idx_n == true)                                                      \
 		return part_n;                                                                \
                                                                                               \
-	data_global.multiplicand_length -= part_n;                                            \
-	data_global.multiplicand_parts -= 1;                                                  \
-	data_global.product_length -= part_n;                                                 \
-	data_global.product_parts -= 1;                                                       \
+	if (data_global.multiplicand_parts > 1) {                                             \
+		data_global.multiplicand_length -= part_n;                                    \
+		data_global.multiplicand_parts -= 1;                                          \
+	}                                                                                     \
+	if (data_global.product_parts > 1) {                                                  \
+		data_global.product_length -= part_n;                                         \
+		data_global.product_parts -= 1;                                               \
+	}                                                                                     \
                                                                                               \
 	data_constant.idx_n = false;                                                          \
 	length_t ret = function_name_internal(data_constant, data_global);                    \
