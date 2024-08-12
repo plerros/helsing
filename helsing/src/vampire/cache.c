@@ -180,8 +180,14 @@ static inline length_t part_vl_rl_internal(
 	struct partdata_variable_t data_variable,
 	struct partdata_local_t data_local)
 {
+	struct partdata_local_t tmp = data_local;
+	if (tmp.length > tmp.parts)
+		tmp.length = tmp.parts;
+	data_local.length -= tmp.length;
+	length_t ret = part_vl_lr_internal(data_variable, tmp);
 	data_variable.index = data_local.parts - data_variable.index -1;
-	return(part_vl_lr_internal(data_variable, data_local));
+	ret +=part_vl_lr_internal(data_variable, data_local);
+	return ret;
 }
 
 static inline length_t part_vl_l1r_internal(
@@ -203,8 +209,14 @@ static inline length_t part_vl_r1l_internal(
 	struct partdata_variable_t data_variable,
 	struct partdata_local_t data_local)
 {
+	struct partdata_local_t tmp = data_local;
+	if (tmp.length > tmp.parts)
+		tmp.length = tmp.parts;
+	data_local.length -= tmp.length;
+	length_t ret = part_vl_lr_internal(data_variable, tmp);
 	data_variable.index = data_local.parts - data_variable.index -1;
-	return(part_vl_l1r_internal(data_variable, data_local));
+	ret +=part_vl_l1r_internal(data_variable, data_local);
+	return ret;
 }
 
 #define PART_CG_BLUEPRINT(function_name, function_name_internal)                              \
