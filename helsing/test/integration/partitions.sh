@@ -2,7 +2,7 @@
 n_max=16
 
 b_seq=$(seq 2 2)                # numeral base
-pm_seq=$(seq 2 4)               # partition method
+pm_seq=$(seq 0 4)               # partition method
 m_seq=$(seq 1 $(( n_max / 2 ))) # multiplicand
 p_seq=$(seq 2 $n_max)           # product
 n_seq=$(seq 2 2 $n_max)         # [n]
