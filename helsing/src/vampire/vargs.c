@@ -431,6 +431,9 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			alg_normal_check(mult_array, multiplicand, product, &result);
 			alg_cache_check(&ag_data, &result);
 
+			if (ALG_NORMAL && ALG_CACHE)
+				OPTIONAL_ASSERT(result != 1);
+
 			if (result && (mult_zero || notrailingzero(multiplicand))) {
 				vargs_iterate_local_count(args);
 				vargs_print_results(product, multiplier, multiplicand);
