@@ -1,4 +1,10 @@
 #!/bin/bash
+
+: '
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2024 Pierro Zachareas
+'
+
 n_max=16
 
 b_seq=$(seq 2 2)                # numeral base
@@ -34,6 +40,17 @@ let "len--"
 echo "base, method, multiplicand, product, [n]"
 echo
 
+cp configuration.h configuration.backup
+
+function handle_sigint()
+{
+	make clean
+	mv configuration.backup configuration.h
+	exit
+}
+
+trap handle_sigint SIGINT
+
 sed -i -e "s|ALG_NORMAL[[:space:]]\+false|ALG_NORMAL true|g"       configuration.h
 sed -i -e "s|ALG_CACHE[[:space:]]\+false|ALG_CACHE true|g"         configuration.h
 sed -i -e "s|SAFETY_CHECKS[[:space:]]\+false|SAFETY_CHECKS true|g" configuration.h
@@ -55,3 +72,5 @@ for i in $(seq 0 $len); do
 		rc=$?
 	done
 done
+
+mv configuration.backup configuration.h
