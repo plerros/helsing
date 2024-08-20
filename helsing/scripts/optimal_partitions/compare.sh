@@ -12,9 +12,11 @@ dir2="$2"
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+selfname=$(basename "$0")
+
 if [ $# -eq 0 ]; then
 	echo "Compare 2 sets of results. Each should be in it's own folder"
-	echo "Usage: compare.sh [path1] [path2]"
+	echo "Usage: $selfname [path1] [path2]"
 	exit
 fi
 

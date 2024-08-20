@@ -5,6 +5,8 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2024 Pierro Zachareas
 '
 
+selfname=$(basename "$0")
+
 case $# in
 	"1")
 		out_folder="$1"
@@ -28,7 +30,7 @@ case $# in
 		;;
 	*)
 		echo "For each base find optimal settings and write them to a CSV"
-		echo "Usage: optim.sh [BASE_MIN] [BASE_MAX] [PARTS_MAX] [TIME_MIN] [OUTPUT_FOLDER]"
+		echo "Usage: $selfname [BASE_MIN] [BASE_MAX] [PARTS_MAX] [TIME_MIN] [OUTPUT_FOLDER]"
 		echo -e "The first 2-4 parameters may be skipped"
 		echo -e "BASE_MIN / MAX               numeral base range"
 		echo -e "PARTS_MAX                    max partitions"
@@ -36,9 +38,9 @@ case $# in
 		echo -e "                             increase to narrow down results"
 		echo
 		echo "Reccomended parameters:"
-		echo -e "\tquick(?~?h)  optim.sh 2 12 3  0.5"
-		echo -e "\tnarrow(?~?h) optim.sh 2 12 3  10.0"
-		echo -e "\twide(7~24h)  optim.sh 2 12 10 0.5"
+		echo -e "\tquick(?~?h)  $selfname 2 12 3  0.5"
+		echo -e "\tnarrow(?~?h) $selfname 2 12 3  10.0"
+		echo -e "\twide(7~24h)  $selfname 12 10 0.5"
 		exit
 		;;
 esac
