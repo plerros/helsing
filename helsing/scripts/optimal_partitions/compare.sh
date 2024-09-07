@@ -5,14 +5,15 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2024 Pierro Zachareas
 '
 
+selfname=$(basename "$0")
+selfdir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 maindir=$(pwd)
 dir1="$1"
 dir2="$2"
 
 RED='\033[0;31m'
 NC='\033[0m' # No Color
-
-selfname=$(basename "$0")
 
 if [ $# -eq 0 ]; then
 	echo "Compare 2 sets of results. Each should be in it's own folder"
@@ -21,31 +22,42 @@ if [ $# -eq 0 ]; then
 fi
 
 common="$maindir/tmp.common"
+csvout=$(echo "$1 vs $2.csv" | sed --expression='s|/||g')
 
-for file in "$dir1"/*; do
+if [ -f "$csvout" ]; then
+	echo "$csvout already exists!"
+	exit
+fi
+
+tmp1="$maindir/tmp1.txt"
+tmp2="$maindir/tmp2.txt"
+
+for file in $(find "$dir1" -type f -name "base*.csv"); do
 	cut -f 3-5 "$file" | sort -u > "$common"
 	break
 done
 
-for file in "$dir1"/*; do
-	cut -f 3-5 "$file" | sort -u > tmp
-	comm -12 tmp "$common" > tmp2
-	rm tmp
-	mv tmp2 "$common"
+for file in $(find "$dir1" -type f -name "base*.csv"); do
+	cut -f 3-5 "$file" | sort -u > "$tmp1"
+	comm -12 "$tmp1" "$common" > "$tmp2"
+	rm "$tmp1"
+	mv "$tmp2" "$common"
 done
 
-for file in "$dir2"/*; do
-	cut -f 3-5 "$file" | sort -u > tmp
-	comm -12 tmp "$common" > tmp2
-	rm tmp
-	mv tmp2 "$common"
+for file in $(find "$dir2" -type f -name "base*.csv"); do
+	cut -f 3-5 "$file" | sort -u > "$tmp1"
+	comm -12 "$tmp1" "$common" > "$tmp2"
+	rm "$tmp1"
+	mv "$tmp2" "$common"
 done
 
-cd "$dir1"
-for file in *; do
-	cut -f 1-5 "$file" > tmp
+echo -e "base\tn\tmethod\tmultiplicand\tproduct\tmean1\tstddev1\tmean2\tstddev2" > "$csvout"
+
+for file in $(find "$dir1" -type f -name "base*.csv"); do
+	cut -f 1-5 "$file" > "$tmp1"
+	name=$(basename $file)
 	while IFS="" read -r line || [ -n "$p" ]; do
-		if [ ! -f "$maindir/$dir2/$file" ]; then
+		if [ ! -f "$maindir/$dir2/$name" ]; then
 			continue;
 		fi
 
@@ -55,40 +67,35 @@ for file in *; do
 			continue;
 		fi
 
-		res=$(cat "$maindir/$dir2/$file" | grep -e "$line")
+		res=$(cat "$maindir/$dir2/$name" | grep -e "$line	")
 		if [ -z "$res" ]; then
 			continue;
 		fi
 
-		mean[0]=$(cat "$maindir/$dir1/$file" | grep -e "$line" | cut -f 6 )
-		mean[1]=$(cat "$maindir/$dir2/$file" | grep -e "$line" | cut -f 6 )
+		mean[0]=$(cat "$maindir/$dir1/$name" | grep -e "$line	" | cut -f 6 )
+		mean[1]=$(cat "$maindir/$dir2/$name" | grep -e "$line	" | cut -f 6 )
 
-		stddev[0]=$(cat "$maindir/$dir1/$file" | grep -e "$line" | cut -f 7 )
-		stddev[1]=$(cat "$maindir/$dir2/$file" | grep -e "$line" | cut -f 7 )
+		stddev[0]=$(cat "$maindir/$dir1/$name" | grep -e "$line	" | cut -f 7 )
+		stddev[1]=$(cat "$maindir/$dir2/$name" | grep -e "$line	" | cut -f 7 )
 
-		#echo ${stddev[0]} \/ ${mean[0]}
-		if [ 1 -eq "$(echo "${stddev[0]} / ${mean[0]} > 0.03" | bc -l)" ]; then
-			echo -e "$line\t${RED}TOO MUCH VARIANCE${NC}"
+		variation_coeff[0]=$( echo "${stddev[0]} / ${mean[0]}" | bc -l)
+		variation_coeff[1]=$( echo "${stddev[1]} / ${mean[1]}" | bc -l)
+		if [ 1 -eq "$(echo "${variation_coeff[0]} > 0.03" | bc -l)" ]; then
+			echo -e "$line\t${RED}SKIPPED, VARIATION COEFFICIENT > 3%${NC}" >&2
 			continue
 		fi
-		if [ 1 -eq "$(echo "${stddev[1]} / ${mean[1]} > 0.03" | bc -l)" ]; then
-			echo -e "$line\t${RED}TOO MUCH VARIANCE${NC}"
-			continue
-		fi
-
-
-		ratio=$( echo "${mean[1]} / ${mean[0]}" | bc -l)
-
-		if [ 1 -eq "$(echo "($ratio < 1.01) && ($ratio > 0.99)" | bc -l)" ]; then
+		if [ 1 -eq "$(echo "${variation_coeff[1]} > 0.03" | bc -l)" ]; then
+			echo -e "$line\t${RED}SKIPPED, VARIATION COEFFICIENT > 3%${NC}" >&2
 			continue
 		fi
 
-		if [ 1 -eq "$(echo "define abs(n) {if ( n > 0 ) return (n);{return (-n);}}; abs(${mean[0]} - ${mean[1]}) > ${stddev[0]} + ${stddev[1]}" | bc -l)" ]; then
-			echo -e "$line\t$ratio"
-		fi
-	done < tmp
+		echo -e "$line\t${mean[0]}\t${stddev[0]}\t${mean[1]}\t${stddev[1]}" >> "$csvout"
+	done < "$tmp1"
 	unset IFS
-	rm tmp
+	rm "$tmp1"
 done
 
 rm "$common"
+rm -f "$tmp1" "$tmp2"
+
+python3 "$selfdir/plot_relative.py" "$csvout"
