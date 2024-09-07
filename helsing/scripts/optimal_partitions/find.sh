@@ -7,6 +7,11 @@ Copyright (c) 2024 Pierro Zachareas
 
 selfname=$(basename "$0")
 
+base_min="2"
+base_max="12"
+part_max="3"
+time_min="0.5"
+
 case $# in
 	"1")
 		out_folder="$1"
@@ -31,7 +36,7 @@ case $# in
 	*)
 		echo "For each base find optimal settings and write them to a CSV"
 		echo "Usage: $selfname [BASE_MIN] [BASE_MAX] [PARTS_MAX] [TIME_MIN] [OUTPUT_FOLDER]"
-		echo -e "The first 2-4 parameters may be skipped"
+		echo -e "The first 2-4 parameters are optional"
 		echo -e "BASE_MIN / MAX               numeral base range"
 		echo -e "PARTS_MAX                    max partitions"
 		echo -e "TIME_MIN                     default config minimum runtime,"
@@ -40,11 +45,14 @@ case $# in
 		echo "Reccomended parameters:"
 		echo -e "\tquick(?~?h)  $selfname 2 12 3  0.5"
 		echo -e "\tnarrow(?~?h) $selfname 2 12 3  10.0"
-		echo -e "\twide(7~24h)  $selfname 12 10 0.5"
+		echo -e "\twide(7~24h)  $selfname 2 12 10 0.5"
 		exit
 		;;
 esac
 
+echo "base=[$base_min, $base_max], parts=[1, $part_max], time_min=$time_min, out=$out_folder"
+
+mkdir -p "$out_folder"
 b_seq=$(seq $base_min $base_max)        # numeral base
 
 function collect_data () {
@@ -187,23 +195,24 @@ cp configuration.h configuration.backup2
 
 function handle_sigint()
 {
-	rm tmp.csv
+	rm -f tmp.csv
 	make clean
 	mv configuration.backup1 configuration.h
-	rm configuration.backup2
+	rm -f configuration.backup2
 	exit
 }
 
 trap handle_sigint SIGINT
 
 for base in $b_seq; do
+	cp configuration.backup2 configuration.h
+	sed -i -e "s|BASE[[:space:]]\+[[:digit:]]\+|BASE $base|g" configuration.h
+	make -j4 > /dev/null
+
 	n_min=2
-	# find n for which runtime is longer than 0.5s
+	# find n for which runtime is longer than 0.01s
 	for i in $(seq $n_min 2 64); do
 		n_min=$i
-		cp configuration.backup2 configuration.h
-		sed -i -e "s|BASE[[:space:]]\+[[:digit:]]\+|BASE $base|g" configuration.h
-		make -j4 > /dev/null
 
 		hyperfine --warmup 2 "./helsing -n $i" --export-csv tmp.csv > /dev/null 2>&1
 		runtime=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
@@ -215,9 +224,6 @@ for base in $b_seq; do
 	# find n for which runtime is longer than 0.5s
 	for i in $(seq $n_max 2 64); do
 		n_max=$i
-		cp configuration.backup2 configuration.h
-		sed -i -e "s|BASE[[:space:]]\+[[:digit:]]\+|BASE $base|g" configuration.h
-		make -j4 > /dev/null
 
 		hyperfine --warmup 2 "./helsing -n $i" --export-csv tmp.csv > /dev/null 2>&1
 		runtime=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
