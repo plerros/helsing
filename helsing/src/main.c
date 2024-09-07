@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2024 Pierro Zachareas
  */
 
 #include <stdio.h>
@@ -29,15 +29,19 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 
 int main(int argc, char *argv[])
 {
+	int rc = 0;
 	struct options_t options;
 	struct interval_t interval;
 	struct taskboard *progress = NULL;
 
-	if (options_init(&options, argc, argv))
+	rc = options_init(&options, argc, argv);
+	if (rc)
 		goto out;
-	if (interval_set(&interval, options))
+	rc = interval_set(&interval, options);
+	if (rc)
 		goto out;
-	if (touch_checkpoint(options, interval))
+	rc = touch_checkpoint(options, interval);
+	if (rc)
 		goto out;
 
 	taskboard_new(&progress, options);
@@ -70,5 +74,5 @@ int main(int argc, char *argv[])
 	free(threads);
 out:
 	taskboard_free(progress);
-	return 0;
+	return rc;
 }
