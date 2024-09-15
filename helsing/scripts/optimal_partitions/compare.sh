@@ -32,54 +32,46 @@ fi
 tmp1="$maindir/tmp1.txt"
 tmp2="$maindir/tmp2.txt"
 
-for file in $(find "$dir1" -type f -name "base*.csv"); do
-	cut -f 3-5 "$file" | sort -u > "$common"
-	break
-done
-
-for file in $(find "$dir1" -type f -name "base*.csv"); do
-	cut -f 3-5 "$file" | sort -u > "$tmp1"
-	comm -12 "$tmp1" "$common" > "$tmp2"
-	rm "$tmp1"
-	mv "$tmp2" "$common"
-done
-
-for file in $(find "$dir2" -type f -name "base*.csv"); do
-	cut -f 3-5 "$file" | sort -u > "$tmp1"
-	comm -12 "$tmp1" "$common" > "$tmp2"
-	rm "$tmp1"
-	mv "$tmp2" "$common"
-done
-
 echo -e "base\tn\tmethod\tmultiplicand\tproduct\tmean1\tstddev1\tmean2\tstddev2" > "$csvout"
 
 for file in $(find "$dir1" -type f -name "base*.csv"); do
 	cut -f 1-5 "$file" > "$tmp1"
 	name=$(basename $file)
+
+	if [ ! -f "$maindir/$dir2/$name" ]; then
+		continue;
+	fi
+
 	while IFS="" read -r line || [ -n "$p" ]; do
-		if [ ! -f "$maindir/$dir2/$name" ]; then
+		res=$(echo "$line" | cut -f 4 | grep -w "1")
+		if [ ! -z "$res" ]; then
+			continue
+		fi
+
+		mean[0]="0.0"
+		stddev[0]="inf"
+		variation_coeff[0]="0.0"
+		mean[1]="0.0"
+		stddev[1]="inf"
+		variation_coeff[1]="0.0"
+
+		isin[0]=$(cat "$maindir/$dir1/$name" | grep -e "$line	")
+		isin[1]=$(cat "$maindir/$dir2/$name" | grep -e "$line	")
+		if [ -z "${isin[0]}" -o  -z "${isin[1]}" ]; then
 			continue;
 		fi
 
-		params=$(echo "$line" | cut -f 3-5)
-		res=$(cat "$common" | grep -e "$params")
-		if [ -z "$res" ]; then
-			continue;
+		if [ ! -z "${isin[0]}" ]; then
+			mean[0]=$(cat "$maindir/$dir1/$name" | grep -e "$line	" | cut -f 6 )
+			stddev[0]=$(cat "$maindir/$dir1/$name" | grep -e "$line	" | cut -f 7 )
+			variation_coeff[0]=$( echo "${stddev[0]} / ${mean[0]}" | bc -l)
+		fi
+		if [ ! -z "${isin[1]}" ]; then
+			mean[1]=$(cat "$maindir/$dir2/$name" | grep -e "$line	" | cut -f 6 )
+			stddev[1]=$(cat "$maindir/$dir2/$name" | grep -e "$line	" | cut -f 7 )
+			variation_coeff[1]=$( echo "${stddev[1]} / ${mean[1]}" | bc -l)
 		fi
 
-		res=$(cat "$maindir/$dir2/$name" | grep -e "$line	")
-		if [ -z "$res" ]; then
-			continue;
-		fi
-
-		mean[0]=$(cat "$maindir/$dir1/$name" | grep -e "$line	" | cut -f 6 )
-		mean[1]=$(cat "$maindir/$dir2/$name" | grep -e "$line	" | cut -f 6 )
-
-		stddev[0]=$(cat "$maindir/$dir1/$name" | grep -e "$line	" | cut -f 7 )
-		stddev[1]=$(cat "$maindir/$dir2/$name" | grep -e "$line	" | cut -f 7 )
-
-		variation_coeff[0]=$( echo "${stddev[0]} / ${mean[0]}" | bc -l)
-		variation_coeff[1]=$( echo "${stddev[1]} / ${mean[1]}" | bc -l)
 		if [ 1 -eq "$(echo "${variation_coeff[0]} > 0.03" | bc -l)" ]; then
 			echo -e "$line\t${RED}SKIPPED, VARIATION COEFFICIENT > 3%${NC}" >&2
 			continue
@@ -95,7 +87,6 @@ for file in $(find "$dir1" -type f -name "base*.csv"); do
 	rm "$tmp1"
 done
 
-rm "$common"
-rm -f "$tmp1" "$tmp2"
+rm -f "$common" "$tmp1" "$tmp2"
 
 python3 "$selfdir/plot_relative.py" "$csvout"
