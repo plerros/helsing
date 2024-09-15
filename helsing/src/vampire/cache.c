@@ -58,9 +58,7 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 				.reserve = 1
 			},
 			.global = {
-				.multiplicand_parts = MULTIPLICAND_PARTITIONS,
 				.multiplicand_length = multiplicand_length,
-				.product_parts = PRODUCT_PARTITIONS,
 				.product_length = i,
 				.multiplicand_iterator = length(BASE - 1),
 				.product_iterator = multiplicand_length + length(BASE - 1)
@@ -72,7 +70,7 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 			}
 		};
 
-		data.local.parts    = data.global.multiplicand_parts;
+		data.local.parts    = MULTIPLICAND_PARTITIONS;
 		data.local.length   = data.global.multiplicand_length;
 		data.local.iterator = data.global.multiplicand_iterator;
 		for (int i = 0; i < data.local.parts; i++) {
@@ -83,7 +81,7 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 				cs = tmp;
 		}
 
-		data.local.parts    = data.global.product_parts;
+		data.local.parts    = PRODUCT_PARTITIONS;
 		data.local.length   = data.global.product_length;
 		data.local.iterator = data.global.product_iterator;
 		for (int i = 0; i < data.local.parts; i++) {
@@ -146,14 +144,16 @@ bool cache_ovf_chk(vamp_t max)
 
 static inline length_t part_scsg_rl_internal(
 	struct partdata_constant_t data_constant,
-	struct partdata_global_t data_global)
+	struct partdata_global_t data_global,
+	length_t multiplicand_parts,
+	length_t product_parts)
 {
-	length_t ret_multiplicand = data_global.multiplicand_length / data_global.multiplicand_parts;
-	length_t ret_product = data_global.product_length / data_global.product_parts;
+	length_t ret_multiplicand = data_global.multiplicand_length / multiplicand_parts;
+	length_t ret_product = data_global.product_length / product_parts;
 
 	if (data_constant.idx_n == true) {
-		ret_multiplicand = data_global.multiplicand_length - ((data_global.multiplicand_parts - 1) * ret_multiplicand);
-		ret_product = data_global.product_length - ((data_global.product_parts - 1) * ret_product);
+		ret_multiplicand = data_global.multiplicand_length - ((multiplicand_parts - 1) * ret_multiplicand);
+		ret_product = data_global.product_length - ((product_parts - 1) * ret_product);
 	}
 	length_t ret = ret_multiplicand;
 	if (ret < ret_product)
@@ -226,33 +226,38 @@ length_t function_name(                                                         
 {                                                                                             \
 	struct partdata_constant_t nth = data_constant;                                       \
 	nth.idx_n = true;                                                                     \
-	length_t part_n = function_name_internal(nth, data_global);                           \
+	length_t part_n = function_name_internal(nth, data_global,                            \
+				MULTIPLICAND_PARTITIONS, PRODUCT_PARTITIONS);                 \
                                                                                               \
 	length_t multiplicand_limit = data_global.multiplicand_length;                        \
 	multiplicand_limit -= data_global.multiplicand_iterator;                              \
 	length_t product_limit = data_global.product_length;                                  \
 	product_limit -= data_global.product_iterator;                                        \
-	if ((data_global.multiplicand_parts > 1) && (part_n > multiplicand_limit))            \
+	if ((MULTIPLICAND_PARTITIONS > 1) && (part_n > multiplicand_limit))                   \
 		part_n = multiplicand_limit;                                                  \
-	if ((data_global.product_parts > 1) && (part_n > product_limit))                      \
+	if ((PRODUCT_PARTITIONS > 1) && (part_n > product_limit))                             \
 		part_n = product_limit;                                                       \
                                                                                               \
 	if (data_constant.idx_n == true)                                                      \
 		return part_n;                                                                \
                                                                                               \
-	if (data_global.multiplicand_parts > 1) {                                             \
+	length_t multiplicand_parts = MULTIPLICAND_PARTITIONS;                                \
+	if (MULTIPLICAND_PARTITIONS > 1) {                                                    \
 		data_global.multiplicand_length -= part_n;                                    \
-		data_global.multiplicand_parts -= 1;                                          \
+		multiplicand_parts -= 1;                                                      \
 	}                                                                                     \
-	if (data_global.product_parts > 1) {                                                  \
+	length_t product_parts = PRODUCT_PARTITIONS;                                          \
+	if (PRODUCT_PARTITIONS > 1) {                                                         \
 		data_global.product_length -= part_n;                                         \
-		data_global.product_parts -= 1;                                               \
+		product_parts -= 1;                                                           \
 	}                                                                                     \
                                                                                               \
 	data_constant.idx_n = false;                                                          \
-	length_t ret = function_name_internal(data_constant, data_global);                    \
+	length_t ret = function_name_internal(data_constant, data_global,                     \
+				multiplicand_parts, product_parts);                           \
 	data_constant.idx_n = true;                                                           \
-	length_t ret2 = function_name_internal(data_constant, data_global);                   \
+	length_t ret2 = function_name_internal(data_constant, data_global,                    \
+				multiplicand_parts, product_parts);                           \
 	if (ret2 > ret)                                                                       \
 		ret = ret2;                                                                   \
 	return ret;                                                                           \

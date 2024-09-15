@@ -247,9 +247,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 			.reserve = 1
 		},
 		.global = {
-			.multiplicand_parts = MULTIPLICAND_PARTITIONS,
 			.multiplicand_length = multiplicand_length,
-			.product_parts = PRODUCT_PARTITIONS,
 			.product_length = lenmax,
 			.multiplicand_iterator = length(BASE - 1),
 			.product_iterator = multiplicand_length + length(BASE - 1)
@@ -261,7 +259,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 		}
 	};
 
-	data.local.parts    = data.global.multiplicand_parts;
+	data.local.parts    = MULTIPLICAND_PARTITIONS;
 	data.local.length   = data.global.multiplicand_length;
 	data.local.iterator = data.global.multiplicand_iterator;
 	for (int i = 0; i < data.local.parts - 1; i++) {
@@ -270,7 +268,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 		ptr->multiplicand[i].mod = pow_v(PARTITION(data));
 	}
 
-	data.local.parts    = data.global.product_parts;
+	data.local.parts    = PRODUCT_PARTITIONS;
 	data.local.length   = data.global.product_length;
 	data.local.iterator = data.global.product_iterator;
 	for (int i = 0; i < data.local.parts - 1; i++) {
