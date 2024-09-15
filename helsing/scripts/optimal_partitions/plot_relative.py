@@ -51,8 +51,15 @@ csv_lines = len(csv_base)
 
 # Re-arrange data in preferred way
 mean_ratio = np.divide(csv_mean1, csv_mean2)
+mean_ratio = np.subtract(mean_ratio, 1) #center on 0 so that results will have opposite sign
+mean_ratio = np.divide(1, mean_ratio) #move big values closer to center and small ones further away
 #mean_ratio = np.fmax(np.divide(csv_mean1, csv_mean2),  np.divide(csv_mean2, csv_mean1))
 mean_ratio, csv_base, csv_method, csv_multiplicand, csv_product, csv_mean1, csv_stddev1, csv_mean2, csv_stddev2 = (list(t) for t in zip(*sorted(zip(mean_ratio, csv_base, csv_method, csv_multiplicand, csv_product, csv_mean1, csv_stddev1, csv_mean2, csv_stddev2))))
+
+# variance and covariance
+# we assume they are independent; no need for covariance!
+var1 = np.multiply(csv_stddev1, csv_stddev1)
+var2 = np.multiply(csv_stddev2, csv_stddev2)
 
 # Calculate relative performance uplift
 mean_relative1 = csv_mean1.copy()
@@ -61,20 +68,20 @@ stddev_relative1 = csv_stddev1.copy()
 stddev_relative2 = csv_stddev2.copy()
 
 for i in range(len(csv_mean1)):
-	tmp = csv_mean1[i] / csv_mean2[i] - 1
-	if tmp > 0:
+	tmp = csv_mean1[i] / csv_mean2[i] - 1.0
+	if (tmp > 0) and (not np.isinf(tmp)):
 		mean_relative1[i] = tmp
-		stddev_relative1[i] = csv_stddev1[i] / csv_mean2[i]
+		stddev_relative1[i] = np.sqrt((var1[i] + var2[i]) / csv_mean2[i])
 	else:
 		mean_relative1[i] = 0
 		stddev_relative1[i] = 0
 
 
 for i in range(len(csv_mean2)):
-	tmp = csv_mean2[i] / csv_mean1[i] - 1
-	if tmp > 0:
+	tmp = csv_mean2[i] / csv_mean1[i] - 1.0
+	if (tmp > 0) and (not np.isinf(tmp)):
 		mean_relative2[i] = -tmp
-		stddev_relative2[i] = csv_stddev2[i] / csv_mean1[i]
+		stddev_relative2[i] = np.sqrt((var1[i] + var2[i]) / csv_mean1[i])
 	else:
 		mean_relative2[i] = 0
 		stddev_relative2[i] = 0
