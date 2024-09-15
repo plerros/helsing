@@ -42,7 +42,7 @@ case $# in
 		echo -e "TIME_MIN                     default config minimum runtime,"
 		echo -e "                             increase to narrow down results"
 		echo
-		echo "Reccomended parameters:"
+		echo "Recommended parameters:"
 		echo -e "\tquick(?~?h)  $selfname 2 12 3  0.5"
 		echo -e "\tnarrow(?~?h) $selfname 2 12 3  10.0"
 		echo -e "\twide(7~24h)  $selfname 2 12 10 0.5"
@@ -90,7 +90,7 @@ function collect_data () {
 	done
 	let "len--"
 
-	echo "base\tn\tmethod\tmultiplicand\tproduct"
+	echo -e "base\tn\tmethod\tmultiplicand\tproduct"
 	for n in $(seq $n_min 2 $n_max); do
 		for i in $(seq 0 $len); do
 			if (( ${l_skip[$i]} == 1 )); then
