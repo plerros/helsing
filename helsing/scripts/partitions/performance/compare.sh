@@ -2,7 +2,7 @@
 
 : '
 SPDX-License-Identifier: BSD-3-Clause
-Copyright (c) 2024 Pierro Zachareas
+Copyright (c) 2025 Pierro Zachareas
 '
 
 selfname=$(basename "$0")
