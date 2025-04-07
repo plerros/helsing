@@ -70,11 +70,16 @@ for base in $b_seq; do
 	# find n for which runtime is longer than 0.01s
 	n_min=2
 	for i in $(seq $n_min 2 64); do
-		n_min=$i
 
 		hyperfine --warmup 2 "./helsing -n $i" --export-csv tmp.csv > /dev/null 2>&1
 		runtime=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
 		echo -e "$base\t$i\t$runtime"
+
+		if [ -z "${runtime}" ]; then
+			continue
+		fi
+
+		n_min=$i
 		if [ 1 -eq "$(echo "${runtime} > 0.01" | bc)" ]; then
 			break
 		fi
@@ -83,16 +88,20 @@ for base in $b_seq; do
 	# find n for which runtime is longer than [time_min] seconds
 	n_max=$n_min
 	for i in $(seq $n_max 2 64); do
-		n_max=$i
-
 		hyperfine --warmup 2 "./helsing -n $i" --export-csv tmp.csv > /dev/null 2>&1
 		runtime=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
 		echo -e "$base\t$i\t$runtime"
+
+		if [ -z "${runtime}" ]; then
+			continue
+		fi
+
+		n_max=$i
 		if [ 1 -eq "$(echo "${runtime} > ${time_min}" | bc)" ]; then
+			echo -e "$base\t$n_min\t$n_max\t$part_max" >> "$out_file"
 			break
 		fi
 	done
-	echo -e "$base\t$n_min\t$n_max\t$part_max" >> "$out_file"
 done
 
 mv configuration.backup1 configuration.h
