@@ -29,18 +29,25 @@ if [ -f "$csvout" ]; then
 	exit
 fi
 
+tmp0="$maindir/tmp0.txt"
 tmp1="$maindir/tmp1.txt"
 tmp2="$maindir/tmp2.txt"
 
 echo -e "base\tn\tmethod\tmultiplicand\tproduct\tmean1\tstddev1\tmean2\tstddev2" > "$csvout"
 
-for file in $(find "$dir1" -type f -name "base*.csv"); do
-	cut -f 1-5 "$file" > "$tmp1"
-	name=$(basename $file)
+find "$dir1" -type f -name "base*.csv" > "$tmp0"
 
+while read -r file; do
+	cut -f 1-5 "$file" > "$tmp1"
+	name=$(basename "$file")
+
+	echo "$maindir"
+	echo "$dir2"
+	echo "$name"
 	if [ ! -f "$maindir/$dir2/$name" ]; then
 		continue;
 	fi
+
 
 	while IFS="" read -r line || [ -n "$p" ]; do
 		res=$(echo "$line" | cut -f 4 | grep -w "1")
@@ -85,8 +92,8 @@ for file in $(find "$dir1" -type f -name "base*.csv"); do
 	done < "$tmp1"
 	unset IFS
 	rm "$tmp1"
-done
+done < "$tmp0"
 
-rm -f "$common" "$tmp1" "$tmp2"
+rm -f "$common" "$tmp0" "$tmp1" "$tmp2"
 
 python3 "$selfdir/plot_relative.py" "$csvout"
