@@ -247,9 +247,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 			.reserve = 1
 		},
 		.global = {
-			.multiplicand_parts = MULTIPLICAND_PARTITIONS,
 			.multiplicand_length = multiplicand_length,
-			.product_parts = PRODUCT_PARTITIONS,
 			.product_length = lenmax,
 			.multiplicand_iterator = length(BASE - 1),
 			.product_iterator = multiplicand_length + length(BASE - 1)
@@ -261,7 +259,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 		}
 	};
 
-	data.local.parts    = data.global.multiplicand_parts;
+	data.local.parts    = MULTIPLICAND_PARTITIONS;
 	data.local.length   = data.global.multiplicand_length;
 	data.local.iterator = data.global.multiplicand_iterator;
 	for (int i = 0; i < data.local.parts - 1; i++) {
@@ -270,7 +268,7 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 		ptr->multiplicand[i].mod = pow_v(PARTITION(data));
 	}
 
-	data.local.parts    = data.global.product_parts;
+	data.local.parts    = PRODUCT_PARTITIONS;
 	data.local.length   = data.global.product_length;
 	data.local.iterator = data.global.product_iterator;
 	for (int i = 0; i < data.local.parts - 1; i++) {
@@ -360,6 +358,11 @@ static inline void alg_cache_iterate(
 	 * optimizable by gcc and clang, while retaining correctness.
 	 */
 
+	if (elements == 1) {
+		arr[0].number += arr[0].iterator;
+		arr[0].carry = 0;
+	}
+
 	for (int i = 0; i < elements - 1; i++) {
 		arr[i].number += arr[i].iterator;
 		arr[i + 1].carry = 0;
@@ -430,6 +433,9 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 
 			alg_normal_check(mult_array, multiplicand, product, &result);
 			alg_cache_check(&ag_data, &result);
+
+			if (ALG_NORMAL && ALG_CACHE)
+				OPTIONAL_ASSERT(result != 1);
 
 			if (result && (mult_zero || notrailingzero(multiplicand))) {
 				vargs_iterate_local_count(args);

@@ -113,10 +113,8 @@ struct partdata_variable_t
 
 struct partdata_global_t
 {
-	length_t multiplicand_parts;
 	length_t multiplicand_length;
 	length_t multiplicand_iterator;
-	length_t product_parts;
 	length_t product_length;
 	length_t product_iterator;
 };
