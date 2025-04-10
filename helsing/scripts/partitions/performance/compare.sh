@@ -5,8 +5,8 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2025 Pierro Zachareas
 '
 
-selfname=$(basename "$0")
-selfdir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+selfname="$(basename "$0")"
+selfdir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 if [ $# -ne 2 ]; then
 	echo "Compare 2 sets of results. Each should be in it's own folder"

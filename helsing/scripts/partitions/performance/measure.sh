@@ -5,7 +5,8 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2025 Pierro Zachareas
 '
 
-selfname=$(basename "$0")
+selfname="$(basename "$0")"
+selfdir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 case $# in
 	"2")
@@ -13,9 +14,9 @@ case $# in
 		out_folder="$2"
 		;;
 	*)
-		echo "For each base find optimal settings and write them to a CSV"
-		echo "Usage: $selfname [PARAMETERS_CSV] [OUTPUT_FOLDER]"
-		echo -e "PARAMETERS_CSV               use generate_parameters.sh"
+		>&2 echo "For each base find optimal settings and write them to a CSV"
+		>&2 echo "Usage: $selfname [PARAMETERS_CSV] [OUTPUT_FOLDER]"
+		>&2 echo -e "PARAMETERS_CSV               use generate_parameters.sh"
 		exit
 		;;
 esac
@@ -56,17 +57,14 @@ function collect_data () {
 	let "len--"
 
 	for i in $(seq 0 $len); do
-		sed -i -e "s|BASE[[:space:]]\+[[:digit:]]\+|BASE $base|g"                                               configuration.h
-		sed -i -e "s|PARTITION_METHOD[[:space:]]\+[[:digit:]]\+|PARTITION_METHOD ${l_meth[$i]}|g"               configuration.h
-		sed -i -e "s|MULTIPLICAND_PARTITIONS[[:space:]]\+[[:digit:]]\+|MULTIPLICAND_PARTITIONS ${l_mult[$i]}|g" configuration.h
-		sed -i -e "s|PRODUCT_PARTITIONS[[:space:]]\+[[:digit:]]\+|PRODUCT_PARTITIONS ${l_prod[$i]}|g"           configuration.h
+		"$selfdir/../../configuration/set_cache.sh" "$base" "${l_meth[$i]}" "${l_mult[$i]}" "${l_prod[$i]}"
 		make -j4 > /dev/null
 		hyperfine --warmup 2 "./helsing -n $n" --export-csv tmp.csv > /dev/null 2>&1
 		l_time[$i]=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
 		l_sdev[$i]=$(awk -F "\"*,\"*" '{print $3}' tmp.csv | awk 'NR>1')
 		rm tmp.csv
 
-		echo -e "$base\tn$n\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}"
+		>&2 echo -e "$base\tn$n\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}"
 	done
 	for i in $(seq 0 $len); do
 		if [ -z "${l_time[$i]}" ]; then
@@ -78,10 +76,7 @@ function collect_data () {
 }
 
 cp configuration.h configuration.backup1
-
-sed -i -e "s|ALG_NORMAL[[:space:]]\+true|ALG_NORMAL false|g"       configuration.h
-sed -i -e "s|ALG_CACHE[[:space:]]\+false|ALG_CACHE true|g"         configuration.h
-sed -i -e "s|SAFETY_CHECKS[[:space:]]\+true|SAFETY_CHECKS false|g" configuration.h
+"$selfdir/../../configuration/set_cache.sh"
 
 function handle_sigint()
 {
@@ -93,7 +88,7 @@ function handle_sigint()
 
 trap handle_sigint SIGINT
 
-echo -e "base\tn\tmethod\tmultiplicand\tproduct"
+>&2 echo -e "base\tn\tmethod\tmultiplicand\tproduct"
 while IFS=$'\t' read -r base n_min n_max part_max; do
 	number='^[[:digit:]]+$'
 	if ! [[ $base =~ $number ]] ; then

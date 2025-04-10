@@ -2,8 +2,10 @@
 
 : '
 SPDX-License-Identifier: BSD-3-Clause
-Copyright (c) 2024 Pierro Zachareas
+Copyright (c) 2025 Pierro Zachareas
 '
+
+selfdir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 n_max=16
 
@@ -41,6 +43,7 @@ echo "base, method, multiplicand, product, [n]"
 echo
 
 cp configuration.h configuration.backup
+"$selfdir/../../scripts/configuration/set_cache.sh"
 
 function handle_sigint()
 {
@@ -51,16 +54,9 @@ function handle_sigint()
 
 trap handle_sigint SIGINT
 
-sed -i -e "s|ALG_NORMAL[[:space:]]\+false|ALG_NORMAL true|g"       configuration.h
-sed -i -e "s|ALG_CACHE[[:space:]]\+false|ALG_CACHE true|g"         configuration.h
-sed -i -e "s|SAFETY_CHECKS[[:space:]]\+false|SAFETY_CHECKS true|g" configuration.h
-
 rc=0
 for i in $(seq 0 $len); do
-	sed -i -e "s|BASE[[:space:]]\+[[:digit:]]\+|BASE ${l_base[$i]}|g"                                       configuration.h
-	sed -i -e "s|PARTITION_METHOD[[:space:]]\+[[:digit:]]\+|PARTITION_METHOD ${l_meth[$i]}|g"               configuration.h
-	sed -i -e "s|MULTIPLICAND_PARTITIONS[[:space:]]\+[[:digit:]]\+|MULTIPLICAND_PARTITIONS ${l_mult[$i]}|g" configuration.h
-	sed -i -e "s|PRODUCT_PARTITIONS[[:space:]]\+[[:digit:]]\+|PRODUCT_PARTITIONS ${l_prod[$i]}|g"           configuration.h
+	"$selfdir/../../scripts/configuration/set_cache.sh" "${l_base[$i]}" "${l_meth[$i]}" "${l_mult[$i]}" "${l_prod[$i]}"
 	make -j4 OPTIMIZE=-O0 > /dev/null
 	for n in $n_seq; do
 		if (( $rc == 0 )); then

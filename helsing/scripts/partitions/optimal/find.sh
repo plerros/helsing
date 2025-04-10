@@ -5,7 +5,8 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2025 Pierro Zachareas
 '
 
-selfname=$(basename "$0")
+selfname="$(basename "$0")"
+selfdir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 case $# in
 	"2")
@@ -64,10 +65,7 @@ function collect_data () {
 				continue
 			fi
 
-			sed -i -e "s|BASE[[:space:]]\+[[:digit:]]\+|BASE $base|g"                                               configuration.h
-			sed -i -e "s|PARTITION_METHOD[[:space:]]\+[[:digit:]]\+|PARTITION_METHOD ${l_meth[$i]}|g"               configuration.h
-			sed -i -e "s|MULTIPLICAND_PARTITIONS[[:space:]]\+[[:digit:]]\+|MULTIPLICAND_PARTITIONS ${l_mult[$i]}|g" configuration.h
-			sed -i -e "s|PRODUCT_PARTITIONS[[:space:]]\+[[:digit:]]\+|PRODUCT_PARTITIONS ${l_prod[$i]}|g"           configuration.h
+			"$selfdir/../../configuration/set_cache.sh" "$base" "${l_meth[$i]}" "${l_mult[$i]}" "${l_prod[$i]}"
 			make -j4 > /dev/null
 			hyperfine --warmup 2 "./helsing -n $n" --export-csv tmp.csv > /dev/null 2>&1
 			l_time[$i]=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
@@ -121,10 +119,7 @@ function collect_data () {
 }
 
 cp configuration.h configuration.backup1
-
-sed -i -e "s|ALG_NORMAL[[:space:]]\+true|ALG_NORMAL false|g"       configuration.h
-sed -i -e "s|ALG_CACHE[[:space:]]\+false|ALG_CACHE true|g"         configuration.h
-sed -i -e "s|SAFETY_CHECKS[[:space:]]\+true|SAFETY_CHECKS false|g" configuration.h
+"$selfdir/../../configuration/set_cache.sh"
 
 function handle_sigint()
 {
