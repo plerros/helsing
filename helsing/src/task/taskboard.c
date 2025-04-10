@@ -162,9 +162,9 @@ void taskboard_cleanup(struct taskboard *ptr)
 void taskboard_print_results(struct taskboard *ptr)
 {
 	#if defined COUNT_RESULTS || defined DUMP_RESULTS
-		fprintf(stderr, "Found: %llu valid fang pair(s).\n", ptr->common_count[0]);
+		fprintf(stderr, "Found: %ju valid fang pair(s).\n", (uintmax_t)(ptr->common_count[0]));
 	#else
-		fprintf(stderr, "Found: %llu vampire number(s).\n", ptr->common_count[MIN_FANG_PAIRS - 1]);
+		fprintf(stderr, "Found: %ju vampire number(s).\n", (uintmax_t)(ptr->common_count[MIN_FANG_PAIRS - 1]));
 	#endif
 	for (size_t i = MIN_FANG_PAIRS; i < MAX_FANG_PAIRS; i++) {
 		if (ptr->common_count[i] == 0)
@@ -174,7 +174,7 @@ void taskboard_print_results(struct taskboard *ptr)
 			fprintf(stderr, "Out of which:\n");
 
 
-		fprintf(stderr, "\t%llu\thave at least %lu fang pair(s)\n", ptr->common_count[i], i+1);
+		fprintf(stderr, "\t%ju\thave at least %zu fang pair(s)\n", (uintmax_t)(ptr->common_count[i]), i+1);
 	}
 	hash_print(ptr->checksum);
 }
@@ -183,7 +183,7 @@ void taskboard_print_results(struct taskboard *ptr)
 void taskboard_progress(struct taskboard *ptr)
 {
 	if (ptr->options.display_progress) {
-		fprintf(stderr, "%llu, %llu", ptr->tasks[ptr->done]->lmin, ptr->tasks[ptr->done]->lmax);
-		fprintf(stderr, "  %llu/%llu\n", ptr->done + 1, ptr->size);
+		fprintf(stderr, "%ju, %ju", (uintmax_t)(ptr->tasks[ptr->done]->lmin), (uintmax_t)(ptr->tasks[ptr->done]->lmax));
+		fprintf(stderr, "  %ju/%ju\n", (uintmax_t)(ptr->done + 1), (uintmax_t)(ptr->size));
 	}
 }

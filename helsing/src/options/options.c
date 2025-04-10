@@ -36,7 +36,7 @@ static void buildconf()
 		printf("    PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
 	}
 	printf("    BASE=%d\n", BASE);
-	printf("    MAX_TASK_SIZE=%llu\n", MAX_TASK_SIZE);
+	printf("    MAX_TASK_SIZE=%ju\n", (uintmax_t)MAX_TASK_SIZE);
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
 	if (USE_CHECKPOINT)
 		printf("    CHECKPOINT_FILE=%s\n", CHECKPOINT_FILE);
@@ -114,7 +114,7 @@ static int strtov(const char *str, vamp_t min, vamp_t max, vamp_t *number) // st
 	*number = tmp;
 out:
 	if (err)
-		fprintf(stderr, "Input out of range: [%llu, %llu]\n", min, max);
+		fprintf(stderr, "Input out of range: [%ju, %ju]\n", (uintmax_t)min, (uintmax_t)max);
 	return err;
 }
 

@@ -175,7 +175,7 @@ void array_print(struct array *ptr, vamp_t count[MAX_FANG_PAIRS])
 			for (size_t k = MIN_FANG_PAIRS - 1; k < j; k++)
 				fprintf(stdout, "\t");
 
-			fprintf(stdout, "%llu %llu\n", ++local_count[j], ptr->number[i]);
+			fprintf(stdout, "%ju %ju\n", (uintmax_t)(++local_count[j]), (uintmax_t)(ptr->number[i]));
 		}
 	}
 	fflush(stdout);

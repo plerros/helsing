@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 		if (progress->size == 0)
 			continue;
 
-		fprintf(stderr, "Checking interval: [%llu, %llu]\n", lmin, lmax);
+		fprintf(stderr, "Checking interval: [%ju, %ju]\n", (uintmax_t)lmin, (uintmax_t)lmax);
 		for (thread_t thread = 0; thread < options.threads; thread++)
 			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
 		for (thread_t thread = 0; thread < options.threads; thread++)

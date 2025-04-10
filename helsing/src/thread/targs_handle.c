@@ -69,7 +69,7 @@ void targs_handle_print(struct targs_handle *ptr)
 	double total_time = 0.0;
 	fprintf(stderr, "Thread  Runtime Count\n");
 	for (thread_t thread = 0; thread < ptr->options.threads; thread++) {
-		fprintf(stderr, "%u\t%.2lfs\t%llu\n", thread, ptr->targs[thread]->runtime, ptr->targs[thread]->total);
+		fprintf(stderr, "%u\t%.2lfs\t%ju\n", thread, ptr->targs[thread]->runtime, (uintmax_t)(ptr->targs[thread]->total));
 		total_time += ptr->targs[thread]->runtime;
 	}
 	fprintf(stderr, "\nFang search took: %.2lf s, average: %.2lf s\n", total_time, total_time / ptr->options.threads);
