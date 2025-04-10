@@ -16,18 +16,18 @@ int interval_set(struct interval_t *ptr, struct options_t options)
 	int rc = 0;
 	if (options.min > options.max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
-		fprintf(stderr, "Invalid arguments, %llu <= %llu\n", options.min, options.max);
+		fprintf(stderr, "Invalid arguments, %ju <= %ju\n", (uintmax_t)(options.min), (uintmax_t)(options.max));
 		rc = 1;
 		goto out;
 	}
 
 	ptr->min = get_min(options.min, options.max);
 	if (options.min != ptr->min)
-		fprintf(stderr, "Adjusted min from %llu to %llu\n", options.min, ptr->min);
+		fprintf(stderr, "Adjusted min from %ju to %ju\n", (uintmax_t)(options.min), (uintmax_t)(ptr->min));
 
 	ptr->max = get_max(ptr->min, options.max);
 	if (options.max != ptr->max)
-		fprintf(stderr, "Adjusted max from %llu to %llu\n", options.max, ptr->max);
+		fprintf(stderr, "Adjusted max from %ju to %ju\n", (uintmax_t)(options.max), (uintmax_t)(ptr->max));
 
 	if (cache_ovf_chk(ptr->max)) {
 		fprintf(stderr, "WARNING: the code might produce false positives, ");

@@ -34,19 +34,19 @@ int touch_checkpoint(struct options_t options, struct interval_t interval)
 		return 1;
 	}
 	fp = fopen(CHECKPOINT_FILE, "w+");
-	fprintf(fp, "%llu %llu\n", interval.min, interval.max);
+	fprintf(fp, "%ju %ju\n", (uintmax_t)(interval.min), (uintmax_t)(interval.max));
 	fclose(fp);
 	return 0;
 }
 
 static void err_baditem(vamp_t line, vamp_t item)
 {
-	fprintf(stderr, "\n[ERROR] %s line %llu item #%llu has bad data:\n", CHECKPOINT_FILE, line, item);
+	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has bad data:\n", CHECKPOINT_FILE, (uintmax_t)line, (uintmax_t)item);
 }
 
 static void err_conflict(vamp_t line, vamp_t item)
 {
-	fprintf(stderr, "\n[ERROR] %s line %llu item #%llu has conflicting data:\n", CHECKPOINT_FILE, line, item);
+	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has conflicting data:\n", CHECKPOINT_FILE, (uintmax_t)line, (uintmax_t)item);
 }
 
 static void err_unexpected_char(int ch, vamp_t line, vamp_t item)
@@ -86,7 +86,7 @@ static int concat_digit(vamp_t *number, int ch, vamp_t line, vamp_t item)
 
 	if (willoverflow(*number, VAMP_MAX, digit)) {
 		err_baditem(line, item);
-		fprintf(stderr, "Out of interval: [0, %llu]\n", VAMP_MAX);
+		fprintf(stderr, "Out of interval: [0, %ju]\n", (uintmax_t)VAMP_MAX);
 		rc = 1;
 		goto out;
 	}
@@ -232,17 +232,17 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 				case complete:
 					if (num < interval->min) {
 						err_conflict(line, item);
-						fprintf(stderr, "%llu < %llu (below min)\n", num, interval->min);
+						fprintf(stderr, "%ju < %ju (below min)\n", (uintmax_t)num, (uintmax_t)(interval->min));
 						rc = 1;
 					}
 					else if (num > interval->max) {
 						err_conflict(line, item);
-						fprintf(stderr, "%llu > %llu (above max)\n", num, interval->max);
+						fprintf(stderr, "%ju > %ju (above max)\n", (uintmax_t)num, (uintmax_t)(interval->max));
 						rc = 1;
 					}
 					else if (num <= interval->complete && line != 2) {
 						err_conflict(line, item);
-						fprintf(stderr, "%llu <= %llu (below previous)\n", num, interval->complete);
+						fprintf(stderr, "%ju <= %ju (below previous)\n", (uintmax_t)num, (uintmax_t)(interval->complete));
 						rc = 1;
 					} else {
 						rc = interval_set_complete(interval, num);
@@ -256,7 +256,7 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 				case count:
 					if (num < progress->common_count[name - count] && line != 2) {
 						err_conflict(line, item);
-						fprintf(stderr, "%llu < %llu (below previous)\n", num, progress->common_count[name - count]);
+						fprintf(stderr, "%ju < %ju (below previous)\n", num, (uintmax_t)(progress->common_count[name - count]));
 						rc = 1;
 					}
 #ifdef PROCESS_RESULTS
@@ -311,9 +311,9 @@ void save_checkpoint(vamp_t complete, struct taskboard *progress)
 	FILE *fp = fopen(CHECKPOINT_FILE, "a");
 	assert(fp != NULL);
 
-	fprintf(fp, "%llu", complete);
+	fprintf(fp, "%ju", (uintmax_t)complete);
 	for (size_t i = 0; i < MAX_FANG_PAIRS; i++)
-		fprintf(fp, " %llu", progress->common_count[i]);
+		fprintf(fp, " %ju", (uintmax_t)(progress->common_count[i]));
 
 
 #ifdef CHECKSUM_RESULTS

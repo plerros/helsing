@@ -10,6 +10,7 @@
 #if ALG_CACHE
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <math.h>
 #include "helper.h"
 #include "cache.h"
@@ -119,16 +120,23 @@ void cache_free(struct cache *ptr)
 
 bool cache_ovf_chk(vamp_t max)
 {
-	double numeral_max;
+	digits_t required_size[BASE];
+	memset(required_size, 0, sizeof(required_size));
 
-#if (BASE != 2) // avoid division by 0
-	numeral_max = log(max) / log(BASE);
-#else
-	numeral_max = log2(max);
-#endif
+	for (; max > 0; max /= BASE) {
+		size_t limit = BASE;
+		if (max <= BASE)
+			limit = max;
+		
+		for (size_t i = 0; i < limit; i++)
+			required_size[i]++;
+	}
 
-	numeral_max = 2.0 * ceil(numeral_max / 2.0);
-	return (numeral_max >= DIGBASE(ELEMENT_BITS) - 1);
+	for (size_t i = 0; i < BASE; i++) {
+		if (required_size[i] > DIGBASE(ACTIVE_BITS))
+			return true;
+	}
+	return false;
 }
 
 /*
