@@ -21,6 +21,8 @@ common_path_prefix="$("$selfdir/../../common_prefix.sh" "$path1" "$path2")"
 common_path_prefix="$(dirname "$common_path_prefix")"
 id1="$("$selfdir/../../subtract_prefix.sh" "$path1" "$common_path_prefix/")"
 id2="$("$selfdir/../../subtract_prefix.sh" "$path2" "$common_path_prefix/")"
+id1="${id1///}"
+id2="${id2///}"
 if [ -z "$id1" ]; then
 	>&2 echo "Is $path1 a subpath of $path2?"
 	exit
