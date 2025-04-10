@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include <assert.h>
 #include <ctype.h> // isdigit
 #include <getopt.h>
@@ -38,10 +39,15 @@ static void buildconf()
 	printf("    BASE=%d\n", BASE);
 	printf("    MAX_TASK_SIZE=%ju\n", (uintmax_t)MAX_TASK_SIZE);
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
-	if (USE_CHECKPOINT)
-		printf("    CHECKPOINT_FILE=%s\n", CHECKPOINT_FILE);
 	printf("    LINK_SIZE=%d\n", LINK_SIZE);
 	printf("    SAFETY_CHECKS=%s\n", (SAFETY_CHECKS ? "true" : "false"));
+}
+
+static void arg_checkpoint()
+{
+#if USE_CHECKPOINT
+	printf("  -c [checkpoint]  continue from checkpoint\n");
+#endif
 }
 
 static void arg_lower_bound()
@@ -81,9 +87,7 @@ static void help()
 	arg_manual_task_size();
 	arg_threads();
 	printf("\nInterval options:\n");
-#if USE_CHECKPOINT
-	printf("  (empty)          recover from checkpoint\n");
-#endif
+	arg_checkpoint();
 	arg_lower_bound();
 	arg_upper_bound();
 	arg_number_of_digits();
@@ -127,14 +131,14 @@ static length_t get_max_length()
 }
 
 int options_init(struct options_t* ptr, int argc, char *argv[])
-{
+{	
 	ptr->threads = 1;
 	ptr->manual_task_size = 0;
 	ptr->display_progress = false;
 	ptr->dry_run = false;
-	ptr->load_checkpoint = false;
 	ptr->min = 0;
 	ptr->max = 0;
+	ptr->checkpoint = NULL;
 
 #ifdef _SC_NPROCESSORS_ONLN
 	ptr->threads = sysconf(_SC_NPROCESSORS_ONLN);
@@ -154,6 +158,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 			{"buildconf", no_argument, &buildconf_flag, 1},
 			{"help", no_argument, &help_flag, 1},
 			{"progress", no_argument, &display_progress, 1},
+			{"checkpoint", required_argument, NULL, 'c'},
 			{"dry-run", no_argument, &dry_run, 1},
 			{"lower bound", required_argument, NULL, 'l'},
 			{"n digits", required_argument, NULL, 'n'},
@@ -164,7 +169,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 		};
 		int option_index = 0;
 
-		c = getopt_long(argc, argv, "l:n:s:t:u:", long_options, &option_index);
+		c = getopt_long(argc, argv, "c:l:n:s:t:u:", long_options, &option_index);
 
 		// Detect end of the options
 		if (c == -1)
@@ -183,6 +188,19 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 
 		switch (c) {
 			case 0:
+				break;
+
+			case 'c':
+				if (ptr->checkpoint != NULL) {
+					help();
+					rc = 1;
+				} else {
+					size_t len = strlen(optarg) + 1;
+					ptr->checkpoint = malloc(len);
+					if (ptr->checkpoint == NULL)
+						abort();
+					strcpy(ptr->checkpoint, optarg);
+				}
 				break;
 
 			case 'l':
@@ -269,14 +287,10 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 		rc = 1;
 		goto out;
 	}
-	if (!min_is_set && !max_is_set) {
-		if (USE_CHECKPOINT) {
-			ptr->load_checkpoint = true;
-		} else {
-			help();
-			rc = 1;
-			goto out;
-		}
+	if ((!min_is_set) && (!max_is_set) && (ptr->checkpoint == NULL)) {
+		help();
+		rc = 1;
+		goto out;
 	}
 	if (display_progress)
 		ptr->display_progress = true;
@@ -284,4 +298,12 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 		ptr->dry_run = true;
 out:
 	return rc;
+}
+
+bool options_touch_checkpoint(struct options_t options)
+{
+	if (options.min == 0 && options.max == 0)
+		return false;
+
+	return true;
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #ifndef HELSING_CHECKPOINT_H
@@ -14,8 +14,8 @@
 
 #if USE_CHECKPOINT
 int touch_checkpoint(struct options_t options, struct interval_t interval);
-int load_checkpoint(struct interval_t *interval, struct taskboard *progress);
-void save_checkpoint(vamp_t complete, struct taskboard *progress);
+int load_checkpoint(struct options_t options, struct interval_t *interval, struct taskboard *progress);
+void save_checkpoint(struct options_t options, vamp_t complete, struct taskboard *progress);
 #else /* USE_CHECKPOINT */
 static inline int touch_checkpoint(
 	__attribute__((unused)) struct options_t options,
@@ -24,12 +24,14 @@ static inline int touch_checkpoint(
 	return 0;
 }
 static inline int load_checkpoint(
+	__attribute__((unused)) struct options_t options,
 	__attribute__((unused)) struct interval_t *interval,
 	__attribute__((unused)) struct taskboard *progress)
 {
 	return 0;
 }
 static inline void save_checkpoint(
+	__attribute__((unused)) struct options_t options,
 	__attribute__((unused)) vamp_t complete,
 	__attribute__((unused)) struct taskboard *progress)
 {

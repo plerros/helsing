@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #include "configuration.h"
@@ -23,35 +23,35 @@
 
 int touch_checkpoint(struct options_t options, struct interval_t interval)
 {
-	if (options.load_checkpoint)
+	if (options.checkpoint == NULL)
 		return 0;
 
 	FILE *fp;
-	fp = fopen(CHECKPOINT_FILE, "r");
+	fp = fopen(options.checkpoint, "r");
 	if (fp != NULL) {
 		fclose(fp);
-		fprintf(stderr, "%s already exists\n", CHECKPOINT_FILE);
+		fprintf(stderr, "%s already exists\n", options.checkpoint);
 		return 1;
 	}
-	fp = fopen(CHECKPOINT_FILE, "w+");
+	fp = fopen(options.checkpoint, "w+");
 	fprintf(fp, "%ju %ju\n", (uintmax_t)(interval.min), (uintmax_t)(interval.max));
 	fclose(fp);
 	return 0;
 }
 
-static void err_baditem(vamp_t line, vamp_t item)
+static void err_baditem(char* filename, vamp_t line, vamp_t item)
 {
-	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has bad data:\n", CHECKPOINT_FILE, (uintmax_t)line, (uintmax_t)item);
+	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has bad data:\n", filename, (uintmax_t)line, (uintmax_t)item);
 }
 
-static void err_conflict(vamp_t line, vamp_t item)
+static void err_conflict(char* filename, vamp_t line, vamp_t item)
 {
-	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has conflicting data:\n", CHECKPOINT_FILE, (uintmax_t)line, (uintmax_t)item);
+	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has conflicting data:\n", filename, (uintmax_t)line, (uintmax_t)item);
 }
 
-static void err_unexpected_char(int ch, vamp_t line, vamp_t item)
+static void err_unexpected_char(char* filename, int ch, vamp_t line, vamp_t item)
 {
-	err_baditem(line, item);
+	err_baditem(filename,line, item);
 	fprintf(stderr, "Unexpected ");
 	switch (ch) {
 		case ' ':
@@ -73,19 +73,19 @@ static void err_unexpected_char(int ch, vamp_t line, vamp_t item)
 	}
 }
 
-static int concat_digit(vamp_t *number, int ch, vamp_t line, vamp_t item)
+static int concat_digit(char *filename, vamp_t *number, int ch, vamp_t line, vamp_t item)
 {
 	int rc = 0;
 
 	if (!isdigit(ch)) {
-		err_unexpected_char(ch, line, item);
+		err_unexpected_char(filename, ch, line, item);
 		rc = 1;
 		goto out;
 	}
 	digit_t digit = ch - '0';
 
 	if (willoverflow(*number, VAMP_MAX, digit)) {
-		err_baditem(line, item);
+		err_baditem(filename, line, item);
 		fprintf(stderr, "Out of interval: [0, %ju]\n", (uintmax_t)VAMP_MAX);
 		rc = 1;
 		goto out;
@@ -97,23 +97,23 @@ out:
 }
 
 #ifdef CHECKSUM_RESULTS
-static int hash_set(struct hash *ptr, int ch, int hash_index, vamp_t line, vamp_t item)
+static int hash_set(char *filename, struct hash *ptr, int ch, int hash_index, vamp_t line, vamp_t item)
 {
 	int rc = 0;
 	if (hash_index == ptr->md_size * 2) {
-		err_unexpected_char(ch, line , item);
+		err_unexpected_char(filename, ch, line , item);
 		fprintf(stderr, "The checksum character length is invalid; Too many characters or missing newline.\n");
 		rc = 1;
 		goto out;
 	}
 	if (isspace(ch)) {
-		err_unexpected_char(ch, line , item);
+		err_unexpected_char(filename, ch, line , item);
 		fprintf(stderr, "The checksum character length is invalid; Too few characters.\n");
 		rc = 1;
 		goto out;
 	}
 	if (!isxdigit(ch)) {
-		err_unexpected_char(ch, line, item);
+		err_unexpected_char(filename, ch, line, item);
 		rc = 1;
 		goto out;
 	}
@@ -155,13 +155,15 @@ static char count_end()
 #endif
 }
 
-int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
+int load_checkpoint(struct options_t options, struct interval_t *interval, struct taskboard *progress)
 {
 	assert(progress != NULL);
+	if (options.checkpoint == NULL)
+		return 0;
 
-	FILE *fp = fopen(CHECKPOINT_FILE, "r");
+	FILE *fp = fopen(options.checkpoint, "r");
 	if (fp == NULL) {
-		fprintf(stderr, "%s doesn't exist\n", CHECKPOINT_FILE);
+		fprintf(stderr, "%s doesn't exist\n", options.checkpoint);
 		return 1;
 	}
 
@@ -188,21 +190,20 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 	bool is_empty = true;
 	vamp_t num = 0;
 	int hash_index = 0;
-	struct options_t options;
 
 	while (!rc) {
 		int ch = fgetc(fp);
 
 		if (feof(fp)) {
 			if (name != complete || !is_empty) {
-				err_baditem(line, item);
+				err_baditem(options.checkpoint, line, item);
 				fprintf(stderr, "Unexpected end of file or missing newline.\n");
 				rc = 1;
 			}
 			break;
 		}
 		if (ferror(fp)) {
-			err_baditem(line, item);
+			err_baditem(options.checkpoint, line, item);
 			fprintf(stderr, "Unexpected end of file, caused by I/O error.\n");
 			rc = 1;
 			break;
@@ -218,7 +219,7 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 
 				case max:
 					if (num < interval->min) {
-						err_conflict(line, item);
+						err_conflict(options.checkpoint, line, item);
 						fprintf(stderr, "max < min\n");
 						rc = 1;
 					} else {
@@ -231,17 +232,17 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 
 				case complete:
 					if (num < interval->min) {
-						err_conflict(line, item);
+						err_conflict(options.checkpoint, line, item);
 						fprintf(stderr, "%ju < %ju (below min)\n", (uintmax_t)num, (uintmax_t)(interval->min));
 						rc = 1;
 					}
 					else if (num > interval->max) {
-						err_conflict(line, item);
+						err_conflict(options.checkpoint, line, item);
 						fprintf(stderr, "%ju > %ju (above max)\n", (uintmax_t)num, (uintmax_t)(interval->max));
 						rc = 1;
 					}
 					else if (num <= interval->complete && line != 2) {
-						err_conflict(line, item);
+						err_conflict(options.checkpoint, line, item);
 						fprintf(stderr, "%ju <= %ju (below previous)\n", (uintmax_t)num, (uintmax_t)(interval->complete));
 						rc = 1;
 					} else {
@@ -253,15 +254,16 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 					if (name < count || name > checksum)
 						break;
 					// Allow count+1, count+2, ... count+n to fall through
+					__attribute__((fallthrough));
 				case count:
 					if (num < progress->common_count[name - count] && line != 2) {
-						err_conflict(line, item);
-						fprintf(stderr, "%ju < %ju (below previous)\n", num, (uintmax_t)(progress->common_count[name - count]));
+						err_conflict(options.checkpoint, line, item);
+						fprintf(stderr, "%ju < %ju (below previous)\n", (uintmax_t)num, (uintmax_t)(progress->common_count[name - count]));
 						rc = 1;
 					}
 #ifdef PROCESS_RESULTS
 					else if (num > 0 && num - 1 > interval->complete - interval->min) {
-						err_conflict(line, item);
+						err_conflict(options.checkpoint, line, item);
 						fprintf(stderr, "More vampire numbers than numbers.\n");
 						rc = 1;
 					}
@@ -271,7 +273,7 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 #ifdef CHECKSUM_RESULTS
 				case checksum:
 					if (hash_index < progress->checksum->md_size * 2) {
-						err_unexpected_char(ch, line , item);
+						err_unexpected_char(options.checkpoint, ch, line , item);
 						fprintf(stderr, "The checksum character length is invalid; Too few characters.\n");
 						rc = 1;
 					}
@@ -286,7 +288,7 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 		} else {
 			switch(type[name]) {
 				case integer:
-					rc = concat_digit(&num, ch, line, item);
+					rc = concat_digit(options.checkpoint, &num, ch, line, item);
 					is_empty = false;
 					break;
 
@@ -306,9 +308,12 @@ int load_checkpoint(struct interval_t *interval, struct taskboard *progress)
 	return rc;
 }
 
-void save_checkpoint(vamp_t complete, struct taskboard *progress)
+void save_checkpoint(struct options_t options, vamp_t complete, struct taskboard *progress)
 {
-	FILE *fp = fopen(CHECKPOINT_FILE, "a");
+	if (options.checkpoint == NULL)
+		return;
+
+	FILE *fp = fopen(options.checkpoint, "a");
 	assert(fp != NULL);
 
 	fprintf(fp, "%ju", (uintmax_t)complete);

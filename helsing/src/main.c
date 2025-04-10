@@ -40,13 +40,14 @@ int main(int argc, char *argv[])
 	rc = interval_set(&interval, options);
 	if (rc)
 		goto out;
-	rc = touch_checkpoint(options, interval);
+	if (options_touch_checkpoint(options))
+		rc = touch_checkpoint(options, interval);
 	if (rc)
 		goto out;
 
 	taskboard_new(&progress, options);
 
-	if (load_checkpoint(&interval, progress))
+	if (load_checkpoint(options, &interval, progress))
 		goto out;
 
 	pthread_t *threads = malloc(sizeof(pthread_t) * options.threads);

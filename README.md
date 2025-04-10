@@ -8,7 +8,7 @@ $O(\sqrt{n})$.
 
 In *helsing/configuration.h* you can toggle the algorithms and tune them,
 adjust verbosity, change the numeral base system, set a minimum fang pairs
-filter, and enable resume from checkpoint.
+filter.
 Be sure to read the documentation.
 
 ## Windows Preparation
@@ -153,6 +153,31 @@ $ ./helsing -n 16
 Checking interval: [1000000000000000, 9999999999999999]
 Found: 11039126154 vampire number(s).
 ```
+#### Checkpoints:
+
+```
+./helsing -n number_of_digits -c checkpoint
+```
+```
+./helsing -l min -u max -c checkpoint
+```
+Example:
+
+```
+$ ./helsing -n 4 -c my.checkpoint
+Checking interval: [1000, 9999]
+Found: 7 vampire number(s).
+
+$ ls
+build           configuration_adv.h  helsing   my.checkpoint  src
+CMakeLists.txt  configuration.h      Makefile  scripts        test
+
+```
+To resume from it:
+
+```
+./helsing -c checkpoint
+```
 #### Set the number of threads
 ```
 ./helsing -t threads
@@ -265,8 +290,4 @@ $ ./helsing --buildconf
     USE_CHECKPOINT=false
     LINK_SIZE=100
     SAFETY_CHECKS=false
-```
-#### Recover from checkpoint (if enabled in configuration)
-```
-./helsing
 ```

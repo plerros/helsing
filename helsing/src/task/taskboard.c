@@ -151,7 +151,7 @@ void taskboard_cleanup(struct taskboard *ptr)
 			ptr->common_count[i] += ptr->tasks[ptr->done]->count[i];
 		taskboard_progress(ptr);
 		if (!ptr->options.dry_run)
-			save_checkpoint(ptr->tasks[ptr->done]->lmax, ptr);
+			save_checkpoint(ptr->options, ptr->tasks[ptr->done]->lmax, ptr);
 
 		task_free(ptr->tasks[ptr->done]);
 		ptr->tasks[ptr->done] = NULL;

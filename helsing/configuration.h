@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #ifndef HELSING_CONFIG_H
@@ -199,7 +199,7 @@
 /*
  * USE_CHECKPOINT:
  *
- * 	USE_CHECKPOINT will generate the CHECKPOINT_FILE. In there the code will
+ * 	USE_CHECKPOINT will generate the checkpoint file. In there the code will
  * store it's progress.
  *
  * 	The file format is text based (ASCII). The first line is like a header,
@@ -210,7 +210,7 @@
  * Interfacing properly with files is hard. I have made a few design decisions
  * in the hopes to minimize the damage from possible errors in my code:
  *
- * 	1. The code always checks if CHECKPOINT_FILE exists before 'touch'-ing
+ * 	1. The code always checks if checkpoint file exists before 'touch'-ing
  * 	   it. This way we prevent accidental truncation.
  *
  * 	2. The code opens the file only in read or append mode. This way we
@@ -220,8 +220,7 @@
  * 	   manually.
  */
 
-#define USE_CHECKPOINT false
-#define CHECKPOINT_FILE "a.checkpoint"
+#define USE_CHECKPOINT true
 
 /*
  * LINK_SIZE:
