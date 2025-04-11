@@ -30,31 +30,31 @@ static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 int main(int argc, char *argv[])
 {
 	int rc = 0;
-	struct options_t options;
+	struct options_t *options = NULL;
 	struct interval_t interval;
 	struct taskboard *progress = NULL;
 
-	rc = options_init(&options, argc, argv);
+	rc = options_new(&options, argc, argv);
 	if (rc)
 		goto out;
-	rc = interval_set(&interval, options);
+	rc = interval_set(&interval, *options);
 	if (rc)
 		goto out;
-	if (options_touch_checkpoint(options))
-		rc = touch_checkpoint(options, interval);
+	if (options_touch_checkpoint(*options))
+		rc = touch_checkpoint(*options, interval);
 	if (rc)
 		goto out;
 
-	taskboard_new(&progress, options);
+	taskboard_new(&progress, *options);
 
-	if (load_checkpoint(options, &interval, progress))
+	if (load_checkpoint(*options, &interval, progress))
 		goto out;
 
-	pthread_t *threads = malloc(sizeof(pthread_t) * options.threads);
+	pthread_t *threads = malloc(sizeof(pthread_t) * options->threads);
 	if (threads == NULL)
 		abort();
 	struct targs_handle *thhandle = NULL;
-	targs_handle_new(&thhandle, options, interval.min, interval.max, progress);
+	targs_handle_new(&thhandle, *options, interval.min, interval.max, progress);
 
 	vamp_t lmin = 0, lmax = 0;
 	for (; interval.complete < interval.max; interval.complete = lmax) {
@@ -65,9 +65,9 @@ int main(int argc, char *argv[])
 			continue;
 
 		fprintf(stderr, "Checking interval: [%ju, %ju]\n", (uintmax_t)lmin, (uintmax_t)lmax);
-		for (thread_t thread = 0; thread < options.threads; thread++)
+		for (thread_t thread = 0; thread < options->threads; thread++)
 			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
-		for (thread_t thread = 0; thread < options.threads; thread++)
+		for (thread_t thread = 0; thread < options->threads; thread++)
 			pthread_join(threads[thread], 0);
 	}
 	targs_handle_print(thhandle);
@@ -75,5 +75,6 @@ int main(int argc, char *argv[])
 	free(threads);
 out:
 	taskboard_free(progress);
+	options_free(options);
 	return rc;
 }

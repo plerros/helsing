@@ -22,7 +22,8 @@ struct options_t
 	bool dry_run;
 };
 
-int options_init(struct options_t* ptr, int argc, char *argv[]);
+int options_new(struct options_t **ptr, int argc, char *argv[]);
+void options_free(struct options_t *ptr);
 bool options_touch_checkpoint(struct options_t options);
 
 #endif /* HELSING_OPTIONS_H */

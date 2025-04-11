@@ -130,18 +130,22 @@ static length_t get_max_length()
 	return ret;
 }
 
-int options_init(struct options_t* ptr, int argc, char *argv[])
-{	
-	ptr->threads = 1;
-	ptr->manual_task_size = 0;
-	ptr->display_progress = false;
-	ptr->dry_run = false;
-	ptr->min = 0;
-	ptr->max = 0;
-	ptr->checkpoint = NULL;
+int options_new(struct options_t **ptr, int argc, char *argv[])
+{
+	struct options_t *new = malloc(sizeof(struct options_t));
+	if (new == NULL)
+		abort();
+
+	new->threads = 1;
+	new->manual_task_size = 0;
+	new->display_progress = false;
+	new->dry_run = false;
+	new->min = 0;
+	new->max = 0;
+	new->checkpoint = NULL;
 
 #ifdef _SC_NPROCESSORS_ONLN
-	ptr->threads = sysconf(_SC_NPROCESSORS_ONLN);
+	new->threads = sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 
 	int rc = 0;
@@ -191,15 +195,15 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 				break;
 
 			case 'c':
-				if (ptr->checkpoint != NULL) {
+				if (new->checkpoint != NULL) {
 					help();
 					rc = 1;
 				} else {
 					size_t len = strlen(optarg) + 1;
-					ptr->checkpoint = malloc(len);
-					if (ptr->checkpoint == NULL)
+					new->checkpoint = malloc(len);
+					if (new->checkpoint == NULL)
 						abort();
-					strcpy(ptr->checkpoint, optarg);
+					strcpy(new->checkpoint, optarg);
 				}
 				break;
 
@@ -208,7 +212,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, VAMP_MAX, &(ptr->min));
+					rc = strtov(optarg, 0, VAMP_MAX, &(new->min));
 					min_is_set = true;
 				}
 				break;
@@ -221,14 +225,14 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 					rc = strtov(optarg, 1, get_max_length(), &tmp);
 					if (rc)
 						break;
-					ptr->min = pow_v(tmp - 1);
-					ptr->max = (ptr->min - 1) * BASE + (BASE - 1); // avoid overflow
+					new->min = pow_v(tmp - 1);
+					new->max = (new->min - 1) * BASE + (BASE - 1); // avoid overflow
 					min_is_set = true;
 					max_is_set = true;
 				}
 				break;
 			case 's':
-				if (ptr->manual_task_size != 0) {
+				if (new->manual_task_size != 0) {
 					help();
 					rc = 1;
 				} else {
@@ -236,7 +240,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 					rc = strtov(optarg, 1, VAMP_MAX, &tmp);
 					if (rc)
 						break;
-					ptr->manual_task_size = tmp;
+					new->manual_task_size = tmp;
 				}
 				break;
 			case 't':
@@ -245,7 +249,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 					rc = strtov(optarg, 1, THREAD_MAX, &tmp);
 					if (rc)
 						break;
-					ptr->threads = tmp;
+					new->threads = tmp;
 				}
 				break;
 			case 'u':
@@ -253,7 +257,7 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, VAMP_MAX, &(ptr->max));
+					rc = strtov(optarg, 0, VAMP_MAX, &(new->max));
 					max_is_set = true;
 				}
 				break;
@@ -287,17 +291,27 @@ int options_init(struct options_t* ptr, int argc, char *argv[])
 		rc = 1;
 		goto out;
 	}
-	if ((!min_is_set) && (!max_is_set) && (ptr->checkpoint == NULL)) {
+	if ((!min_is_set) && (!max_is_set) && (new->checkpoint == NULL)) {
 		help();
 		rc = 1;
 		goto out;
 	}
 	if (display_progress)
-		ptr->display_progress = true;
+		new->display_progress = true;
 	if (dry_run)
-		ptr->dry_run = true;
+		new->dry_run = true;
 out:
+	(*ptr) = new;
 	return rc;
+}
+
+void options_free(struct options_t *ptr)
+{
+	if (ptr == NULL)
+		return;
+	
+	free(ptr->checkpoint);
+	free(ptr);
 }
 
 bool options_touch_checkpoint(struct options_t options)
