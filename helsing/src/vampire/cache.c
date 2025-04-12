@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
  * Copyright (c) 2012 Jens Kruse Andersen
- * Copyright (c) 2021-2023 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #include "configuration.h"
@@ -14,9 +14,6 @@
 #include <math.h>
 #include "helper.h"
 #include "cache.h"
-#endif
-
-#if ALG_CACHE
 
 #define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
 #define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL(bits)))
@@ -34,6 +31,14 @@ digits_t set_dig(fang_t number)
 	}
 
 	return ret;
+}
+
+static inline fang_t square(fang_t value)
+{
+	if (value > FANG_MAX / value)
+		return FANG_MAX;
+	
+	return (value * value);
 }
 
 void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
@@ -100,8 +105,40 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 	if (new->dig == NULL)
 		abort();
 
-	for (fang_t d = 0; d < new->size; d++)
-		new->dig[d] = set_dig(d);
+	/*
+	 * Instead of calling set_dig(d) for all d, use dynamic programming to
+	 * synthesize later results based on earlier ones, reducing complexity.
+	 */
+
+	fang_t window_min = 0;
+	fang_t window_max = BASE;
+	fang_t quotient  = 1;
+	fang_t remainder = 1;
+
+	fang_t j = 0;
+	for (; j < new->size && j <= window_max; j++)
+		new->dig[j] = set_dig(j);
+
+	fang_t dig_quotient = new->dig[quotient];
+	for (; j < new->size; j++) {
+		if (j > window_max) {
+			// This order of operations is faster
+			window_min = window_max;
+			quotient  = j / window_min;
+			remainder = j % window_min;
+			window_max = square(window_max);
+
+			OPTIONAL_ASSERT(dig_quotient == new->dig[quotient]);
+		}
+		else if (remainder == window_min) {
+			remainder = 0;
+			quotient++;
+
+			dig_quotient = new->dig[quotient];
+		}
+		new->dig[j] = new->dig[remainder] + dig_quotient;
+		remainder++;
+	}
 	*ptr = new;
 }
 
