@@ -6,16 +6,13 @@
 #include "configuration_adv.h"
 #include "helper.h"
 
-#ifdef CHECKSUM_RESULTS
+#if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
 #include <openssl/evp.h>
 #include "hash.h"
-#endif
-
-#ifdef CHECKSUM_RESULTS
 
 void hash_new(struct hash **ptr)
 {
@@ -61,4 +58,4 @@ void hash_print(struct hash *ptr)
 		fprintf(stderr, "%02x", ptr->md_value[i]);
 	fprintf(stderr, "\n");
 }
-#endif /* CHECKSUM_RESULTS */
+#endif /* VAMPIRE_NUMBER_OUTPUTS && VAMPIRE_HASH */

@@ -11,15 +11,31 @@
 // Check memory with valgrind --tool=massif
 
 /*
- * VERBOSE_LEVEL:
- * 0 - Count fang pairs
- * 1 - Print fang pairs
- * 2 - Count vampire numbers
- * 3 - Calculate checksum
- * 4 - Print vampire numbers in OEIS format
+ * FANG_PAIR_OUTPUTS:
+ *
+ * FANG_PRINT:
+ * 	print fang pairs
+ */
+#define FANG_PAIR_OUTPUTS false
+#define FANG_PRINT false
+/*
+ * VAMPIRE_NUMBER_OUTPUTS:
+ *
+ * VAMPIRE_INDEX
+ * VAMPIRE_PRINT
+ * VAMPIRE_INTEGRAL
+ *
+ * VAMPIRE_HASH
+ *
+ * OEIS is VAMPIRE_INDEX and VAMPIRE_PRINT
  */
 
-#define VERBOSE_LEVEL 2
+#define VAMPIRE_NUMBER_OUTPUTS true
+#define VAMPIRE_INDEX    false
+#define VAMPIRE_PRINT    false
+#define VAMPIRE_INTEGRAL false
+#define VAMPIRE_HASH     false
+
 #define DIGEST_NAME "sha512" // requires VERBOSE_LEVEL 3
 
 /*

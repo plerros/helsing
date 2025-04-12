@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #ifndef HELSING_CONFIG_ADV_H
@@ -44,40 +44,42 @@ typedef uint8_t length_t;
 	#endif
 #endif
 
-#if (VERBOSE_LEVEL == 0)
-	#define COUNT_RESULTS
-#elif (VERBOSE_LEVEL == 1)
-	#define DUMP_RESULTS
-#elif (VERBOSE_LEVEL == 2)
-	#define PROCESS_RESULTS
-#elif (VERBOSE_LEVEL == 3)
-	#define STORE_RESULTS
-	#define PROCESS_RESULTS
-	#define CHECKSUM_RESULTS
-#elif (VERBOSE_LEVEL == 4)
-	#define STORE_RESULTS
-	#define PROCESS_RESULTS
+#if (VAMPIRE_INDEX || VAMPIRE_PRINT || VAMPIRE_INTEGRAL)
 	#define PRINT_RESULTS
 #endif
 
-#if (VERBOSE_LEVEL > 4)
-#error VERBOSE_LEVEL acceptable values are 0 ~ 4
+#if (VAMPIRE_HASH) || (defined PRINT_RESULTS)
+	#define STORE_RESULTS
+#endif
+
+#if VAMPIRE_HASH
+	#define CHECKSUM_RESULTS
+#endif
+
+#define FANG_PAIRS_SIZE (MAX_FANG_PAIRS - MIN_FANG_PAIRS + 1)
+
+#define FANG_ARRAY_SIZE  (MAX_FANG_PAIRS)
+#define COUNT_ARRAY_SIZE (MAX_FANG_PAIRS + 1)
+#define COUNT_ARRAY_REMAINDER (MAX_FANG_PAIRS)
+
+#if (FANG_PAIR_OUTPUTS) && (VAMPIRE_NUMBER_OUTPUTS)
+#warning Both FANG_PAIR_OUTPUTS and VAMPIRE_NUMBER_OUTPUTS are true
 #endif
 
 #if (MIN_FANG_PAIRS == 0)
 #error MIN_FANG_PAIRS must be larger than 0
 #endif
 
-#if (MIN_FANG_PAIRS > 1 && VERBOSE_LEVEL <= 1)
-#error MIN_FANG_PAIRS > 1 requires VERBOSE_LEVEL 2 or higher
+#if (MIN_FANG_PAIRS > 1 && !(VAMPIRE_NUMBER_OUTPUTS))
+#error MIN_FANG_PAIRS > 1 requires VAMPIRE_NUMBER_OUTPUTS
 #endif
 
 #if (MAX_FANG_PAIRS == 0)
 #error MAX_FANG_PAIRS must be larger than 0
 #endif
 
-#if (MAX_FANG_PAIRS > 1 && VERBOSE_LEVEL <= 1)
-#error MAX_FANG_PAIRS > 1 requires VERBOSE_LEVEL 2 or higher
+#if (MAX_FANG_PAIRS > 1 && !(VAMPIRE_NUMBER_OUTPUTS))
+#error MAX_FANG_PAIRS > 1 requires VAMPIRE_NUMBER_OUTPUTS
 #endif
 
 #if (MAX_FANG_PAIRS < MIN_FANG_PAIRS)
@@ -105,10 +107,10 @@ typedef uint8_t length_t;
 #endif
 
 #if SAFETY_CHECKS
-#define OPTIONAL_ASSERT(x) assert(x)
-#include <assert.h>
+	#define OPTIONAL_ASSERT(x) assert(x)
+	#include <assert.h>
 #else
-#define OPTIONAL_ASSERT(x) if(!(x)) {no_args();}
+	#define OPTIONAL_ASSERT(x) if(!(x)) {no_args();}
 #endif
 
 #endif /* HELSING_CONFIG_ADV_H */

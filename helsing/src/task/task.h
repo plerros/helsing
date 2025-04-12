@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #ifndef HELSING_TASK_H
@@ -23,7 +23,7 @@ struct task
 	vamp_t lmin; // local minimum
 	vamp_t lmax; // local maximum
 	struct array *result;
-	vamp_t count[MAX_FANG_PAIRS];
+	vamp_t count[COUNT_ARRAY_SIZE];
 	bool complete;
 };
 

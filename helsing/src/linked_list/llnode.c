@@ -7,16 +7,14 @@
 #include "configuration_adv.h"
 #include "helper.h"
 
-#ifdef PROCESS_RESULTS
+
+#if VAMPIRE_NUMBER_OUTPUTS
 #include <stdlib.h>
 #include "llnode.h"
-#endif
 
-#if defined(PROCESS_RESULTS) && defined(CHECKSUM_RESULTS)
+#if VAMPIRE_HASH
 #include <openssl/evp.h>
 #endif
-
-#ifdef PROCESS_RESULTS
 
 static void llnode_new(struct llnode **ptr, struct llnode *next)
 {
@@ -74,4 +72,4 @@ vamp_t llnode_getsize(struct llnode *ptr)
 
 	return size;
 }
-#endif /* PROCESS_RESULTS */
+#endif /* VAMPIRE_NUMBER_OUTPUTS */

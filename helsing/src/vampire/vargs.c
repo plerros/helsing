@@ -109,7 +109,7 @@ void vargs_new(struct vargs **ptr, struct cache *digptr)
 		abort();
 
 	new->digptr = digptr;
-	memset(new->local_count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
+	memset(new->local_count, 0, sizeof(new->local_count));
 	new->result = NULL;
 	*ptr = new;
 }
@@ -125,7 +125,7 @@ void vargs_free(struct vargs *args)
 
 void vargs_reset(struct vargs *args)
 {
-	memset(args->local_count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
+	memset(args->local_count, 0, sizeof(args->local_count));
 	array_free(args->result);
 	args->result = NULL;
 }

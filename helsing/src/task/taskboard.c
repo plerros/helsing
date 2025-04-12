@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2022 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -34,7 +34,8 @@ void taskboard_new(struct taskboard **ptr, struct options_t options)
 	new->todo = 0;
 	new->fmax = 0;
 	new->done = 0;
-	memset(new->common_count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
+	memset(new->common_count, 0, sizeof(new->common_count));
+	memset(new->common_prev, 0, sizeof(new->common_prev));
 	new->checksum = NULL;
 	hash_new(&(new->checksum));
 	*ptr = new;
@@ -144,10 +145,10 @@ void taskboard_cleanup(struct taskboard *ptr)
 		ptr->tasks[ptr->done]->complete != false)
 	{
 		if (ptr->tasks[ptr->done]->result != NULL) {
-			array_print(ptr->tasks[ptr->done]->result, ptr->common_count);
+			array_print(ptr->tasks[ptr->done]->result, ptr->common_count, &(ptr->common_prev));
 			array_checksum(ptr->tasks[ptr->done]->result, ptr->checksum);
 		}
-		for (size_t i = 0; i < MAX_FANG_PAIRS; i++)
+		for (size_t i = 0; i < COUNT_ARRAY_SIZE; i++)
 			ptr->common_count[i] += ptr->tasks[ptr->done]->count[i];
 		taskboard_progress(ptr);
 		if (!ptr->options.dry_run)
@@ -161,9 +162,14 @@ void taskboard_cleanup(struct taskboard *ptr)
 
 void taskboard_print_results(struct taskboard *ptr)
 {
-	#if defined COUNT_RESULTS || defined DUMP_RESULTS
-		fprintf(stderr, "Found: %ju valid fang pair(s).\n", (uintmax_t)(ptr->common_count[0]));
-	#else
+	#if FANG_PAIR_OUTPUTS
+		vamp_t sum = 0;
+		for (size_t i = 0; i < COUNT_ARRAY_SIZE; i++)
+			sum += ptr->common_count[i];
+		fprintf(stderr, "Found: %ju fang pair(s).\n", (uintmax_t)sum);
+	#endif
+
+	#if VAMPIRE_NUMBER_OUTPUTS
 		fprintf(stderr, "Found: %ju vampire number(s).\n", (uintmax_t)(ptr->common_count[MIN_FANG_PAIRS - 1]));
 	#endif
 	for (size_t i = MIN_FANG_PAIRS; i < MAX_FANG_PAIRS; i++) {

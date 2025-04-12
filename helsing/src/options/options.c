@@ -20,10 +20,20 @@
 static void buildconf()
 {
 	printf("  configuration:\n");
-	printf("    VERBOSE_LEVEL=%d\n", VERBOSE_LEVEL);
-	if (VERBOSE_LEVEL == 3)
-		printf("    DIGEST_NAME=%s\n", DIGEST_NAME);
-	if (VERBOSE_LEVEL > 1) {
+
+	printf("    FANG_PAIR_OUTPUTS=%s\n", (FANG_PAIR_OUTPUTS ? "true" : "false"));
+	if (FANG_PAIR_OUTPUTS) {
+		printf("        FANG_PRINT=%s\n", (FANG_PRINT ? "true" : "false"));
+	}
+	printf("    VAMPIRE_NUMBER_OUTPUTS=%s\n", (VAMPIRE_NUMBER_OUTPUTS ? "true" : "false"));
+	if (VAMPIRE_NUMBER_OUTPUTS) {
+		printf("        VAMPIRE_INDEX=%s\n", (VAMPIRE_INDEX ? "true" : "false"));
+		printf("        VAMPIRE_PRINT=%s\n", (VAMPIRE_PRINT ? "true" : "false"));
+		printf("        VAMPIRE_INTEGRAL=%s\n", (VAMPIRE_INTEGRAL ? "true" : "false"));
+		printf("        VAMPIRE_HASH=%s\n", (VAMPIRE_HASH ? "true" : "false"));
+		if (VAMPIRE_HASH)
+			printf("    DIGEST_NAME=%s\n", DIGEST_NAME);
+
 		printf("    MIN_FANG_PAIRS=%d\n", MIN_FANG_PAIRS);
 		printf("    MAX_FANG_PAIRS=%d\n", MAX_FANG_PAIRS);
 	}
@@ -31,10 +41,10 @@ static void buildconf()
 	printf("    ALG_NORMAL=%s\n", (ALG_NORMAL ? "true" : "false"));
 	printf("    ALG_CACHE=%s\n", (ALG_CACHE ? "true" : "false"));
 	if (ALG_CACHE) {
-		printf("    COMPARISON_BITS=%d\n", COMPARISON_BITS);
-		printf("    PARTITION_METHOD=%d\n", PARTITION_METHOD);
-		printf("    MULTIPLICAND_PARTITIONS=%d\n", MULTIPLICAND_PARTITIONS);
-		printf("    PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
+		printf("        COMPARISON_BITS=%d\n", COMPARISON_BITS);
+		printf("        PARTITION_METHOD=%d\n", PARTITION_METHOD);
+		printf("        MULTIPLICAND_PARTITIONS=%d\n", MULTIPLICAND_PARTITIONS);
+		printf("        PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
 	}
 	printf("    BASE=%d\n", BASE);
 	printf("    MAX_TASK_SIZE=%ju\n", (uintmax_t)MAX_TASK_SIZE);

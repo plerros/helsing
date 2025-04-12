@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -26,7 +26,7 @@ void task_new(struct task **ptr, vamp_t lmin, vamp_t lmax)
 	new->lmin = lmin;
 	new->lmax = lmax;
 	new->result = NULL;
-	memset(new->count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
+	memset(new->count, 0, sizeof(new->count));
 	new->complete = false;
 	*ptr = new;
 }
@@ -46,7 +46,7 @@ void task_copy_vargs(struct task *ptr, struct vargs *vamp_args)
 	OPTIONAL_ASSERT(vamp_args != NULL);
 
 	ptr->result = vamp_args->result;
-	memcpy(ptr->count, vamp_args->local_count, MAX_FANG_PAIRS * sizeof(vamp_t));
+	memcpy(ptr->count, vamp_args->local_count, sizeof(ptr->count));
 	ptr->complete = true;
 
 	vamp_args->result = NULL;

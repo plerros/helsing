@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #ifndef HELSING_TASKBOARD_H
@@ -20,7 +20,8 @@ struct taskboard
 	vamp_t todo; // First task that hasn't been accepted.
 	vamp_t done; // Last task that's completed, but isn't yet processed. (print, hash, checksum...)
 	fang_t fmax;
-	vamp_t common_count[MAX_FANG_PAIRS];
+	vamp_t common_count[COUNT_ARRAY_SIZE];
+	vamp_t common_prev[COUNT_ARRAY_SIZE]; // The last vampire number that got printed out.
 	struct hash *checksum;
 };
 

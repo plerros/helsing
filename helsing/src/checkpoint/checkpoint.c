@@ -17,9 +17,6 @@
 #include "taskboard.h"
 #include "options.h"
 #include "interval.h"
-#endif
-
-#if USE_CHECKPOINT
 
 int touch_checkpoint(struct options_t options, struct interval_t interval)
 {
@@ -96,7 +93,7 @@ out:
 	return rc;
 }
 
-#ifdef CHECKSUM_RESULTS
+#if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)
 static int hash_set(char *filename, struct hash *ptr, int ch, int hash_index, vamp_t line, vamp_t item)
 {
 	int rc = 0;
@@ -134,8 +131,13 @@ static int hash_set(char *filename, struct hash *ptr, int ch, int hash_index, va
 out:
 	return rc;
 }
-#else
+static char count_end()
+{
+	return (' ');
+}
+#else /* (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH) */
 static int hash_set(
+	__attribute__((unused)) char *filename,
 	__attribute__((unused)) struct hash *ptr,
 	__attribute__((unused)) int ch,
 	__attribute__((unused)) int hash_index,
@@ -144,16 +146,11 @@ static int hash_set(
 {
 	return 0;
 }
-#endif
-
 static char count_end()
 {
-#ifdef CHECKSUM_RESULTS
-	return (' ');
-#else
 	return ('\n');
-#endif
 }
+#endif /* (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH) */
 
 int load_checkpoint(struct options_t options, struct interval_t *interval, struct taskboard *progress)
 {
@@ -170,18 +167,21 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 	int rc = 0;
 
 	enum types {integer, hash};
-	enum names {min, max, complete, count, checksum = count + MAX_FANG_PAIRS};
+	enum names {min, max, complete, count, checksum = count + FANG_PAIRS_SIZE};
 
-	char end_char[4 + MAX_FANG_PAIRS] = {' ', '\n', ' '};
-	for (size_t i = 0; i < MAX_FANG_PAIRS - 1; i++)
+	char end_char[4 + FANG_PAIRS_SIZE] = {' ', '\n', ' '};
+
+	// pls compiler no complain
+	volatile size_t fang_pairs_size = FANG_PAIRS_SIZE;
+	for (size_t i = 0; i < fang_pairs_size - 1; i++)
 		end_char[3 + i] = ' ';
-	end_char[2 + MAX_FANG_PAIRS] = count_end();
-	end_char[3 + MAX_FANG_PAIRS] = '\n';
+	end_char[2 + FANG_PAIRS_SIZE] = count_end();
+	end_char[3 + FANG_PAIRS_SIZE] = '\n';
 
-	int type[4 + MAX_FANG_PAIRS] = {integer, integer, integer};
-	for (size_t i = 0; i < MAX_FANG_PAIRS; i++)
+	int type[4 + FANG_PAIRS_SIZE] = {integer, integer, integer};
+	for (size_t i = 0; i < FANG_PAIRS_SIZE; i++)
 		type[3 + i] = integer;
-	type[3 + MAX_FANG_PAIRS] = hash;
+	type[3 + FANG_PAIRS_SIZE] = hash;
 
 	int name = min;
 	vamp_t line = 1;
@@ -255,22 +255,46 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 						break;
 					// Allow count+1, count+2, ... count+n to fall through
 					__attribute__((fallthrough));
-				case count:
-					if (num < progress->common_count[name - count] && line != 2) {
+				case count: {
+					bool not_first_column = (name > count);
+
+					/*
+					 * (previous line): ... [    ] [prev]
+					 * (current  line): ... [left] [now ]
+					 */
+					
+					size_t prev = name - count;
+					size_t left = 0;
+					if (not_first_column)
+						left = name - count -1;
+					vamp_t *element_prev = &(progress->common_count[prev]);
+					vamp_t *element_left = NULL;
+					if (not_first_column)
+						element_left = &(progress->common_count[left]);
+
+					if ((num < *element_prev) && (line != 2)) {
 						err_conflict(options.checkpoint, line, item);
-						fprintf(stderr, "%ju < %ju (below previous)\n", (uintmax_t)num, (uintmax_t)(progress->common_count[name - count]));
+						fprintf(stderr, "%ju < %ju (below previous)\n", (uintmax_t)num, (uintmax_t)(*element_prev));
 						rc = 1;
 					}
-#ifdef PROCESS_RESULTS
-					else if (num > 0 && num - 1 > interval->complete - interval->min) {
+					else if (not_first_column && (num > *element_left)) {
+						err_conflict(options.checkpoint, line, item);
+						size_t left_pairs = left + MIN_FANG_PAIRS;
+						size_t pairs      = left_pairs + 1;
+						fprintf(stderr, "%ju > %ju (More vampire numbers with %zu pairs than %zu pairs)\n", (uintmax_t)num, (uintmax_t)(*element_left), pairs, left_pairs);
+						rc = 1;
+					}
+#if VAMPIRE_NUMBER_OUTPUTS
+					else if ((num > 0) && (num - 1 > interval->complete - interval->min)) {
 						err_conflict(options.checkpoint, line, item);
 						fprintf(stderr, "More vampire numbers than numbers.\n");
 						rc = 1;
 					}
-#endif /* PROCESS_RESULTS */
-					progress->common_count[name - count] = num;
+#endif
+					(*element_prev) = num;
 					break;
-#ifdef CHECKSUM_RESULTS
+				}
+#if (VAMPIRE_NUMBER_OUTPUTS) &&  (VAMPIRE_HASH)
 				case checksum:
 					if (hash_index < progress->checksum->md_size * 2) {
 						err_unexpected_char(options.checkpoint, ch, line , item);
@@ -278,7 +302,7 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 						rc = 1;
 					}
 					break;
-#endif /* CHECKSUM_RESULTS */
+#endif
 			}
 			num = 0;
 			hash_index = 0;
@@ -293,7 +317,7 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 					break;
 
 				case hash:
-					rc = hash_set(progress->checksum, ch, hash_index++, line, item);
+					rc = hash_set(options.checkpoint, progress->checksum, ch, hash_index++, line, item);
 					is_empty = false;
 					break;
 			}
@@ -317,15 +341,15 @@ void save_checkpoint(struct options_t options, vamp_t complete, struct taskboard
 	assert(fp != NULL);
 
 	fprintf(fp, "%ju", (uintmax_t)complete);
-	for (size_t i = 0; i < MAX_FANG_PAIRS; i++)
+	for (size_t i = 0; i < FANG_PAIRS_SIZE; i++)
 		fprintf(fp, " %ju", (uintmax_t)(progress->common_count[i]));
 
 
-#ifdef CHECKSUM_RESULTS
+#if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)
 	fprintf(fp, " ");
 	for (int i = 0; i < progress->checksum->md_size; i++)
 		fprintf(fp, "%02x", progress->checksum->md_value[i]);
-#endif /* CHECKSUM_RESULTS */
+#endif
 
 	fprintf(fp, "\n");
 	fclose(fp);

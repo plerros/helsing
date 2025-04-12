@@ -8,7 +8,7 @@
 
 #include "configuration_adv.h"
 
-#ifdef PROCESS_RESULTS
+#if VAMPIRE_NUMBER_OUTPUTS
 struct llnode
 {
 	vamp_t *data;
@@ -18,7 +18,7 @@ struct llnode
 void llnode_free(struct llnode *list);
 void llnode_add(struct llnode **ptr, vamp_t value);
 vamp_t llnode_getsize(struct llnode *ptr);
-#else /* PROCESS_RESULTS */
+#else /* VAMPIRE_NUMBER_OUTPUTS */
 struct llnode
 {
 };
@@ -34,5 +34,5 @@ static inline vamp_t llnode_getsize(__attribute__((unused)) struct llnode *ptr)
 {
 	return 0;
 }
-#endif /* PROCESS_RESULTS */
+#endif /* VAMPIRE_NUMBER_OUTPUTS */
 #endif /* HELSING_LLNODE_H */

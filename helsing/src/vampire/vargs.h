@@ -10,7 +10,7 @@
 #include "cache.h"
 #include "array.h"
 
-#ifdef DUMP_RESULTS
+#if FANG_PRINT
 #include <stdio.h>
 #endif
 
@@ -18,7 +18,7 @@ struct vargs /* Vampire arguments */
 {
 	struct cache *digptr;
 	struct array *result;
-	vamp_t local_count[MAX_FANG_PAIRS];
+	vamp_t local_count[COUNT_ARRAY_SIZE];
 };
 
 void vargs_new(struct vargs **ptr, struct cache *digptr);
@@ -26,19 +26,19 @@ void vargs_free(struct vargs *args);
 void vargs_reset(struct vargs *args);
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax);
 
-#if defined COUNT_RESULTS || defined DUMP_RESULTS
+#if FANG_PAIR_OUTPUTS
 static inline void vargs_iterate_local_count(struct vargs *ptr)
 {
-	ptr->local_count[0] += 1;
+	ptr->local_count[COUNT_ARRAY_REMAINDER] += 1;
 }
-#else /* defined COUNT_RESULTS || defined DUMP_RESULTS */
+#else /* FANG_PAIR_OUTPUTS */
 static inline void vargs_iterate_local_count(
 	__attribute__((unused)) struct vargs *ptr)
 {
 }
-#endif /* defined COUNT_RESULTS || defined DUMP_RESULTS */
+#endif /* FANG_PAIR_OUTPUTS */
 
-#ifdef DUMP_RESULTS
+#if FANG_PRINT
 static inline void vargs_print_results(
 	vamp_t product,
 	fang_t multiplier,
@@ -48,14 +48,14 @@ static inline void vargs_print_results(
 	printf("%ju = %ju x %ju\n",(uintmax_t)product, (uintmax_t)multiplier, (uintmax_t)multiplicand);
 	funlockfile(stdout);
 }
-#else /* DUMP_RESULTS */
+#else /* FANG_PRINT */
 static inline void vargs_print_results(
 	__attribute__((unused)) vamp_t product,
 	__attribute__((unused)) fang_t multiplier,
 	__attribute__((unused)) fang_t multiplicand)
 {
 }
-#endif /* DUMP_RESULTS */
+#endif /* FANG_PRINT */
 
 #if !(ALG_NORMAL)
 static inline void alg_normal_set(

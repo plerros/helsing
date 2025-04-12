@@ -7,7 +7,7 @@ The default algorithm has a time complexity of $O(n)$ and a space complexity of
 $O(\sqrt{n})$.
 
 In *helsing/configuration.h* you can toggle the algorithms and tune them,
-adjust verbosity, change the numeral base system, set a minimum fang pairs
+adjust verbosity, change the numeral base system, and set a fang pairs
 filter.
 Be sure to read the documentation.
 
@@ -171,7 +171,6 @@ Found: 7 vampire number(s).
 $ ls
 build           configuration_adv.h  helsing   my.checkpoint  src
 CMakeLists.txt  configuration.h      Makefile  scripts        test
-
 ```
 To resume from it:
 
@@ -275,19 +274,24 @@ Example:
 ```
 $ ./helsing --buildconf
   configuration:
-    VERBOSE_LEVEL=2
+    FANG_PAIR_OUTPUTS=false
+    VAMPIRE_NUMBER_OUTPUTS=true
+        VAMPIRE_INDEX=false
+        VAMPIRE_PRINT=false
+        VAMPIRE_INTEGRAL=false
+        VAMPIRE_HASH=false
     MIN_FANG_PAIRS=1
     MAX_FANG_PAIRS=1
     MEASURE_RUNTIME=false
     ALG_NORMAL=false
     ALG_CACHE=true
-    COMPARISON_BITS=64
-    PARTITION_METHOD=0
-    MULTIPLICAND_PARTITIONS=2
-    PRODUCT_PARTITIONS=3
+        COMPARISON_BITS=64
+        PARTITION_METHOD=0
+        MULTIPLICAND_PARTITIONS=2
+        PRODUCT_PARTITIONS=3
     BASE=10
     MAX_TASK_SIZE=99999999999
-    USE_CHECKPOINT=false
+    USE_CHECKPOINT=true
     LINK_SIZE=100
     SAFETY_CHECKS=false
 ```

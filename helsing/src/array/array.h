@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #ifndef HELSING_ARRAY_H
@@ -10,7 +10,7 @@
 #include "llnode.h"
 #include "hash.h"
 
-#ifdef STORE_RESULTS
+#if (VAMPIRE_NUMBER_OUTPUTS) && (defined STORE_RESULTS)
 struct array
 {
 	vamp_t *number;
@@ -18,27 +18,27 @@ struct array
 	vamp_t size;
 };
 void array_free(struct array *ptr);
-#else  /* STORE_RESULTS */
+#else
 struct array
 {
 };
 static inline void array_free(__attribute__((unused)) struct array *ptr)
 {
 }
-#endif /* STORE_RESULTS */
+#endif /* (VAMPIRE_NUMBER_OUTPUTS) && (defined STORE_RESULTS) */
 
-#ifdef PROCESS_RESULTS
-void array_new(struct array **ptr, struct llnode *ll, vamp_t (*count_ptr)[MAX_FANG_PAIRS]);
-#else  /* PROCESS_RESULTS */
+#if VAMPIRE_NUMBER_OUTPUTS
+void array_new(struct array **ptr, struct llnode *ll, vamp_t (*count_ptr)[COUNT_ARRAY_SIZE]);
+#else 
 static inline void array_new(
 	__attribute__((unused)) struct array **ptr,
 	__attribute__((unused)) struct llnode *ll,
-	__attribute__((unused)) vamp_t (*count_ptr)[MAX_FANG_PAIRS])
+	__attribute__((unused)) vamp_t (*count_ptr)[COUNT_ARRAY_SIZE])
 {
 }
-#endif /* PROCESS_RESULTS */
+#endif /* VAMPIRE_NUMBER_OUTPUTS */
 
-#if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
+#if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)
 void array_checksum(struct array *ptr, struct hash *checksum);
 #else
 static inline void array_checksum(
@@ -46,15 +46,19 @@ static inline void array_checksum(
 	__attribute__((unused)) struct hash *checksum)
 {
 }
-#endif
+#endif /* (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH) */
 
-#if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
-void array_print(struct array *ptr, vamp_t count[MAX_FANG_PAIRS]);
+#if (VAMPIRE_NUMBER_OUTPUTS) && (defined PRINT_RESULTS)
+void array_print(
+	struct array *ptr,
+	vamp_t count[FANG_ARRAY_SIZE],
+	vamp_t (*prev)[COUNT_ARRAY_SIZE]);
 #else
 static inline void array_print(
 	__attribute__((unused)) struct array *ptr,
-	__attribute__((unused)) vamp_t count[MAX_FANG_PAIRS])
+	__attribute__((unused)) vamp_t count[FANG_ARRAY_SIZE],
+	__attribute__((unused)) vamp_t (*prev)[COUNT_ARRAY_SIZE])
 {
 }
-#endif
+#endif /* (VAMPIRE_NUMBER_OUTPUTS) && (defined PRINT_RESULTS) */
 #endif /* HELSING_ARRAY_H */

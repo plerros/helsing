@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
 #include "configuration.h"
@@ -8,19 +8,20 @@
 
 #include "helper.h"
 
-#ifdef PROCESS_RESULTS
+#if (VAMPIRE_NUMBER_OUTPUTS) // applies to entire file
+
 #include <stdlib.h>
 #include <string.h>
 #include "array.h"
 #include "llnode.h"
-#endif
 
-#if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
+
+#if VAMPIRE_HASH
 #include <openssl/evp.h>
 #include "hash.h"
 #endif
 
-#if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
+#ifdef PRINT_RESULTS
 #include <stdio.h>
 #endif
 
@@ -36,7 +37,6 @@ void array_free(struct array *ptr)
 }
 #endif
 
-#ifdef PROCESS_RESULTS
 int cmpvampt(const void *a, const void *b)
 {
 	vamp_t tmp_a = (*(vamp_t *) a);
@@ -53,7 +53,7 @@ int cmpvampt(const void *a, const void *b)
 void array_new(
 	struct array **ptr,
 	struct llnode *ll,
-	vamp_t (*count_ptr)[MAX_FANG_PAIRS])
+	vamp_t (*count_ptr)[COUNT_ARRAY_SIZE])
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(*ptr == NULL);
@@ -84,8 +84,8 @@ void array_new(
 	qsort(number, size, sizeof(vamp_t), cmpvampt);
 
 	// filter fangs & resize
-	vamp_t count[MAX_FANG_PAIRS];
-	memset(count, 0, MAX_FANG_PAIRS * sizeof(vamp_t));
+	vamp_t count[COUNT_ARRAY_SIZE];
+	memset(count, 0, sizeof(count));
 
 	if (size > 0)
 		fangs[0] = 1;
@@ -99,8 +99,10 @@ void array_new(
 		fangs[i - 1] = 0;
 		number[i - 1] = 0;
 
-		if (fangs[i] > MAX_FANG_PAIRS)
+		if (fangs[i] > MAX_FANG_PAIRS) {
 			fangs[i] = MAX_FANG_PAIRS;
+			count[COUNT_ARRAY_REMAINDER]++;
+		}
 	}
 
 	// Filter out with MIN_FANG_PAIRS & count the results
@@ -123,17 +125,16 @@ void array_new(
 	new->fangs = fangs;
 	new->size = size;
 	*ptr = new;
-#else
+#else /* STORE_RESULTS */
 	free(number);
 	free(fangs);
 	*ptr = NULL;
-#endif
-	memcpy(count_ptr, count, MAX_FANG_PAIRS * sizeof(vamp_t));
+#endif /* STORE_RESULTS */
+	memcpy(count_ptr, count, sizeof(*count_ptr));
 	return;
 }
-#endif /* PROCESS_RESULTS */
 
-#if defined(STORE_RESULTS) && defined(CHECKSUM_RESULTS)
+#if VAMPIRE_HASH
 void array_checksum(struct array *ptr, struct hash *checksum)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
@@ -157,15 +158,15 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 		EVP_DigestFinal_ex(checksum->mdctx, checksum->md_value, NULL);
 	}
 }
-#endif
+#endif /* VAMPIRE_HASH */
 
-#if defined(STORE_RESULTS) && defined(PRINT_RESULTS)
-void array_print(struct array *ptr, vamp_t count[MAX_FANG_PAIRS])
+#ifdef PRINT_RESULTS
+void array_print(struct array *ptr, vamp_t count[FANG_ARRAY_SIZE], vamp_t (*prev)[COUNT_ARRAY_SIZE])
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 
-	vamp_t local_count[MAX_FANG_PAIRS];
-	memcpy(local_count, count, MAX_FANG_PAIRS * sizeof(vamp_t));
+	vamp_t local_count[FANG_ARRAY_SIZE];
+	memcpy(local_count, count, sizeof(local_count));
 
 	for (vamp_t i = 0; i < ptr->size; i++) {
 		if (ptr->number[i] == 0)
@@ -175,9 +176,21 @@ void array_print(struct array *ptr, vamp_t count[MAX_FANG_PAIRS])
 			for (size_t k = MIN_FANG_PAIRS - 1; k < j; k++)
 				fprintf(stdout, "\t");
 
-			fprintf(stdout, "%ju %ju\n", (uintmax_t)(++local_count[j]), (uintmax_t)(ptr->number[i]));
+			++local_count[j];
+			#if VAMPIRE_INDEX
+				fprintf(stdout, "%ju ", (uintmax_t)(local_count[j]));
+			#endif
+			#if VAMPIRE_PRINT
+				fprintf(stdout, "%ju ", (uintmax_t)(ptr->number[i]));
+			#endif
+			#if VAMPIRE_INTEGRAL
+				fprintf(stdout, "%ju ", (uintmax_t)(ptr->number[i] - (*prev)[j]));
+				(*prev)[j] = ptr->number[i];
+			#endif
+			fprintf(stdout, "\n");
 		}
 	}
 	fflush(stdout);
 }
-#endif
+#endif /* PRINT_RESULTS */
+#endif /* VAMPIRE_NUMBER_OUTPUTS */

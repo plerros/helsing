@@ -5,12 +5,9 @@
 #ifndef HELSING_HASH_H
 #define HELSING_HASH_H
 
-#ifdef CHECKSUM_RESULTS
+#if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)
 #include <stdint.h>
 #include <openssl/evp.h>
-#endif
-
-#ifdef CHECKSUM_RESULTS
 struct hash
 {
 	EVP_MD_CTX *mdctx;
@@ -21,7 +18,7 @@ struct hash
 void hash_new(struct hash **ptr);
 void hash_free(struct hash *ptr);
 void hash_print(struct hash *ptr);
-#else /* CHECKSUM_RESULTS */
+#else /* VAMPIRE_NUMBER_OUTPUTS && VAMPIRE_HASH */
 struct hash
 {
 };
@@ -34,5 +31,5 @@ static inline void hash_free(__attribute__((unused)) struct hash *ptr)
 static inline void hash_print(__attribute__((unused)) struct hash *ptr)
 {
 }
-#endif /* CHECKSUM_RESULTS */
+#endif /* VAMPIRE_NUMBER_OUTPUTS && VAMPIRE_HASH */
 #endif /* HELSING_HASH_H */
