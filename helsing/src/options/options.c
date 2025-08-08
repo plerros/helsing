@@ -41,7 +41,6 @@ static void buildconf()
 	printf("    ALG_NORMAL=%s\n", (ALG_NORMAL ? "true" : "false"));
 	printf("    ALG_CACHE=%s\n", (ALG_CACHE ? "true" : "false"));
 	if (ALG_CACHE) {
-		printf("        COMPARISON_BITS=%d\n", COMPARISON_BITS);
 		printf("        PARTITION_METHOD=%d\n", PARTITION_METHOD);
 		printf("        MULTIPLICAND_PARTITIONS=%d\n", MULTIPLICAND_PARTITIONS);
 		printf("        PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
@@ -130,14 +129,6 @@ out:
 	if (err)
 		fprintf(stderr, "Input out of range: [%ju, %ju]\n", (uintmax_t)min, (uintmax_t)max);
 	return err;
-}
-
-static length_t get_max_length()
-{
-	length_t ret = 0;
-	for (vamp_t i = VAMP_MAX; i >= BASE - 1; i /= BASE)
-		ret ++;
-	return ret;
 }
 
 int options_new(struct options_t **ptr, int argc, char *argv[])
@@ -232,7 +223,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(optarg, 1, get_max_length(), &tmp);
+					rc = strtov(optarg, 1, length(VAMP_MAX), &tmp);
 					if (rc)
 						break;
 					new->min = pow_v(tmp - 1);
@@ -256,7 +247,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 			case 't':
 				{
 					vamp_t tmp;
-					rc = strtov(optarg, 1, THREAD_MAX, &tmp);
+					rc = strtov(optarg, 1, THREAD_T_MAX, &tmp);
 					if (rc)
 						break;
 					new->threads = tmp;

@@ -11,106 +11,102 @@
 #include <time.h>
 #include "configuration.h"
 
-#define ELEMENT_BITS COMPARISON_BITS
-#define ACTIVE_BITS ELEMENT_BITS
-
 /*
- * The following typedefs are used to explicate intent.
+ * Platform types configuration:
+ * 
+ * These are good defaults for 64-bit systems.
+ *
+ * You may be able to improve performance in 32-bit systems by adjusting some
+ * of these down to 32-bit types, or increase the solvable space by adjusting
+ * them up (128-bit, ...)
+ * 
+ * If you modify any of the typedefs, make sure to update the corresponding max
+ * value. The code assumes you've done that correctly.
  */
 
-typedef unsigned long long vamp_t; // vampire type
-#define VAMP_MAX ULLONG_MAX
+	typedef unsigned long long vamp_t; // vampire type
+	#define VAMP_MAX ULLONG_MAX
+	//typedef __uint128_t vamp_t;      // vampire type
+	//static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
+	//#define VAMP_MAX UINT128_MAX
 
-typedef unsigned long fang_t; // fang type
-#define FANG_MAX ULONG_MAX
+	typedef unsigned long fang_t; // fang type
+	#define FANG_MAX ULONG_MAX
+		#if (FANG_MAX > VAMP_MAX)
+			#error "VAMP_MAX should be >= than FANG_MAX"
+		#endif
 
-typedef uint16_t thread_t;
-#define THREAD_MAX UINT16_MAX
-typedef uint8_t digit_t;
-typedef uint8_t length_t;
-#define LENGTH_T_MAX UINT8_MAX
+	typedef uint16_t thread_t;
+	#define THREAD_T_MAX UINT16_MAX
 
-#if ELEMENT_BITS == 32
-	typedef uint32_t digits_t;
-#elif ELEMENT_BITS == 64
-	typedef uint64_t digits_t;
-#endif
+	typedef uint8_t digit_t;
+	#define DIGIT_T_MAX BASE
 
-#if MEASURE_RUNTIME
-	#if defined(CLOCK_MONOTONIC)
-		#define SPDT_CLK_MODE CLOCK_MONOTONIC
-	#elif defined(CLOCK_REALTIME)
-		#define SPDT_CLK_MODE CLOCK_REALTIME
+	/*
+	 * length_t:
+	 * 
+	 * how many digits a number has in the current numeral system.
+	 * LENGTH_T_MAX should be greater or equal to the #bits of any type used.
+	 */
+
+	typedef uint16_t length_t; // I don't think we're getting 65536-bit unsigned long long anytime soon
+	#define LENGTH_T_MAX UINT16_MAX
+
+	/*
+	 * digits_t
+	 *
+	 * Datatype of the cache used in ALG_CACHE
+	 * 
+	 * On 32-bit systems this can be set to:
+	 * 	typedef uint_least32_t digits_t;
+	 * 	#define DIGITS_T_MAX UINT_LEAST32_MAX
+	 * The performance will improve at the cost of not being able to solve bigger problems.
+	 */
+
+	typedef uint_fast64_t digits_t;
+	#define DIGITS_T_MAX UINT_FAST64_MAX
+
+/*
+ * Helper Preprocessor Macros
+ */
+	#if MEASURE_RUNTIME
+		#if defined(CLOCK_MONOTONIC)
+			#define SPDT_CLK_MODE CLOCK_MONOTONIC
+		#elif defined(CLOCK_REALTIME)
+			#define SPDT_CLK_MODE CLOCK_REALTIME
+		#endif
 	#endif
-#endif
 
-#if (VAMPIRE_INDEX || VAMPIRE_PRINT || VAMPIRE_INTEGRAL)
-	#define PRINT_RESULTS
-#endif
+	#if (VAMPIRE_INDEX || VAMPIRE_PRINT || VAMPIRE_INTEGRAL)
+		#define PRINT_RESULTS
+	#endif
 
-#if (VAMPIRE_HASH) || (defined PRINT_RESULTS)
-	#define STORE_RESULTS
-#endif
+	#if (VAMPIRE_HASH) || (defined PRINT_RESULTS)
+		#define STORE_RESULTS
+	#endif
 
-#if VAMPIRE_HASH
-	#define CHECKSUM_RESULTS
-#endif
+	#if VAMPIRE_HASH
+		#define CHECKSUM_RESULTS
+	#endif
 
-#define FANG_PAIRS_SIZE (MAX_FANG_PAIRS - MIN_FANG_PAIRS + 1)
+	#define FANG_PAIRS_SIZE (MAX_FANG_PAIRS - MIN_FANG_PAIRS + 1)
+	#define COUNT_ARRAY_SIZE (MAX_FANG_PAIRS + 1)
 
-#define FANG_ARRAY_SIZE  (MAX_FANG_PAIRS)
-#define COUNT_ARRAY_SIZE (MAX_FANG_PAIRS + 1)
-#define COUNT_ARRAY_REMAINDER (MAX_FANG_PAIRS)
+	/*
+	* count[COUNT_ARRAY_REMAINDER]
+	*
+	* Anything that doesn't get counted as a vampire number is stored here.
+	* Depending on configuration the value could store the count of vampire numbers
+	* with more fang pairs than MAX_FANG_PAIRS, or all the vampire fangs.
+	*/
 
-#if (FANG_PAIR_OUTPUTS) && (VAMPIRE_NUMBER_OUTPUTS)
-#warning Both FANG_PAIR_OUTPUTS and VAMPIRE_NUMBER_OUTPUTS are true
-#endif
+	#define COUNT_ARRAY_REMAINDER (MAX_FANG_PAIRS)
 
-#if (MIN_FANG_PAIRS == 0)
-#error MIN_FANG_PAIRS must be larger than 0
-#endif
-
-#if (MIN_FANG_PAIRS > 1 && !(VAMPIRE_NUMBER_OUTPUTS))
-#error MIN_FANG_PAIRS > 1 requires VAMPIRE_NUMBER_OUTPUTS
-#endif
-
-#if (MAX_FANG_PAIRS == 0)
-#error MAX_FANG_PAIRS must be larger than 0
-#endif
-
-#if (MAX_FANG_PAIRS > 1 && !(VAMPIRE_NUMBER_OUTPUTS))
-#error MAX_FANG_PAIRS > 1 requires VAMPIRE_NUMBER_OUTPUTS
-#endif
-
-#if (MAX_FANG_PAIRS < MIN_FANG_PAIRS)
-#error MAX_FANG_PAIRS should be higher than MIN_FANG_PAIRS
-#endif
-
-#if (COMPARISON_BITS != 32 && COMPARISON_BITS != 64)
-#error COMPARISON_BITS acceptable values are 32 or 64
-#endif
-
-#if (MULTIPLICAND_PARTITIONS == 0)
-	#error MULTIPLICAND_PARTITIONS must be larger than 0
-#endif
-
-#if (PRODUCT_PARTITIONS == 0)
-	#error MULTIPLICAND_PARTITIONS must be larger than 0
-#endif
-
-#if (MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS)
-	//#warning MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS -- performance will suffer
-#endif
-
-#if (BASE < 2)
-#error BASE must be larger than 1
-#endif
-
-#if SAFETY_CHECKS
-	#define OPTIONAL_ASSERT(x) assert(x)
-	#include <assert.h>
-#else
-	#define OPTIONAL_ASSERT(x) if(!(x)) {no_args();}
-#endif
+	#if SAFETY_CHECKS
+		#define OPTIONAL_ASSERT(x) assert(x)
+		#include <assert.h>
+	#else
+		#define OPTIONAL_ASSERT(x) if(!(x)) {no_args();}
+	#endif
 
 #endif /* HELSING_CONFIG_ADV_H */

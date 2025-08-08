@@ -64,7 +64,7 @@ static bool disqualify_mult(vamp_t x)
 			ret = false;
 			break;
 		case 7:	{
-			int tmp = x % (BASE - 1);
+			digit_t tmp = x % (BASE - 1);
 			ret = (tmp == 1 || tmp == 3 || tmp == 4 || tmp == 5);
 			break;
 		}
@@ -230,11 +230,14 @@ struct alg_cache
 static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct cache *cache)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(cache != NULL);
+
+	if (ptr == NULL)
+		return;
 
 	ptr->digits_array = NULL;
 	if (cache != NULL)
 		ptr->digits_array = cache->dig;
-
 
 	length_t multiplicand_length =  div_roof(lenmax, 2);
 

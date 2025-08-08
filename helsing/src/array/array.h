@@ -51,12 +51,12 @@ static inline void array_checksum(
 #if (VAMPIRE_NUMBER_OUTPUTS) && (defined PRINT_RESULTS)
 void array_print(
 	struct array *ptr,
-	vamp_t count[FANG_ARRAY_SIZE],
+	vamp_t count[COUNT_ARRAY_SIZE],
 	vamp_t (*prev)[COUNT_ARRAY_SIZE]);
 #else
 static inline void array_print(
 	__attribute__((unused)) struct array *ptr,
-	__attribute__((unused)) vamp_t count[FANG_ARRAY_SIZE],
+	__attribute__((unused)) vamp_t count[COUNT_ARRAY_SIZE],
 	__attribute__((unused)) vamp_t (*prev)[COUNT_ARRAY_SIZE])
 {
 }

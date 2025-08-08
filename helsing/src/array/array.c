@@ -161,11 +161,11 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 #endif /* VAMPIRE_HASH */
 
 #ifdef PRINT_RESULTS
-void array_print(struct array *ptr, vamp_t count[FANG_ARRAY_SIZE], vamp_t (*prev)[COUNT_ARRAY_SIZE])
+void array_print(struct array *ptr, vamp_t count[COUNT_ARRAY_SIZE], vamp_t (*prev)[COUNT_ARRAY_SIZE])
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 
-	vamp_t local_count[FANG_ARRAY_SIZE];
+	vamp_t local_count[COUNT_ARRAY_SIZE];
 	memcpy(local_count, count, sizeof(local_count));
 
 	for (vamp_t i = 0; i < ptr->size; i++) {

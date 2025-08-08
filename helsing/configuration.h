@@ -16,8 +16,10 @@
  * FANG_PRINT:
  * 	print fang pairs
  */
+
 #define FANG_PAIR_OUTPUTS false
 #define FANG_PRINT false
+
 /*
  * VAMPIRE_NUMBER_OUTPUTS:
  *
@@ -37,6 +39,10 @@
 #define VAMPIRE_HASH     false
 
 #define DIGEST_NAME "sha512" // requires VERBOSE_LEVEL 3
+
+	#if (FANG_PAIR_OUTPUTS) && (VAMPIRE_NUMBER_OUTPUTS)
+		#warning Both FANG_PAIR_OUTPUTS and VAMPIRE_NUMBER_OUTPUTS are true. Result streams will be interleaved.
+	#endif
 
 /*
  * MIN_FANG_PAIRS:
@@ -83,6 +89,21 @@
 
 #define MIN_FANG_PAIRS 1
 #define MAX_FANG_PAIRS 1
+	#if (MIN_FANG_PAIRS == 0)
+		#error MIN_FANG_PAIRS must be larger than 0
+	#endif
+	#if (MAX_FANG_PAIRS == 0)
+		#error MAX_FANG_PAIRS must be larger than 0
+	#endif
+	#if (MIN_FANG_PAIRS > 1 && !(VAMPIRE_NUMBER_OUTPUTS))
+		#error MIN_FANG_PAIRS > 1 requires VAMPIRE_NUMBER_OUTPUTS
+	#endif
+	#if (MAX_FANG_PAIRS > 1 && !(VAMPIRE_NUMBER_OUTPUTS))
+		#error MAX_FANG_PAIRS > 1 requires VAMPIRE_NUMBER_OUTPUTS
+	#endif
+	#if (MAX_FANG_PAIRS < MIN_FANG_PAIRS)
+		#error MAX_FANG_PAIRS should be higher than MIN_FANG_PAIRS
+	#endif
 
 #define MEASURE_RUNTIME false
 
@@ -149,13 +170,10 @@
  *
  * ALG_CACHE Options:
  *
- * 1) COMPARISON_BITS:
- * 	The #bits used for the vampire check. It can be set to 64(default) or 32.
- * 	Setting COMPARISON_BITS to 32 will half the ALG_CACHE size and use 32-bit
- * 	variables.
- *
- * 	This option adjusts the space of solvable intervals to avoid
- * 	false-positives.
+ * 1) cache datatype:
+ * 	The datatype used for vampire check can be found in configuration_adv.h.
+ * 	Changing it will alter the performance characteristics of the program.
+ * 	The space of solvable itervals will change to avoid false-positives.
  *
  * 2) PARTITION_METHOD:
  * 	Type: Semi-Constant, Semi-Global
@@ -179,10 +197,18 @@
  */
 
 #define ALG_CACHE true
-#define COMPARISON_BITS 64
 #define PARTITION_METHOD 0
 #define MULTIPLICAND_PARTITIONS 2
 #define PRODUCT_PARTITIONS 3
+	#if (MULTIPLICAND_PARTITIONS <= 0)
+		#error MULTIPLICAND_PARTITIONS must be larger than 0
+	#endif
+	#if (PRODUCT_PARTITIONS <= 0)
+		#error MULTIPLICAND_PARTITIONS must be larger than 0
+	#endif
+	#if (MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS)
+		#warning MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS -- performance will suffer
+	#endif
 
 /*
  * BASE:
@@ -195,6 +221,9 @@
  */
 
 #define BASE 10
+	#if (BASE < 2)
+		#error BASE must be larger than 1
+	#endif
 
 /*
  * MAX_TASK_SIZE:

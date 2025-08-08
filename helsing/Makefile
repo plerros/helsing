@@ -20,7 +20,7 @@ DEBUG := # -fsanitize=thread
 
 OPTIMIZE := -O2
 # If the code is underperforming, try recompiling it with some of these flags:
-# -falign-functions=32 -falign-loops=32 -march=native -mtune=native
+# -falign-functions=32 -falign-functions=64 -falign-loops=32 -march=native -mtune=native
 
 LFLAGS := # -Wl,--gc-sections
 LIBS := -lpthread -lm $(shell if $(CC) -dM -E -I$(SRC_DIRS)/configuration.h $(SRC_DIRS)/configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)

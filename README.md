@@ -285,7 +285,6 @@ $ ./helsing --buildconf
     MEASURE_RUNTIME=false
     ALG_NORMAL=false
     ALG_CACHE=true
-        COMPARISON_BITS=64
         PARTITION_METHOD=0
         MULTIPLICAND_PARTITIONS=2
         PRODUCT_PARTITIONS=3

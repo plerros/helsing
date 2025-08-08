@@ -16,18 +16,24 @@
 #include "cache.h"
 
 #define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
-#define DIGBASE(bits) ((vamp_t) pow(2.0, BITS_PER_NUMERAL(bits)))
+#define DIGBASE(bits) (pow(2.0, BITS_PER_NUMERAL(bits)))
 
 digits_t set_dig(fang_t number)
 {
-	digits_t ret = 0;
-	digits_t tmp[BASE] = {0};
+	length_t tmp[BASE] = {0};
 	for (; number > 0; number /= BASE)
 		tmp[number % BASE] += 1;
 
+	const digits_t digbase_active_bits = DIGBASE(sizeof(digits_t) * CHAR_BIT);
+
+	digits_t ret = 0;
 	for (digit_t i = 1; i < BASE; i++) {
-		OPTIONAL_ASSERT(tmp[i] < DIGBASE(ACTIVE_BITS));
-		ret = ret * DIGBASE(ACTIVE_BITS) + tmp[i];
+		OPTIONAL_ASSERT(tmp[i] < digbase_active_bits);
+
+		OPTIONAL_ASSERT(DIGITS_T_MAX / digbase_active_bits >= ret);
+		ret *= digbase_active_bits;
+		OPTIONAL_ASSERT(DIGITS_T_MAX - tmp[i] >= ret);
+		ret += tmp[i];
 	}
 
 	return ret;
@@ -119,7 +125,7 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 	for (; j < new->size && j <= window_max; j++)
 		new->dig[j] = set_dig(j);
 
-	fang_t dig_quotient = new->dig[quotient];
+	digits_t dig_quotient = new->dig[quotient];
 	for (; j < new->size; j++) {
 		if (j > window_max) {
 			// This order of operations is faster
@@ -159,18 +165,23 @@ bool cache_ovf_chk(vamp_t max)
 {
 	digits_t required_size[BASE];
 	memset(required_size, 0, sizeof(required_size));
+	const digits_t digbase_active_bits = DIGBASE(sizeof(digits_t) * CHAR_BIT);
 
 	for (; max > 0; max /= BASE) {
 		size_t limit = BASE;
 		if (max <= BASE)
 			limit = max;
 		
-		for (size_t i = 0; i < limit; i++)
+		for (size_t i = 0; i < limit; i++) {
+			if (required_size[i] == DIGITS_T_MAX)
+				return true;
+
 			required_size[i]++;
+		}
 	}
 
 	for (size_t i = 0; i < BASE; i++) {
-		if (required_size[i] > DIGBASE(ACTIVE_BITS))
+		if (required_size[i] > digbase_active_bits)
 			return true;
 	}
 	return false;

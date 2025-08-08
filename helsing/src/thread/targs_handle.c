@@ -34,8 +34,15 @@ void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_
 		abort();
 
 	new->read = malloc(sizeof(pthread_mutex_t));
+	if (new->read == NULL)
+		abort();
+
 	pthread_mutex_init(new->read, NULL);
+
 	new->write = malloc(sizeof(pthread_mutex_t));
+	if (new->write == NULL)
+		abort();
+
 	pthread_mutex_init(new->write, NULL);
 
 	for (thread_t thread = 0; thread < new->options.threads; thread++) {

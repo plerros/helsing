@@ -30,6 +30,8 @@ void hash_new(struct hash **ptr)
 
 	new->md_size = EVP_MD_size(new->md);
 	new->md_value = malloc(sizeof(uint8_t) * new->md_size);
+	if (new->md_value == NULL)
+		abort();
 
 	for (int i = 0; i < new->md_size; i++)
 		new->md_value[i] = 0;
