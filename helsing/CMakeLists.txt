@@ -70,10 +70,12 @@ add_executable(helsing
     src/linked_list/llnode.c
     src/main.c
     src/options/options.c
+    src/thread/mutex.c
     src/task/task.c
     src/task/taskboard.c
     src/thread/targs.c
     src/thread/targs_handle.c
+    src/thread/thread.c
     src/vampire/cache.c
     src/vampire/vargs.c
     )
