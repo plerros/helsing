@@ -4,12 +4,12 @@
  */
 
 #include <stdlib.h>
-#include <pthread.h>
 #include <stdbool.h>
 
 #include "configuration.h"
 #include "helper.h"
 #include "cache.h"
+#include "mutex.h"
 #include "targs.h"
 #include "vargs.h"
 
@@ -19,8 +19,8 @@
 
 void targs_new(
 	struct targs **ptr,
-	pthread_mutex_t *read,
-	pthread_mutex_t *write,
+	struct mutex_t *read,
+	struct mutex_t *write,
 	struct taskboard *progress,
 	struct cache *digptr,
 	bool dry_run)
@@ -58,11 +58,11 @@ void *thread_function(void *void_args)
 	do {
 		current = NULL;
 // Critical section start
-		pthread_mutex_lock(args->read);
+		mutex_lock(args->read);
 
 		current = taskboard_get_task(args->progress);
 
-		pthread_mutex_unlock(args->read);
+		mutex_unlock(args->read);
 // Critical section end
 
 		if (current != NULL) {
@@ -70,7 +70,7 @@ void *thread_function(void *void_args)
 				vampire(current->lmin, current->lmax, vamp_args, args->progress->fmax);
 
 // Critical section start
-			pthread_mutex_lock(args->write);
+			mutex_lock(args->write);
 
 			task_copy_vargs(current, vamp_args);
 #if MEASURE_RUNTIME
@@ -78,7 +78,7 @@ void *thread_function(void *void_args)
 #endif
 			taskboard_cleanup(args->progress);
 
-			pthread_mutex_unlock(args->write);
+			mutex_unlock(args->write);
 
 // Critical section end
 			vargs_reset(vamp_args);

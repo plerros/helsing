@@ -88,7 +88,7 @@
  */
 
 #define MIN_FANG_PAIRS 1
-#define MAX_FANG_PAIRS 1
+#define MAX_FANG_PAIRS 10
 	#if (MIN_FANG_PAIRS == 0)
 		#error MIN_FANG_PAIRS must be larger than 0
 	#endif
@@ -274,6 +274,21 @@
  */
 
 #define LINK_SIZE 100
+
+/*
+ * THREADS_PTHREAD:
+ *
+ * When set to false, pthreads.h won't be included. (for embedded)
+ */
+
+#define THREADS_PTHREAD true
+
+/*
+ * SAFETY_CKECKS:
+ *
+ * Code self check during development.
+ */
+
 #define SAFETY_CHECKS false
 
 #endif /* HELSING_CONFIG_H */

@@ -6,13 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <pthread.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "helper.h"
+#include "mutex.h"
 #include "taskboard.h"
 #include "targs_handle.h"
+#include "thread.h"
 #include "checkpoint.h"
 #include "interval.h"
 #include "options.h"
@@ -50,9 +51,9 @@ int main(int argc, char *argv[])
 	if (load_checkpoint(*options, &interval, progress))
 		goto out;
 
-	pthread_t *threads = malloc(sizeof(pthread_t) * options->threads);
-	if (threads == NULL)
-		abort();
+	struct threads_t *threads = NULL;
+	threads_new(&threads, options);
+
 	struct targs_handle *thhandle = NULL;
 	targs_handle_new(&thhandle, *options, interval.min, interval.max, progress);
 
@@ -65,14 +66,13 @@ int main(int argc, char *argv[])
 			continue;
 
 		fprintf(stderr, "Checking interval: [%ju, %ju]\n", (uintmax_t)lmin, (uintmax_t)lmax);
-		for (thread_t thread = 0; thread < options->threads; thread++)
-			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
-		for (thread_t thread = 0; thread < options->threads; thread++)
-			pthread_join(threads[thread], 0);
+
+		threads_create(threads, options, thhandle);
+		threads_join(threads, options);
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);
-	free(threads);
+	threads_free(threads);
 out:
 	taskboard_free(progress);
 	options_free(options);

@@ -50,6 +50,7 @@ static void buildconf()
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
 	printf("    LINK_SIZE=%d\n", LINK_SIZE);
 	printf("    SAFETY_CHECKS=%s\n", (SAFETY_CHECKS ? "true" : "false"));
+	printf("    THREADS_PTHREAD=%s\n", (THREADS_PTHREAD ? "true" : "false"));
 }
 
 static void arg_checkpoint()
@@ -145,7 +146,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 	new->max = 0;
 	new->checkpoint = NULL;
 
-#ifdef _SC_NPROCESSORS_ONLN
+#if (defined _SC_NPROCESSORS_ONLN) && (THREADS_PTHREAD)
 	new->threads = sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 
@@ -283,6 +284,25 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 		goto out;
 	}
 
+	if (!min_is_set && !max_is_set) {
+		char buffer[100];
+	
+		printf("Lower bound: ");
+		fgets(buffer, sizeof(buffer), stdin);
+		rc = strtov(buffer, 0, VAMP_MAX, &(new->min));
+		if (rc)
+			goto out;
+		min_is_set = true;
+
+		printf("Upper bound: ");
+		fgets(buffer, sizeof(buffer), stdin);
+		rc = strtov(buffer, 0, VAMP_MAX, &(new->max));
+		if (rc)
+			goto out;
+
+		max_is_set = true;
+	}
+
 	if (min_is_set ^ max_is_set) {
 		printf("Missing argument:\n");
 		if (max_is_set)
@@ -292,11 +312,13 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 		rc = 1;
 		goto out;
 	}
+
 	if ((!min_is_set) && (!max_is_set) && (new->checkpoint == NULL)) {
 		help();
 		rc = 1;
 		goto out;
 	}
+
 	if (display_progress)
 		new->display_progress = true;
 	if (dry_run)

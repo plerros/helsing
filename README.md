@@ -23,6 +23,10 @@ Note that the guide above will install WSL with Ubuntu, so you'll have to follow
 
 On MacOS you'll have to [install homebrew](https://brew.sh/).
 
+## Embedded Preparation
+
+Use of *pthreads.h* can be disabled in *configuration.h* by setting `THREADS_PTHREAD false`
+
 ## Installation
 1. Install dependencies
 	<table>
