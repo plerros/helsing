@@ -67,8 +67,8 @@ function get_runtime()
 	awk -F "\"*,\"*" '{print $2}' "$1/tmp.csv"  | awk 'NR>1'
 }
 
-echo -e "base\tn\truntime"
-echo -e "base\tn_min\tn_max\tpart_max" > "$out_file"
+echo -e "base\tupper_bound\truntime"
+echo -e "base\tupper_bound\tpart_max" > "$out_file"
 
 for base in $b_seq; do
 	cp configuration.backup2 configuration.h
@@ -83,7 +83,7 @@ for base in $b_seq; do
 		runtime=$(get_runtime $tempdir $ub_max)
 		
 		if [ -z "${runtime}" ]; then
-			continue
+			break
 		fi
 
 		if [ 1 -eq "$(echo "${runtime} > ${time_min}" | bc)" ]; then
@@ -104,6 +104,9 @@ for base in $b_seq; do
 		center="$(echo "(${ub_min} + ${ub_max}) / 2" | bc)"
 
 		runtime=$(get_runtime $tempdir $center)
+		if [ -z "${runtime}" ]; then
+			break
+		fi
 
 		if [ 1 -eq "$(echo "${runtime} < ${time_min}" | bc)" ]; then
 			ub_min="$center"
