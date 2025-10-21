@@ -61,6 +61,12 @@ trap handle_sigint SIGINT
 
 b_seq=$(seq $base_min $base_max)        # numeral base
 
+function get_runtime()
+{
+	hyperfine --warmup 2 "./helsing -l 0 -u $2" --export-csv "$1/tmp.csv" > /dev/null 2>&1
+	awk -F "\"*,\"*" '{print $2}' "$1/tmp.csv"  | awk 'NR>1'
+}
+
 echo -e "base\tn\truntime"
 echo -e "base\tn_min\tn_max\tpart_max" > "$out_file"
 
@@ -69,30 +75,44 @@ for base in $b_seq; do
 	"$selfdir/../configuration/set.sh" BASE "$base"
 	make -j4 > /dev/null
 
-	n_min=""
-	n_max=""
-	for i in $(seq 2 2 64); do
-		hyperfine --warmup 2 "./helsing -n $i" --export-csv "$tempdir/tmp.csv" > /dev/null 2>&1
-		runtime=$(awk -F "\"*,\"*" '{print $2}' "$tempdir/tmp.csv"  | awk 'NR>1')
-		echo -e "$base\t$i\t$runtime"
+	ub_min="1"
+	ub_max="1"
 
+	# Loop 1: Generate the initial number range [a, b] for the upper bound.
+	while true; do
+		runtime=$(get_runtime $tempdir $ub_max)
+		
 		if [ -z "${runtime}" ]; then
 			continue
 		fi
 
-		# find n for which runtime is longer than 0.01s
-		if [ -z "${n_min}" ]; then
-			if [ 1 -eq "$(echo "${runtime} > 0.01" | bc)" ]; then
-				n_min=$i
-			fi
-			continue
+		if [ 1 -eq "$(echo "${runtime} > ${time_min}" | bc)" ]; then
+			break;
 		fi
 
-		# find n for which runtime is longer than [time_min] seconds
-		if [ 1 -eq "$(echo "${runtime} > ${time_min}" | bc)" ]; then
-			n_max=$i
-			echo -e "$base\t$n_min\t$n_max\t$part_max" >> "$out_file"
-			break
+		ub_min="$ub_max"
+		multiplier="$(echo "${time_min} * 1.5 / ${runtime}" | bc)"
+		if [ 1 -eq "$(echo "${multiplier} < 10" | bc)" ]; then
+			multiplier="10"
+		fi
+
+		ub_max="$(echo "${ub_max} * ${multiplier}" | bc)"
+	done
+
+	# Loop 2: Divide iteratively to find a good enough upper bound
+	while true; do
+		center="$(echo "(${ub_min} + ${ub_max}) / 2" | bc)"
+
+		runtime=$(get_runtime $tempdir $center)
+
+		if [ 1 -eq "$(echo "${runtime} < ${time_min}" | bc)" ]; then
+			ub_min="$center"
+		elif [ 1 -eq "$(echo "${runtime} > ${time_min} * 2" | bc)" ]; then
+			ub_max="$center"
+		else
+			echo -e "$base\t$center\t$part_max" >> "$out_file"
+			echo -e "$base\t$center\t$part_max"
+			break;
 		fi
 	done
 done

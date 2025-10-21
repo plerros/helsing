@@ -25,7 +25,7 @@ mkdir -p "$out_folder"
 
 function collect_data () {
 	base=$1
-	n=$2
+	ubound=$2
 	part_max=$3
 	out_file=$4
 
@@ -59,18 +59,18 @@ function collect_data () {
 	for i in $(seq 0 $len); do
 		"$selfdir/../../configuration/set_cache.sh" "$base" "${l_meth[$i]}" "${l_mult[$i]}" "${l_prod[$i]}"
 		make -j4 > /dev/null
-		hyperfine --warmup 2 "./helsing -n $n" --export-csv tmp.csv > /dev/null 2>&1
+		hyperfine --warmup 2 "./helsing -l 0 -u $ubound" --export-csv tmp.csv > /dev/null 2>&1
 		l_time[$i]=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
 		l_sdev[$i]=$(awk -F "\"*,\"*" '{print $3}' tmp.csv | awk 'NR>1')
 		rm tmp.csv
 
-		>&2 echo -e "$base\tn$n\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}"
+		>&2 echo -e "$base\tub$ubound\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}"
 	done
 	for i in $(seq 0 $len); do
 		if [ -z "${l_time[$i]}" ]; then
 			continue
 		fi
-		echo -e "$base\tn$n\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}" >> $out_file
+		echo -e "$base\tub$ubound\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}" >> $out_file
 	done
 
 }
@@ -88,15 +88,15 @@ function handle_sigint()
 
 trap handle_sigint SIGINT
 
->&2 echo -e "base\tn\tmethod\tmultiplicand\tproduct"
-while IFS=$'\t' read -r base n_min n_max part_max; do
+>&2 echo -e "base\tupper_bound\tmethod\tmultiplicand\tproduct"
+while IFS=$'\t' read -r base ubound part_max; do
 	number='^[[:digit:]]+$'
 	if ! [[ $base =~ $number ]] ; then
 		continue
 	fi
 
 	out_file=$(echo "$out_folder/base$base.csv")
-	collect_data $base $n_max $part_max $out_file
+	collect_data $base $ubound $part_max $out_file
 done < "$parameters_file"
 
 mv configuration.backup1 configuration.h
