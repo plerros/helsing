@@ -21,12 +21,31 @@ case $# in
 		;;
 esac
 
+"$selfdir/../../system_info.sh"
+tempdir=$(mktemp -d) && trap 'rm -rf "$tempdir"' EXIT || exit
+
+# Temporary files
+configuration_h_backup1="$tempdir/configuration.backup1"
+hyperfine_csv="$tempdir/hyperfine.csv"
+
 mkdir -p "$out_folder"
+cp configuration.h "$configuration_h_backup1"
+"$selfdir/../../configuration/set_cache.sh"
+
+function cleanup()
+{
+	make clean
+	mv $configuration_h_backup1 configuration.h
+	rm -f "$hyperfine_csv"
+	exit
+}
+
+trap cleanup SIGINT
 
 function collect_data () {
 	base=$1
-	n_min=$2
-	n_max=$3
+	u_min=$2
+	u_max=$3
 	part_max=$4
 	out_file=$5
 
@@ -59,20 +78,34 @@ function collect_data () {
 	done
 	let "len--"
 
-	for n in $(seq $n_min 2 $n_max); do
+	u="0"
+	while [ 1 -eq "$(echo $u '<' $u_max | bc)" ]; do
+		# Handle u values
+		if [ "$u" == "0" ]; then
+			# first loop; initialize
+			u="$u_min"
+		else
+			# nth loop; iterate
+			u="$(echo $u '*' $base '*' $base | bc)"
+		fi
+		if [ 1 -eq "$(echo $u '<' $u_max | bc)" ]; then
+			# last loop; cap
+			u="$u_max"
+		fi
+
 		for i in $(seq 0 $len); do
 			if (( ${l_skip[$i]} == 1 )); then
 				continue
 			fi
 
 			"$selfdir/../../configuration/set_cache.sh" "$base" "${l_meth[$i]}" "${l_mult[$i]}" "${l_prod[$i]}"
-			make -j4 > /dev/null
-			hyperfine --warmup 2 "./helsing -n $n" --export-csv tmp.csv > /dev/null 2>&1
-			l_time[$i]=$(awk -F "\"*,\"*" '{print $2}' tmp.csv | awk 'NR>1')
-			l_sdev[$i]=$(awk -F "\"*,\"*" '{print $3}' tmp.csv | awk 'NR>1')
-			rm tmp.csv
+			make -j4 > /dev/null 2>&1
+			hyperfine --warmup 2 "./helsing -l 0 -u $u" --export-csv "$hyperfine_csv" > /dev/null 2>&1
+			l_time[$i]=$(awk -F "\"*,\"*" '{print $2}' "$hyperfine_csv" | awk 'NR>1')
+			l_sdev[$i]=$(awk -F "\"*,\"*" '{print $3}' "$hyperfine_csv" | awk 'NR>1')
+			rm "$hyperfine_csv"
 
-			echo -e "$base\tn$n\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}"
+			echo -e "$base\t$u\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}"
 
 			if [ -z "${l_time[$i]}" ]; then
 				l_skip[$i]=1
@@ -85,7 +118,7 @@ function collect_data () {
 			if (( ${l_skip[$i]} == 1 )); then
 				continue
 			fi
-			min=$(echo "${l_time[$i]} + ${l_sdev[$i]}" | bc)
+			min="$(echo ${l_time[$i]} '+' ${l_sdev[$i]} | bc)"
 			break
 		done
 
@@ -94,8 +127,8 @@ function collect_data () {
 			if (( ${l_skip[$i]} == 1 )); then
 				continue
 			fi
-			if [ 1 -eq "$(echo "${min} > ${l_time[$i]} + ${l_sdev[$i]}" | bc)" ]; then
-				min=$(echo "${l_time[$i]} + ${l_sdev[$i]}" | bc)
+			if [ 1 -eq "$(echo $min '>' ${l_time[$i]} '+' ${l_sdev[$i]} | bc)" ]; then
+				min="$(echo ${l_time[$i]} '+' ${l_sdev[$i]} | bc)"
 			fi
 		done
 
@@ -104,7 +137,7 @@ function collect_data () {
 			if (( ${l_skip[$i]} == 1 )); then
 				continue
 			fi
-			if [ 1 -eq "$(echo "${min} * 2.0 < ${l_time[$i]} - ${l_sdev[$i]}" | bc)" ]; then
+			if [ 1 -eq "$(echo $min '* 2.0 <' ${l_time[$i]} '-' ${l_sdev[$i]} | bc)" ]; then
 				l_skip[$i]=1
 			fi
 		done
@@ -113,33 +146,20 @@ function collect_data () {
 		if (( ${l_skip[$i]} == 1 )); then
 			continue
 		fi
-		echo -e "$base\tn$n\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}" >> $out_file
+		echo -e "$base\t$u\t${l_meth[$i]}\t${l_mult[$i]}\t${l_prod[$i]}\t${l_time[$i]}\t${l_sdev[$i]}" >> $out_file
 	done
 
 }
 
-cp configuration.h configuration.backup1
-"$selfdir/../../configuration/set_cache.sh"
-
-function handle_sigint()
-{
-	rm -f tmp.csv
-	make clean
-	mv configuration.backup1 configuration.h
-	exit
-}
-
-trap handle_sigint SIGINT
-
-echo -e "base\tn\tmethod\tmultiplicand\tproduct"
-while IFS=$'\t' read -r base n_min n_max part_max; do
+echo -e "base\tupper_bound\tmethod\tmultiplicand\tproduct"
+while IFS=$'\t' read -r base u_min u_max part_max; do
 	number='^[[:digit:]]+$'
 	if ! [[ $base =~ $number ]] ; then
 		continue
 	fi
 
 	out_file=$(echo "$out_folder/base$base.csv")
-	collect_data $base $n_min $n_max $part_max $out_file
+	collect_data $base $u_min $u_max $part_max $out_file
 done < "$parameters_file"
 
-mv configuration.backup1 configuration.h
+cleanup

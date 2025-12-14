@@ -54,15 +54,10 @@ while read -r file; do
 	echo "$path2"
 	echo "$name"
 	if [ ! -f "$path2/$name" ]; then
-		continue;
+		continue
 	fi
 
 	while IFS="" read -r line || [ -n "$p" ]; do
-		res=$(echo "$line" | cut -f 4 | grep -w "1")
-		if [ ! -z "$res" ]; then
-			continue
-		fi
-
 		mean[0]="0.0"
 		stddev[0]="inf"
 		variation_coeff[0]="0.0"
@@ -73,25 +68,25 @@ while read -r file; do
 		isin[0]=$(cat "$path1/$name" | grep -e "$line	")
 		isin[1]=$(cat "$path2/$name" | grep -e "$line	")
 		if [ -z "${isin[0]}" -o  -z "${isin[1]}" ]; then
-			continue;
+			continue
 		fi
 
 		if [ ! -z "${isin[0]}" ]; then
 			mean[0]=$(cat "$path1/$name" | grep -e "$line	" | cut -f 6 )
 			stddev[0]=$(cat "$path1/$name" | grep -e "$line	" | cut -f 7 )
-			variation_coeff[0]=$( echo "${stddev[0]} / ${mean[0]}" | bc -l)
+			variation_coeff[0]="$(echo ${stddev[0]} '/' ${mean[0]} | bc -l)"
 		fi
 		if [ ! -z "${isin[1]}" ]; then
 			mean[1]=$(cat "$path2/$name" | grep -e "$line	" | cut -f 6 )
 			stddev[1]=$(cat "$path2/$name" | grep -e "$line	" | cut -f 7 )
-			variation_coeff[1]=$( echo "${stddev[1]} / ${mean[1]}" | bc -l)
+			variation_coeff[1]="$(echo ${stddev[1]} '/' ${mean[1]} | bc -l)"
 		fi
 
-		if [ 1 -eq "$(echo "${variation_coeff[0]} > 0.03" | bc -l)" ]; then
+		if [ 1 -eq "$(echo ${variation_coeff[0]} '> 0.03' | bc -l)" ]; then
 			echo -e "$line\t${RED}SKIPPED, VARIATION COEFFICIENT > 3%${NC}" >&2
 			continue
 		fi
-		if [ 1 -eq "$(echo "${variation_coeff[1]} > 0.03" | bc -l)" ]; then
+		if [ 1 -eq "$(echo ${variation_coeff[1]} '> 0.03' | bc -l)" ]; then
 			echo -e "$line\t${RED}SKIPPED, VARIATION COEFFICIENT > 3%${NC}" >&2
 			continue
 		fi
