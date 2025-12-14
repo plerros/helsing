@@ -16,7 +16,8 @@
 #include "cache.h"
 
 #define BITS_PER_NUMERAL(bits) ((double)(bits))/(double)(BASE - 1)
-#define DIGBASE(bits) (pow(2.0, BITS_PER_NUMERAL(bits)))
+#define DIGBASE_UNSAFE(bits) (pow(2.0, BITS_PER_NUMERAL(bits)))
+#define DIGBASE(bits) ((DIGBASE_UNSAFE(bits) >= ((double) DIGITS_T_MAX)) ? DIGITS_T_MAX : ((digits_t)DIGBASE_UNSAFE(bits)))
 
 digits_t set_dig(fang_t number)
 {
