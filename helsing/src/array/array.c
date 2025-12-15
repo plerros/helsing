@@ -62,7 +62,7 @@ void array_new(
 	if (ll == NULL)
 		return;
 
-	vamp_t size = llnode_getsize(ll);
+	size_t size = llnode_getsize(ll);
 	if (size == 0)
 		return;
 
@@ -76,6 +76,8 @@ void array_new(
 
 	// copy
 	for (vamp_t i = 0; ll != NULL; ll = ll->next) {
+		OPTIONAL_ASSERT(ll->data != NULL);
+
 		memcpy(&(number[i]), ll->data, (ll->logical_size) * sizeof(vamp_t));
 		i += ll->logical_size;
 	}
@@ -90,7 +92,7 @@ void array_new(
 	if (size > 0)
 		fangs[0] = 1;
 	// Combine duplicate entries
-	for (vamp_t i = 1; i < size; i++) {
+	for (size_t i = 1; i < size; i++) {
 		fangs[i] = 1;
 		if (number[i - 1] != number[i])
 			continue;
@@ -106,7 +108,7 @@ void array_new(
 	}
 
 	// Filter out with MIN_FANG_PAIRS & count the results
-	for (vamp_t i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++) {
 		if (fangs[i] < MIN_FANG_PAIRS) {
 			number[i] = 0;
 			fangs[i] = 0;
@@ -140,7 +142,7 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(checksum != NULL);
 
-	for (vamp_t i = 0; i < ptr->size; i++) {
+	for (size_t i = 0; i < ptr->size; i++) {
 		if (ptr->number[i] == 0)
 			continue;
 
@@ -168,7 +170,7 @@ void array_print(struct array *ptr, vamp_t count[COUNT_ARRAY_SIZE], vamp_t (*pre
 	vamp_t local_count[COUNT_ARRAY_SIZE];
 	memcpy(local_count, count, sizeof(local_count));
 
-	for (vamp_t i = 0; i < ptr->size; i++) {
+	for (size_t i = 0; i < ptr->size; i++) {
 		if (ptr->number[i] == 0)
 			continue;
 

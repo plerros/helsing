@@ -15,7 +15,7 @@ struct array
 {
 	vamp_t *number;
 	vamp_t *fangs;
-	vamp_t size;
+	size_t size;
 };
 void array_free(struct array *ptr);
 #else

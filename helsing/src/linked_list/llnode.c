@@ -1,34 +1,33 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2025  Pierro Zachareas
  */
+
+#include <stdlib.h>
+#include <string.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "helper.h"
-
-
-#if VAMPIRE_NUMBER_OUTPUTS
-#include <stdlib.h>
 #include "llnode.h"
 
-#if VAMPIRE_HASH
-#include <openssl/evp.h>
-#endif
-
-static void llnode_new(struct llnode **ptr, struct llnode *next)
+void llnode_new(struct llnode **ptr, size_t element_size, struct llnode *next)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(*ptr == NULL);
+
+	if (ptr == NULL)
+		return;
 
 	struct llnode *new = malloc(sizeof(struct llnode));
 	if (new == NULL)
 		abort();
 
-	new->data = malloc(sizeof(vamp_t) * LINK_SIZE);
-	if (new->data == NULL)
+	new->data = malloc(element_size * LINK_SIZE);
+	if (new->data == NULL && (element_size * LINK_SIZE > 0))
 		abort();
 
+	new->element_size = element_size;
 	new->logical_size = 0;
 	new->next = next;
 	*ptr = new;
@@ -42,34 +41,42 @@ void llnode_free(struct llnode *node)
 	struct llnode *tmp = node;
 	for (struct llnode *i = tmp; tmp != NULL; i = tmp) {
 		tmp = tmp->next;
-		free(i->data);
+		if (i->data != NULL)
+			free(i->data);
 		free(i);
 	}
 }
 
-void llnode_add(struct llnode **ptr, vamp_t value)
+void llnode_add(struct llnode **ptr, void *value)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
-	OPTIONAL_ASSERT(value != 0);
+	OPTIONAL_ASSERT(*ptr != NULL);
 
-	if (*ptr == NULL) {
-		llnode_new(ptr, NULL);
-	}
-	else if ((*ptr)->logical_size >= LINK_SIZE) {
+	if (ptr == NULL)
+		return;
+	if (value == NULL)
+		return;
+
+	if ((*ptr)->logical_size >= LINK_SIZE) {
 		struct llnode *new = NULL;
-		llnode_new(&new, *ptr);
+		llnode_new(&new, (*ptr)->element_size, *ptr);
 		*ptr = new;
 	}
-	(*ptr)->data[(*ptr)->logical_size] = value;
+	size_t offset = (*ptr)->logical_size * (*ptr)->element_size;
+	void *destination = (*ptr)->data + offset;
+
+	memcpy(destination, value, (*ptr)->element_size);
 	(*ptr)->logical_size += 1;
 }
 
-vamp_t llnode_getsize(struct llnode *ptr)
+size_t llnode_getsize(struct llnode *ptr)
 {
-	vamp_t size = 0;
+	if (ptr == NULL)
+		return 0;
+
+	size_t size = 0;
 	for (struct llnode *i = ptr; i != NULL; i = i->next)
 		size += i->logical_size;
 
 	return size;
 }
-#endif /* VAMPIRE_NUMBER_OUTPUTS */
