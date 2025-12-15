@@ -8,16 +8,11 @@
 
 #include "configuration_adv.h"
 
-struct llnode
-{
-	void *data;
-	size_t element_size;
-	size_t logical_size; // The first unoccupied element.
-	struct llnode *next;
-};
-
-void llnode_new(struct llnode **ptr, size_t element_size, struct llnode *next);
-void llnode_free(struct llnode *list);
-void llnode_add(struct llnode **ptr, void *value);
-size_t llnode_getsize(struct llnode *ptr);
+struct llvamp_t;
+void llvamp_new(struct llvamp_t **ptr, struct llvamp_t *next);
+void llvamp_free(struct llvamp_t *node);
+void llvamp_add(struct llvamp_t **ptr, vamp_t value);
+struct llvamp_t *llvamp_pop(struct llvamp_t **ptr);
+vamp_t *llvamp_getdata(struct llvamp_t *ptr);
+size_t llvamp_count_elements(struct llvamp_t *ptr);
 #endif /* HELSING_LLNODE_H */

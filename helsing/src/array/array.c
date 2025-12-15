@@ -52,7 +52,7 @@ int cmpvampt(const void *a, const void *b)
 
 void array_new(
 	struct array **ptr,
-	struct llnode *ll,
+	struct llvamp_t **ll,
 	vamp_t (*count_ptr)[COUNT_ARRAY_SIZE])
 {
 	OPTIONAL_ASSERT(ptr != NULL);
@@ -62,7 +62,7 @@ void array_new(
 	if (ll == NULL)
 		return;
 
-	size_t size = llnode_getsize(ll);
+	size_t size = llvamp_count_elements(*ll);
 	if (size == 0)
 		return;
 
@@ -74,12 +74,16 @@ void array_new(
 	if (fangs == NULL)
 		abort();
 
-	// copy
-	for (vamp_t i = 0; ll != NULL; ll = ll->next) {
-		OPTIONAL_ASSERT(ll->data != NULL);
-
-		memcpy(&(number[i]), ll->data, (ll->logical_size) * sizeof(vamp_t));
-		i += ll->logical_size;
+	// move data
+	for (size_t i = 0; *ll != NULL;)
+	{
+		struct llvamp_t *current = llvamp_pop(ll);
+		size_t logical_size = llvamp_count_elements(current);
+		void *data = llvamp_getdata(current);
+	
+		memcpy(&(number[i]), data, logical_size * sizeof(vamp_t));
+		llvamp_free(current);
+		i += logical_size;
 	}
 
 	// sort

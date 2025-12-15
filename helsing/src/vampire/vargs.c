@@ -391,8 +391,8 @@ static void alg_cache_iterate_all(struct alg_cache *ptr)
 
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
-	struct llnode *ll = NULL;
-	llnode_new(&ll, sizeof(vamp_t), NULL);
+	struct llvamp_t *ll = NULL;
+	llvamp_new(&ll, NULL);
 
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
@@ -445,13 +445,13 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			if (result && (mult_zero || notrailingzero(multiplicand))) {
 				vargs_iterate_local_count(args);
 				vargs_print_results(product, multiplier, multiplicand);
-				llnode_add(&(ll), (void *)(&product));
+				llvamp_add(&(ll), product);
 			}
 			alg_cache_iterate_all(&ag_data);
 			product += product_iterator;
 		}
 	}
-	array_new(&(args->result), ll, &(args->local_count));
-	llnode_free(ll);
+	array_new(&(args->result), &ll, &(args->local_count));
+	llvamp_free(ll);
 	return;
 }
