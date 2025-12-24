@@ -15,7 +15,7 @@ struct array
 {
 	vamp_t *number;
 	vamp_t *fangs;
-	vamp_t size;
+	size_t size;
 };
 void array_free(struct array *ptr);
 #else
@@ -28,11 +28,11 @@ static inline void array_free(__attribute__((unused)) struct array *ptr)
 #endif /* (VAMPIRE_NUMBER_OUTPUTS) && (defined STORE_RESULTS) */
 
 #if VAMPIRE_NUMBER_OUTPUTS
-void array_new(struct array **ptr, struct llnode *ll, vamp_t (*count_ptr)[COUNT_ARRAY_SIZE]);
+void array_new(struct array **ptr, struct llvamp_t **ll, vamp_t (*count_ptr)[COUNT_ARRAY_SIZE]);
 #else 
 static inline void array_new(
 	__attribute__((unused)) struct array **ptr,
-	__attribute__((unused)) struct llnode *ll,
+	__attribute__((unused)) struct llvamp_t **ll,
 	__attribute__((unused)) vamp_t (*count_ptr)[COUNT_ARRAY_SIZE])
 {
 }
