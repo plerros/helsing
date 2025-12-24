@@ -19,7 +19,7 @@ struct llnode
 	struct llnode *next;
 };
 
-void llnode_new(struct llnode **ptr, size_t element_size, struct llnode *next)
+static inline void llnode_new(struct llnode **ptr, size_t element_size, struct llnode *next)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(*ptr == NULL);
@@ -32,7 +32,7 @@ void llnode_new(struct llnode **ptr, size_t element_size, struct llnode *next)
 		abort();
 
 	new->data = malloc(element_size * LINK_SIZE);
-	if (new->data == NULL && (element_size * LINK_SIZE > 0))
+	if (new->data == NULL)
 		abort();
 
 	new->element_size = element_size;
@@ -41,7 +41,7 @@ void llnode_new(struct llnode **ptr, size_t element_size, struct llnode *next)
 	*ptr = new;
 }
 
-void llnode_free(struct llnode *node)
+static inline void llnode_free(struct llnode *node)
 {
 	if (node == NULL)
 		return;
@@ -55,7 +55,7 @@ void llnode_free(struct llnode *node)
 	}
 }
 
-void llnode_add(struct llnode **ptr, void *value)
+static inline void llnode_add(struct llnode **ptr, void *value)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(*ptr != NULL);
@@ -77,7 +77,7 @@ void llnode_add(struct llnode **ptr, void *value)
 	(*ptr)->logical_size += 1;
 }
 
-void *llnode_pop(struct llnode **ptr)
+static inline void *llnode_pop(struct llnode **ptr)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(*ptr != NULL);
@@ -91,14 +91,14 @@ void *llnode_pop(struct llnode **ptr)
 	return ret;
 }
 
-void *llnode_getdata(struct llnode *ptr)
+static inline void *llnode_getdata(struct llnode *ptr)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	return (ptr->data);
 
 }
 
-size_t llnode_count_elements(struct llnode *ptr)
+static inline size_t llnode_count_elements(struct llnode *ptr)
 {
 	if (ptr == NULL)
 		return 0;
@@ -110,7 +110,7 @@ size_t llnode_count_elements(struct llnode *ptr)
 	return size;
 }
 
-size_t llnode_count_bytes(struct llnode *ptr)
+static inline size_t llnode_count_bytes(struct llnode *ptr)
 {
 	return (llnode_count_elements(ptr) * ptr->element_size);
 }
