@@ -102,7 +102,7 @@
 
 	#define COUNT_ARRAY_REMAINDER (MAX_FANG_PAIRS)
 
-	#if (ALG_CACHE && ALF_NORMAL)
+	#if (ALG_CACHE && ALG_NORMAL)
 		#error Only one algorithm can be active at once.
 	#endif
 
