@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2025  Pierro Zachareas
+ * Copyright (c) 2021-2026  Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -8,8 +8,10 @@
 
 #include "configuration.h"
 #include "configuration_adv.h"
+
 #include "helper.h"
 #include "llnode.h"
+#include "msentence.h"
 
 struct llnode
 {
@@ -145,6 +147,40 @@ vamp_t *llvamp_getdata(struct llvamp_t *ptr)
 }
 
 size_t llvamp_count_elements(struct llvamp_t *ptr)
+{
+	return (llnode_count_elements((struct llnode *)ptr));
+}
+
+// msentence_t
+
+typedef struct llnode llmsentence_t;
+
+void llmsentence_new(struct llmsentence_t **ptr, struct llmsentence_t *next)
+{
+	llnode_new((struct llnode **)ptr, sizeof(struct msentence_t), (struct llnode *) next);
+}
+
+void llmsentence_free(struct llmsentence_t *node)
+{
+	llnode_free((struct llnode *)node);
+}
+
+void llmsentence_add(struct llmsentence_t **ptr, struct msentence_t value)
+{
+	llnode_add((struct llnode **)ptr, &value);
+}
+
+struct llmsentence_t *llmsentence_pop(struct llmsentence_t **ptr)
+{
+	return (llnode_pop((struct llnode **) ptr));
+}
+
+struct msentence_t *llmsentence_getdata(struct llmsentence_t *ptr)
+{
+	return ((struct msentence_t *)llnode_getdata((struct llnode *) ptr));
+}
+
+size_t llmsentence_count_elements(struct llmsentence_t *ptr)
 {
 	return (llnode_count_elements((struct llnode *)ptr));
 }

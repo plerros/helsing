@@ -29,13 +29,6 @@ int interval_set(struct interval_t *ptr, struct options_t options)
 	if (options.max != ptr->max)
 		fprintf(stderr, "Adjusted max from %ju to %ju\n", (uintmax_t)(options.max), (uintmax_t)(ptr->max));
 
-	if (cache_ovf_chk(ptr->max)) {
-		fprintf(stderr, "WARNING: the code might produce false positives, ");
-		fprintf(stderr, "please set ALG_CACHE to false, or digits_t to 128-bit.\n");
-		rc = 1;
-		goto out;
-	}
-
 	ptr->complete = 0;
 	if (ptr->complete < ptr->min)
 		ptr->complete = ptr->min - 1;

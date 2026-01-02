@@ -57,21 +57,6 @@ static inline void vargs_print_results(
 }
 #endif /* FANG_PRINT */
 
-#if !(ALG_NORMAL)
-static inline void alg_normal_set(
-	__attribute__((unused)) fang_t multiplier,
-	__attribute__((unused)) length_t (*mult_array)[BASE])
-{
-}
-static inline void alg_normal_check(
-	__attribute__((unused)) length_t mult_array[BASE],
-	__attribute__((unused)) fang_t multiplicand,
-	__attribute__((unused)) vamp_t product,
-	__attribute__((unused)) int *result)
-{
-}
-#endif /* !ALG_NORMAL */
-
 #if !(ALG_CACHE)
 struct alg_cache
 {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
  * Copyright (c) 2012 Jens Kruse Andersen
- * Copyright (c) 2021-2023 Pierro Zachareas
+ * Copyright (c) 2021-2026 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -12,6 +12,7 @@
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "helper.h"
+#include "msentence.h"
 #include "llnode.h"
 #include "array.h"
 #include "cache.h"
@@ -130,8 +131,6 @@ void vargs_reset(struct vargs *args)
 	args->result = NULL;
 }
 
-#if ALG_NORMAL // when false we use the empty functions in vargs.h
-
 static void alg_normal_set(fang_t multiplier, length_t (*mult_array)[BASE])
 {
 	for (digit_t i = 0; i < BASE; i++)
@@ -171,8 +170,6 @@ static void alg_normal_check(
 out:
 	return;
 }
-
-#endif /* ALG_NORMAL */
 
 #if ALG_CACHE // when false we use the empty functions in vargs.h
 
@@ -388,70 +385,103 @@ static void alg_cache_iterate_all(struct alg_cache *ptr)
 
 #endif /* ALG_CACHE */
 
-
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
-	struct llvamp_t *ll = NULL;
-	llvamp_new(&ll, NULL);
+	struct llmsentence_t *ll_msentence = NULL;
+	llmsentence_new(&ll_msentence, NULL);
+	struct llvamp_t *ll_vampire = NULL;
+	llvamp_new(&ll_vampire, NULL);
 
 	fang_t min_sqrt = sqrtv_roof(min);
 	fang_t max_sqrt = sqrtv_floor(max);
+
+	struct msentence_t msentence = {
+		.multiplier   = 0,
+		.multiplicand = 0,
+		.product      = 0
+	};
 
 	struct alg_cache ag_data;
 	alg_cache_init(&ag_data, length(max), args->digptr);
 
 	length_t mult_array[BASE];
 
-	for (fang_t multiplier = fmax; multiplier >= min_sqrt && multiplier > 0; multiplier--) {
-		if (disqualify_mult(multiplier))
+	for (msentence.multiplier = fmax; msentence.multiplier >= min_sqrt && msentence.multiplier > 0; msentence.multiplier--) {
+		if (disqualify_mult(msentence.multiplier))
 			continue;
 
-		fang_t multiplicand = div_roof(min, multiplier); // fmin * fmax <= min - BASE^n
-		bool mult_zero = notrailingzero(multiplier);
+		msentence.multiplicand = div_roof(min, msentence.multiplier); // fmin * fmax <= min - BASE^n
+		bool mult_zero = notrailingzero(msentence.multiplier);
 
 		fang_t multiplicand_max;
-		if (multiplier > max_sqrt)
-			multiplicand_max = max / multiplier;
+		if (msentence.multiplier > max_sqrt)
+			multiplicand_max = max / msentence.multiplier;
 		else
-			multiplicand_max = multiplier;
+			multiplicand_max = msentence.multiplier;
 			// multiplicand <= multiplier: 5267275776 = 72576 * 72576.
 
-		while (multiplicand <= multiplicand_max && congruence_check(multiplier, multiplicand))
-			multiplicand++;
+		while (msentence.multiplicand <= multiplicand_max && congruence_check(msentence.multiplier, msentence.multiplicand))
+			msentence.multiplicand++;
 
-		if (multiplicand > multiplicand_max)
+		if (msentence.multiplicand > multiplicand_max)
 			continue;
 		/*
 		 * If multiplier has n digits, then product_iterator has at most n+1 digits.
 		 */
-		vamp_t product_iterator = multiplier;
+		vamp_t product_iterator = msentence.multiplier;
 		product_iterator *= BASE - 1; // <= (BASE-1) * (2^32)
-		vamp_t product = multiplier;
-		product *= multiplicand; // avoid overflow
+		msentence.product = msentence.multiplier;
+		msentence.product *= msentence.multiplicand; // avoid overflow
 
-		alg_cache_set(&ag_data, multiplier, multiplicand, product, product_iterator);
+		alg_cache_set(&ag_data, msentence.multiplier, msentence.multiplicand, msentence.product, product_iterator);
 
-		alg_normal_set(multiplier, &mult_array);
+		if (ALG_NORMAL == true)
+			alg_normal_set(msentence.multiplier, &mult_array);
 
-		for (; multiplicand <= multiplicand_max; multiplicand += BASE - 1) {
+		for (; msentence.multiplicand <= multiplicand_max; msentence.multiplicand += BASE - 1) {
 			int result = 0;
 
-			alg_normal_check(mult_array, multiplicand, product, &result);
 			alg_cache_check(&ag_data, &result);
+			if (ALG_NORMAL == true)
+				alg_normal_check(mult_array, msentence.multiplicand, msentence.product, &result);
 
-			if (ALG_NORMAL && ALG_CACHE)
-				OPTIONAL_ASSERT(result != 1);
-
-			if (result && (mult_zero || notrailingzero(multiplicand))) {
-				vargs_iterate_local_count(args);
-				vargs_print_results(product, multiplier, multiplicand);
-				llvamp_add(&(ll), product);
+			if (result && (mult_zero || notrailingzero(msentence.multiplicand))) {
+				if (ALG_NORMAL == true)
+					llvamp_add(&(ll_vampire), msentence.product);
+				
+				if (ALG_CACHE == true)
+					llmsentence_add(&(ll_msentence), msentence);
 			}
 			alg_cache_iterate_all(&ag_data);
-			product += product_iterator;
+			msentence.product += product_iterator;
 		}
 	}
-	array_new(&(args->result), &ll, &(args->local_count));
-	llvamp_free(ll);
+	
+	/*
+	 * If we're using ALG_CACHE, this step will filter results for false positives.
+	 */
+	while (ll_msentence != NULL) {
+		struct llmsentence_t *current = llmsentence_pop(&(ll_msentence));
+		size_t logical_size = llmsentence_count_elements(current);
+		struct msentence_t *data = llmsentence_getdata(current);
+	
+		for (size_t i = 0; i < logical_size; i++) {
+			alg_normal_set(data[i].multiplier, &mult_array);
+			
+			int result = 0;
+			alg_normal_check(mult_array, data[i].multiplicand, data[i].product, &result);
+
+			if (result) {
+				vargs_iterate_local_count(args);
+				vargs_print_results(data[i].product, data[i].multiplier, data[i].multiplicand);
+				llvamp_add(&(ll_vampire), data[i].product);
+			}
+		}
+		llmsentence_free(current);
+	}
+
+	array_new(&(args->result), &ll_vampire, &(args->local_count));
+
+	llvamp_free(ll_vampire);
 	return;
 }

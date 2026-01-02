@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2025 Pierro Zachareas
+ * Copyright (c) 2021-2026 Pierro Zachareas
  */
 
 #ifndef HELSING_CONFIG_ADV_H
@@ -101,6 +101,10 @@
 	*/
 
 	#define COUNT_ARRAY_REMAINDER (MAX_FANG_PAIRS)
+
+	#if (ALG_CACHE && ALF_NORMAL)
+		#error Only one algorithm can be active at once.
+	#endif
 
 	#if SAFETY_CHECKS
 		#define OPTIONAL_ASSERT(x) assert(x)

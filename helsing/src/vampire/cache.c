@@ -29,8 +29,6 @@ digits_t set_dig(fang_t number)
 
 	digits_t ret = 0;
 	for (digit_t i = 1; i < BASE; i++) {
-		OPTIONAL_ASSERT(tmp[i] < digbase_active_bits);
-
 		OPTIONAL_ASSERT(DIGITS_T_MAX / digbase_active_bits >= ret);
 		ret *= digbase_active_bits;
 		OPTIONAL_ASSERT(DIGITS_T_MAX - tmp[i] >= ret);
@@ -156,36 +154,6 @@ void cache_free(struct cache *ptr)
 
 	free(ptr->dig);
 	free(ptr);
-}
-
-/*
- * Checks if the number can cause overflow.
- */
-
-bool cache_ovf_chk(vamp_t max)
-{
-	digits_t required_size[BASE];
-	memset(required_size, 0, sizeof(required_size));
-	const digits_t digbase_active_bits = DIGBASE(sizeof(digits_t) * CHAR_BIT);
-
-	for (; max > 0; max /= BASE) {
-		size_t limit = BASE;
-		if (max <= BASE)
-			limit = max;
-		
-		for (size_t i = 0; i < limit; i++) {
-			if (required_size[i] == DIGITS_T_MAX)
-				return true;
-
-			required_size[i]++;
-		}
-	}
-
-	for (size_t i = 0; i < BASE; i++) {
-		if (required_size[i] > digbase_active_bits)
-			return true;
-	}
-	return false;
 }
 
 /*
