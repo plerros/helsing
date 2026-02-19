@@ -222,6 +222,7 @@ struct alg_cache
 	// multiplicand iterator is BASE - 1
 	struct num_part multiplicand[MULTIPLICAND_PARTITIONS];
 	struct num_part product[PRODUCT_PARTITIONS];
+	bool overflow;
 };
 
 static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct cache *cache)
@@ -232,9 +233,8 @@ static inline void alg_cache_init(struct alg_cache *ptr, length_t lenmax, struct
 	if (ptr == NULL)
 		return;
 
-	ptr->digits_array = NULL;
-	if (cache != NULL)
-		ptr->digits_array = cache->dig;
+	ptr->digits_array = cache->dig;
+	ptr->overflow = cache->overflow;
 
 	length_t multiplicand_length =  div_roof(lenmax, 2);
 
@@ -349,6 +349,14 @@ static void alg_cache_check(struct alg_cache *ptr, int *result)
 		(*result) += 1;
 }
 
+static inline bool alg_cache_store_vamp(struct alg_cache *ptr)
+{
+	if (!ALG_CACHE)
+		return false;
+
+	return (!(ptr->overflow));
+}
+
 static inline void alg_cache_iterate(
 	struct num_part *arr,
 	int elements)
@@ -385,6 +393,8 @@ static void alg_cache_iterate_all(struct alg_cache *ptr)
 
 #endif /* ALG_CACHE */
 
+enum vampire_storage {none_e, vampire_e, msentence_e};
+
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	struct llmsentence_t *ll_msentence = NULL;
@@ -405,6 +415,12 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	alg_cache_init(&ag_data, length(max), args->digptr);
 
 	length_t mult_array[BASE];
+
+	int store_to = none_e;
+	if (ALG_NORMAL)
+		store_to = msentence_e;
+	if (ALG_CACHE && alg_cache_store_vamp(&ag_data))
+		store_to = vampire_e;
 
 	for (msentence.multiplier = fmax; msentence.multiplier >= min_sqrt && msentence.multiplier > 0; msentence.multiplier--) {
 		if (disqualify_mult(msentence.multiplier))
@@ -446,11 +462,15 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 				alg_normal_check(mult_array, msentence.multiplicand, msentence.product, &result);
 
 			if (result && (mult_zero || notrailingzero(msentence.multiplicand))) {
-				if (ALG_NORMAL == true)
-					llvamp_add(&(ll_vampire), msentence.product);
-				
-				if (ALG_CACHE == true)
-					llmsentence_add(&(ll_msentence), msentence);
+				switch (store_to) {
+					case msentence_e:
+						llmsentence_add(&(ll_msentence), msentence);
+						break;
+					case vampire_e:
+						llvamp_add(&(ll_vampire), msentence.product);
+						break;
+					default:
+				}
 			}
 			alg_cache_iterate_all(&ag_data);
 			msentence.product += product_iterator;

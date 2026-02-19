@@ -15,10 +15,12 @@ struct cache
 {
 	digits_t *dig;
 	fang_t size;
+	bool overflow;
 };
 digits_t set_dig(fang_t number);
 void cache_new(struct cache **ptr, vamp_t min, vamp_t max);
 void cache_free(struct cache *ptr);
+bool cache_ovf_chk(vamp_t max);
 #else /* !ALG_CACHE */
 struct cache
 {
@@ -35,6 +37,10 @@ static inline void cache_new(
 }
 static inline void cache_free(__attribute__((unused)) struct cache *ptr)
 {
+}
+static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
+{
+	return false;
 }
 #endif /* ALG_CACHE */
 

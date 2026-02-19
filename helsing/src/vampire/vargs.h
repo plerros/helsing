@@ -80,6 +80,10 @@ static inline void alg_cache_check(
 	__attribute__((unused)) int *result)
 {
 }
+static inline bool alg_cache_store_vamp(__attribute__((unused)) struct alg_cache *ptr)
+{
+	return false;
+}
 static inline void alg_cache_iterate_all(__attribute__((unused)) struct alg_cache *ptr)
 {
 }

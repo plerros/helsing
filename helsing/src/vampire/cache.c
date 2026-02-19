@@ -55,6 +55,7 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 	if (new == NULL)
 		abort();
 
+	new->overflow = cache_ovf_chk(max);
 	length_t cs = 0;
 	length_t i = length(min);
 
@@ -154,6 +155,36 @@ void cache_free(struct cache *ptr)
 
 	free(ptr->dig);
 	free(ptr);
+}
+
+/*
+ * Checks if the number can cause overflow.
+ */
+
+bool cache_ovf_chk(vamp_t max)
+{
+	digits_t required_size[BASE];
+	memset(required_size, 0, sizeof(required_size));
+	const digits_t digbase_active_bits = DIGBASE(sizeof(digits_t) * CHAR_BIT);
+
+	for (; max > 0; max /= BASE) {
+		size_t limit = BASE;
+		if (max <= BASE)
+			limit = max;
+		
+		for (size_t i = 0; i < limit; i++) {
+			if (required_size[i] == DIGITS_T_MAX)
+				return true;
+
+			required_size[i]++;
+		}
+	}
+
+	for (size_t i = 0; i < BASE; i++) {
+		if (required_size[i] > digbase_active_bits)
+			return true;
+	}
+	return false;
 }
 
 /*
