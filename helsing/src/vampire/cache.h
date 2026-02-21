@@ -15,6 +15,7 @@ struct cache
 {
 	digits_t *dig;
 	fang_t size;
+	bool overflow;
 };
 digits_t set_dig(fang_t number);
 void cache_new(struct cache **ptr, vamp_t min, vamp_t max);

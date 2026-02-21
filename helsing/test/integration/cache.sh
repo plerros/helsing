@@ -39,7 +39,7 @@ trap handle_sigint SIGINT
 
 for i in $(seq 0 $len); do
 	"$selfdir/../../scripts/configuration/set.sh" BASE "${l_base[$i]}"
-	make -j4 OPTIMIZE=-O2 > /dev/null
+	make -j4 OPTIMIZE=-O2 > /dev/null 2>&1
 	rc=0
 	for n in $n_seq; do
 		./helsing -n "$n" > /dev/null 2>&1

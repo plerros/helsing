@@ -29,8 +29,6 @@ digits_t set_dig(fang_t number)
 
 	digits_t ret = 0;
 	for (digit_t i = 1; i < BASE; i++) {
-		OPTIONAL_ASSERT(tmp[i] < digbase_active_bits);
-
 		OPTIONAL_ASSERT(DIGITS_T_MAX / digbase_active_bits >= ret);
 		ret *= digbase_active_bits;
 		OPTIONAL_ASSERT(DIGITS_T_MAX - tmp[i] >= ret);
@@ -44,7 +42,7 @@ static inline fang_t square(fang_t value)
 {
 	if (value > FANG_MAX / value)
 		return FANG_MAX;
-	
+
 	return (value * value);
 }
 
@@ -57,6 +55,7 @@ void cache_new(struct cache **ptr, vamp_t min, vamp_t max)
 	if (new == NULL)
 		abort();
 
+	new->overflow = cache_ovf_chk(max);
 	length_t cs = 0;
 	length_t i = length(min);
 
@@ -172,7 +171,7 @@ bool cache_ovf_chk(vamp_t max)
 		size_t limit = BASE;
 		if (max <= BASE)
 			limit = max;
-		
+
 		for (size_t i = 0; i < limit; i++) {
 			if (required_size[i] == DIGITS_T_MAX)
 				return true;

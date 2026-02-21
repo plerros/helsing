@@ -209,7 +209,9 @@
 	#if (MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS)
 		#warning MULTIPLICAND_PARTITIONS > PRODUCT_PARTITIONS -- performance will suffer
 	#endif
-
+	#if (ALG_NORMAL && ALG_CACHE)
+		#warning both ALG_NORMAL and ALG_CACHE are enabled -- performance will suffer
+	#endif
 /*
  * BASE:
  *

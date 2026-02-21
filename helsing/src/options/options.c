@@ -310,7 +310,7 @@ void options_free(struct options_t *ptr)
 {
 	if (ptr == NULL)
 		return;
-	
+
 	free(ptr->checkpoint);
 	free(ptr);
 }

@@ -57,7 +57,7 @@ trap handle_sigint SIGINT
 rc=0
 for i in $(seq 0 $len); do
 	"$selfdir/../../scripts/configuration/set_cache.sh" "${l_base[$i]}" "${l_meth[$i]}" "${l_mult[$i]}" "${l_prod[$i]}"
-	make -j4 OPTIMIZE=-O0 > /dev/null
+	make -j4 OPTIMIZE=-O0 > /dev/null 2>&1
 	for n in $n_seq; do
 		if (( $rc == 0 )); then
 			echo -e '\e[1A\e[K'"${l_base[$i]} ${l_meth[$i]} ${l_mult[$i]} ${l_prod[$i]}\t$n"

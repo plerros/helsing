@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2025 Pierro Zachareas
+ * Copyright (c) 2021-2026 Pierro Zachareas
  */
 
 #ifndef HELSING_CONFIG_ADV_H
@@ -54,17 +54,17 @@
 
 	/*
 	 * digits_t
-	 *
-	 * Datatype of the cache used in ALG_CACHE
 	 * 
-	 * On 32-bit systems this can be set to:
-	 * 	typedef uint_least32_t digits_t;
-	 * 	#define DIGITS_T_MAX UINT_LEAST32_MAX
-	 * The performance will improve at the cost of not being able to solve bigger problems.
+	 * Datatype of cached values in ALG_CACHE
+	 *
+	 * Affects performance, not correctness of program output. Specifically
+	 * ALG_CACHE is a two stage process, where stage 1 benefits from fewer
+	 * bits in digits_t and stage 2 benefits from more. By how much depends
+	 * on the args and the configuration.
 	 */
 
-	typedef uint_fast64_t digits_t;
-	#define DIGITS_T_MAX UINT_FAST64_MAX
+	typedef uint64_t digits_t;
+	#define DIGITS_T_MAX UINT64_MAX
 
 /*
  * Helper Preprocessor Macros
