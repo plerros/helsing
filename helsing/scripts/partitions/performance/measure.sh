@@ -46,6 +46,10 @@ function collect_data () {
 	for partition_method in $pm_seq; do
 		for multiplicand in $m_seq; do
 			for product in $p_seq; do
+				if ! [[ $multiplicand < $product ]] ; then
+					continue
+				fi
+
 				l_meth[$len]="$partition_method"
 				l_mult[$len]="$multiplicand"
 				l_prod[$len]="$product"
