@@ -42,7 +42,7 @@ static inline fang_t square(fang_t value)
 {
 	if (value > FANG_MAX / value)
 		return FANG_MAX;
-	
+
 	return (value * value);
 }
 
@@ -171,7 +171,7 @@ bool cache_ovf_chk(vamp_t max)
 		size_t limit = BASE;
 		if (max <= BASE)
 			limit = max;
-		
+
 		for (size_t i = 0; i < limit; i++) {
 			if (required_size[i] == DIGITS_T_MAX)
 				return true;

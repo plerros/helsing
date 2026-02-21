@@ -29,7 +29,7 @@ static inline void array_free(__attribute__((unused)) struct array *ptr)
 
 #if VAMPIRE_NUMBER_OUTPUTS
 void array_new(struct array **ptr, struct llvamp_t **ll, vamp_t (*count_ptr)[COUNT_ARRAY_SIZE]);
-#else 
+#else
 static inline void array_new(
 	__attribute__((unused)) struct array **ptr,
 	__attribute__((unused)) struct llvamp_t **ll,

@@ -262,7 +262,7 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 					 * (previous line): ... [    ] [prev]
 					 * (current  line): ... [left] [now ]
 					 */
-					
+
 					size_t prev = name - count;
 					size_t left = 0;
 					if (not_first_column)

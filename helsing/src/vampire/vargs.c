@@ -381,7 +381,7 @@ static inline void alg_cache_iterate(
 	}
 	for (int i = 1; i < elements - 1; i++)
 		arr[i].number += arr[i].carry;
-	
+
 	arr[elements - 1].number += arr[elements - 1].carry;
 }
 
@@ -476,7 +476,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			msentence.product += product_iterator;
 		}
 	}
-	
+
 	/*
 	 * If we're using ALG_CACHE, this step will filter results for false positives.
 	 */
@@ -484,10 +484,10 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 		struct llmsentence_t *current = llmsentence_pop(&(ll_msentence));
 		size_t logical_size = llmsentence_count_elements(current);
 		struct msentence_t *data = llmsentence_getdata(current);
-	
+
 		for (size_t i = 0; i < logical_size; i++) {
 			alg_normal_set(data[i].multiplier, &mult_array);
-			
+
 			int result = 0;
 			alg_normal_check(mult_array, data[i].multiplicand, data[i].product, &result);
 

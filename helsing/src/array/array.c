@@ -80,7 +80,7 @@ void array_new(
 		struct llvamp_t *current = llvamp_pop(ll);
 		size_t logical_size = llvamp_count_elements(current);
 		void *data = llvamp_getdata(current);
-	
+
 		memcpy(&(number[i]), data, logical_size * sizeof(vamp_t));
 		llvamp_free(current);
 		i += logical_size;
