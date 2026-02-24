@@ -417,7 +417,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	length_t mult_array[BASE];
 
 	int store_to = none_e;
-	if (ALG_NORMAL)
+	if (ALG_NORMAL || ALG_CACHE)
 		store_to = msentence_e;
 	if (ALG_CACHE && alg_cache_store_vamp(&ag_data))
 		store_to = vampire_e;
