@@ -467,6 +467,8 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 						llmsentence_add(&(ll_msentence), msentence);
 						break;
 					case vampire_e:
+						vargs_iterate_local_count(args);
+						vargs_print_results(msentence.product, msentence.multiplier, msentence.multiplicand);
 						llvamp_add(&(ll_vampire), msentence.product);
 						break;
 					default:
