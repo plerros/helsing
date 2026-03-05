@@ -395,6 +395,30 @@ static void alg_cache_iterate_all(struct alg_cache *ptr)
 
 enum vampire_storage {none_e, vampire_e, msentence_e};
 
+static inline void msentence_to_vampire(struct vargs* args, struct llmsentence_t **ll_msentence, struct llvamp_t **ll_vampire)
+{
+	length_t mult_array[BASE];
+	while (*ll_msentence != NULL) {
+		struct llmsentence_t *current = llmsentence_pop(ll_msentence);
+		size_t logical_size = llmsentence_count_elements(current);
+		struct msentence_t *data = llmsentence_getdata(current);
+
+		for (size_t i = 0; i < logical_size; i++) {
+			alg_normal_set(data[i].multiplier, &mult_array);
+
+			int result = 0;
+			alg_normal_check(mult_array, data[i].multiplicand, data[i].product, &result);
+
+			if (result) {
+				vargs_iterate_local_count(args);
+				vargs_print_results(data[i].product, data[i].multiplier, data[i].multiplicand);
+				llvamp_add(ll_vampire, data[i].product);
+			}
+		}
+		llmsentence_free(current);
+	}
+}
+
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 {
 	struct llmsentence_t *ll_msentence = NULL;
@@ -410,6 +434,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 		.multiplicand = 0,
 		.product      = 0
 	};
+	size_t msentence_count = 0;
 
 	struct alg_cache ag_data;
 	alg_cache_init(&ag_data, length(max), args->digptr);
@@ -464,7 +489,13 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 			if (result && (mult_zero || notrailingzero(msentence.multiplicand))) {
 				switch (store_to) {
 					case msentence_e:
+						msentence_count++;
 						llmsentence_add(&(ll_msentence), msentence);
+						if (msentence_count > LLMSENTENCE_LIMIT) {
+							msentence_to_vampire(args, &ll_msentence, &ll_vampire);
+							msentence_count = 0;
+							llmsentence_new(&ll_msentence, NULL);
+						}
 						break;
 					case vampire_e:
 						vargs_iterate_local_count(args);
@@ -482,25 +513,8 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 	/*
 	 * If we're using ALG_CACHE, this step will filter results for false positives.
 	 */
-	while (ll_msentence != NULL) {
-		struct llmsentence_t *current = llmsentence_pop(&(ll_msentence));
-		size_t logical_size = llmsentence_count_elements(current);
-		struct msentence_t *data = llmsentence_getdata(current);
-
-		for (size_t i = 0; i < logical_size; i++) {
-			alg_normal_set(data[i].multiplier, &mult_array);
-
-			int result = 0;
-			alg_normal_check(mult_array, data[i].multiplicand, data[i].product, &result);
-
-			if (result) {
-				vargs_iterate_local_count(args);
-				vargs_print_results(data[i].product, data[i].multiplier, data[i].multiplicand);
-				llvamp_add(&(ll_vampire), data[i].product);
-			}
-		}
-		llmsentence_free(current);
-	}
+	if (ll_msentence != NULL)
+		msentence_to_vampire(args, &ll_msentence, &ll_vampire);
 
 	array_new(&(args->result), &ll_vampire, &(args->local_count));
 

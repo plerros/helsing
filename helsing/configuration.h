@@ -276,6 +276,7 @@
  */
 
 #define LINK_SIZE 100
+#define LLMSENTENCE_LIMIT 10000
 #define SAFETY_CHECKS false
 
 #endif /* HELSING_CONFIG_H */
