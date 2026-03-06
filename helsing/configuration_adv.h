@@ -63,8 +63,8 @@
 	 * on the args and the configuration.
 	 */
 
-	typedef uint64_t digits_t;
-	#define DIGITS_T_MAX UINT64_MAX
+	typedef uint32_t digits_t;
+	#define DIGITS_T_MAX UINT32_MAX
 
 /*
  * Helper Preprocessor Macros
