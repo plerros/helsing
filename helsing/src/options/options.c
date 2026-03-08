@@ -49,6 +49,8 @@ static void buildconf()
 	printf("    MAX_TASK_SIZE=%ju\n", (uintmax_t)MAX_TASK_SIZE);
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
 	printf("    LINK_SIZE=%d\n", LINK_SIZE);
+	printf("    LLMSENTENCE_LIMIT=%d\n", LLMSENTENCE_LIMIT);
+	printf("    TASKBOARD_LIMIT=%d\n", TASKBOARD_LIMIT);
 	printf("    SAFETY_CHECKS=%s\n", (SAFETY_CHECKS ? "true" : "false"));
 }
 
