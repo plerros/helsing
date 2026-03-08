@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2025-2026 Pierro Zachareas
+ * Copyright (c) 2025-2027 Pierro Zachareas
  */
 
 #ifndef HELSING_MSENTENCE_H
