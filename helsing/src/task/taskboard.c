@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2025 Pierro Zachareas
+ * Copyright (c) 2021-2027 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -71,6 +71,21 @@ static vamp_t get_interval_size(struct options_t options, vamp_t lmin, vamp_t lm
 	return interval_size;
 }
 
+static inline void taskboard_set_task(struct taskboard *ptr, size_t index)
+{
+	OPTIONAL_ASSERT(ptr != NULL);
+	OPTIONAL_ASSERT(index >= ptr->todo);
+
+	vamp_t l_bound = ptr->lmin + (ptr->interval_size + 1) * index;
+	vamp_t u_bound = l_bound;
+	if (VAMP_MAX - ptr->interval_size > u_bound)
+		u_bound += ptr->interval_size ;
+	if (u_bound > ptr->lmax)
+		u_bound = ptr->lmax;
+
+	task_new(&(ptr->tasks[index]), l_bound, u_bound);
+}
+
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 {
 	assert(ptr->done == ptr->size);
@@ -93,17 +108,28 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	else
 		ptr->fmax = pow_v(fang_length) - 1; // Max factor value.
 
-	if (ptr->fmax < VAMP_MAX / ptr->fmax) { // Avoid overflow
+	/*
+	 * Adjust lmax -- we can skip values bigger than fmax^2:
+	 * BASE^(2n) - 1 > (BASE^n - 1) ^ 2
+	 */
+	if (
+		(ptr->fmax > 0) // Div zero guard
+		&& (ptr->fmax < VAMP_MAX / ptr->fmax) // Overflow guard
+	) {
 		vamp_t fmaxsquare = ptr->fmax;
 		fmaxsquare *= ptr->fmax;
 		if (fmaxsquare < lmin)
 			return;
 		else if (fmaxsquare < lmax)
-			lmax = fmaxsquare; // Max can be bigger than fmax^2: BASE^(2n) - 1 > (BASE^n - 1) ^ 2
+			lmax = fmaxsquare;
 	}
-	vamp_t interval_size = get_interval_size(ptr->options, lmin, lmax);
 
-	ptr->size = div_roof((lmax - lmin + 1), interval_size + (interval_size < VAMP_MAX));
+	ptr->lmin = lmin;
+	ptr->lmax = lmax;
+	ptr->interval_size = get_interval_size(ptr->options, lmin, lmax);
+
+	ptr->size = div_roof((lmax - lmin + 1), ptr->interval_size + (ptr->interval_size < VAMP_MAX));
+
 	ptr->tasks = malloc(sizeof(struct task *) * ptr->size);
 	if (ptr->tasks == NULL)
 		abort();
@@ -111,30 +137,29 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	for (vamp_t i = 0; i < ptr->size; i++)
 		ptr->tasks[i] = NULL;
 
-	vamp_t x = 0;
-	vamp_t iterator = interval_size;
-	for (vamp_t i = lmin; i <= lmax; i += iterator + 1) {
-		if (lmax - i < interval_size)
-			iterator = lmax - i;
-
-		task_new(&(ptr->tasks[x]), i, i + iterator);
-
-		x++;
-		if (i == lmax)
-			break;
-		if (i + iterator == VAMP_MAX)
-			break;
-	}
-	ptr->tasks[ptr->size - 1]->lmax = lmax;
+	for (vamp_t i = 0; i < ptr->size && i < TASKBOARD_LIMIT; i++)
+		taskboard_set_task(ptr, i);	
 }
 
 struct task *taskboard_get_task(struct taskboard *ptr)
 {
-	struct task *ret = NULL;
-	if (ptr->todo < ptr->size) {
-		ret = ptr->tasks[ptr->todo];
-		ptr->todo += 1;
+	if (ptr->todo >= ptr->size)
+		return NULL;
+
+	size_t todo = ptr->todo;
+
+	if (ptr->tasks[ptr->todo] == NULL) {
+		size_t interval = ptr->size - ptr->todo;
+		if (interval > TASKBOARD_LIMIT)
+			interval = TASKBOARD_LIMIT;
+
+		for (size_t i = 0; i < interval; i++) {
+			taskboard_set_task(ptr, i + ptr->todo);
+		}
+
 	}
+	struct task *ret = ptr->tasks[todo];
+	ptr->todo += 1;
 	return ret;
 }
 
@@ -142,6 +167,7 @@ void taskboard_cleanup(struct taskboard *ptr)
 {
 	while (
 		ptr->done < ptr->size &&
+		ptr->tasks[ptr->done] != NULL &&
 		ptr->tasks[ptr->done]->complete != false)
 	{
 		if (ptr->tasks[ptr->done]->result != NULL) {

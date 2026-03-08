@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021-2025 Pierro Zachareas
+ * Copyright (c) 2021-2027 Pierro Zachareas
  */
 
 #ifndef HELSING_TASKBOARD_H
@@ -19,7 +19,10 @@ struct taskboard
 	vamp_t size; // The size of the tasks array
 	vamp_t todo; // First task that hasn't been accepted.
 	vamp_t done; // Last task that's completed, but isn't yet processed. (print, hash, checksum...)
+	vamp_t lmin; // Copy of the lmin value
+	vamp_t lmax; // Copy of the lmax value
 	fang_t fmax;
+	vamp_t interval_size;
 	vamp_t common_count[COUNT_ARRAY_SIZE];
 	vamp_t common_prev[COUNT_ARRAY_SIZE]; // The last vampire number that got printed out.
 	struct hash *checksum;
