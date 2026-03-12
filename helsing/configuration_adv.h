@@ -109,4 +109,12 @@
 		#define OPTIONAL_ASSERT(x) if(!(x)) {no_args();}
 	#endif
 
+/*
+ * Additional safety checks
+ */
+
+	#if ((MAX_FANG_PAIRS) >= (VAMP_MAX))
+		#error MAX_FANG_PAIRS should be less than VAMP_MAX
+	#endif
+
 #endif /* HELSING_CONFIG_ADV_H */

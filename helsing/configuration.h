@@ -102,7 +102,7 @@
 		#error MAX_FANG_PAIRS > 1 requires VAMPIRE_NUMBER_OUTPUTS
 	#endif
 	#if (MAX_FANG_PAIRS < MIN_FANG_PAIRS)
-		#error MAX_FANG_PAIRS should be higher than MIN_FANG_PAIRS
+		#error MAX_FANG_PAIRS should be bigger than MIN_FANG_PAIRS
 	#endif
 
 #define MEASURE_RUNTIME false
