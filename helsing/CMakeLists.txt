@@ -11,7 +11,7 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "Flags used by the compiler du
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
 
-project(helsing VERSION 1.1.1)
+project(helsing VERSION 1.2.0)
 
 option(ENABLE_LTO "enable link time optimization" OFF)
 
@@ -85,6 +85,7 @@ target_include_directories(helsing PRIVATE
     src/helper
     src/interval
     src/linked_list
+    src/msentence
     src/options
     src/task
     src/thread
