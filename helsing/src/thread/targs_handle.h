@@ -6,7 +6,7 @@
 #ifndef HELSING_TARGS_HANDLE_H
 #define HELSING_TARGS_HANDLE_H
 
-#include <pthread.h>
+#include <threads.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -20,8 +20,8 @@ struct targs_handle
 	struct targs **targs;
 	struct taskboard *progress;
 	struct cache *digptr;
-	pthread_mutex_t *read;
-	pthread_mutex_t *write;
+	mtx_t *read;
+	mtx_t *write;
 };
 
 void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t min, vamp_t max, struct taskboard *progress);

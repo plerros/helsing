@@ -18,12 +18,12 @@ CC := $(shell \
 WARNINGS := -Wall -Wextra
 DEBUG := # -fsanitize=thread
 
-OPTIMIZE := -O2
+OPTIMIZE := -O2 -std=c11
 # If the code is underperforming, try recompiling it with some of these flags:
 # -falign-functions=32 -falign-functions=64 -falign-loops=32 -march=native -mtune=native
 
 LFLAGS := # -Wl,--gc-sections
-LIBS := -lpthread -lm $(shell if $(CC) -dM -E -I$(SRC_DIRS)/configuration.h $(SRC_DIRS)/configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
+LIBS := -lm $(shell if $(CC) -dM -E -I$(SRC_DIRS)/configuration.h $(SRC_DIRS)/configuration_adv.h | grep -q "CHECKSUM_RESULTS"; then echo "-lcrypto"; fi)
 
 SRCS := $(shell find $(SRC_DIRS) -name *.c | sort)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)

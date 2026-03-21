@@ -26,7 +26,7 @@ if (ENABLE_LTO)
     endif ()
 endif ()
 
-add_compile_options(-Wall -Wextra)
+add_compile_options(-Wall -Wextra -std=c11)
 add_compile_options(-march=native)
 
 # re-run cmake if the configurtation files change

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <pthread.h>
+#include <threads.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 	if (load_checkpoint(*options, &interval, progress))
 		goto out;
 
-	pthread_t *threads = malloc(sizeof(pthread_t) * options->threads);
+	thrd_t *threads = malloc(sizeof(thrd_t) * options->threads);
 	if (threads == NULL)
 		abort();
 	struct targs_handle *thhandle = NULL;
@@ -66,9 +66,9 @@ int main(int argc, char *argv[])
 
 		fprintf(stderr, "Checking interval: [%ju, %ju]\n", (uintmax_t)lmin, (uintmax_t)lmax);
 		for (thread_t thread = 0; thread < options->threads; thread++)
-			assert(pthread_create(&threads[thread], NULL, thread_function, (void *)(thhandle->targs[thread])) == 0);
+			assert(thrd_create(&threads[thread], thread_function, (void *)(thhandle->targs[thread])) == thrd_success);
 		for (thread_t thread = 0; thread < options->threads; thread++)
-			pthread_join(threads[thread], 0);
+			thrd_join(threads[thread], 0);
 	}
 	targs_handle_print(thhandle);
 	targs_handle_free(thhandle);
