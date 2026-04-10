@@ -27,10 +27,9 @@ if (ENABLE_LTO)
 endif ()
 
 add_compile_options(-Wall -Wextra)
-add_compile_options(-march=native)
+#add_compile_options(-march=native)
 
-# re-run cmake if the configurtation files change
-
+# Re-run cmake if the configurtation files change
 function(watch)
     set_property(
             DIRECTORY
@@ -38,12 +37,10 @@ function(watch)
             PROPERTY CMAKE_CONFIGURE_DEPENDS ${ARGV}
     )
 endfunction()
-
 watch("${CMAKE_CURRENT_SOURCE_DIR}/configuration.h")
 watch("${CMAKE_CURRENT_SOURCE_DIR}/configuration_adv.h")
 
 # Detect if OpenSSL is required
-
 execute_process(
     COMMAND sh -c "${CMAKE_C_COMPILER} -dM -E -I \"${CMAKE_CURRENT_SOURCE_DIR}configuration.h\" \"${CMAKE_CURRENT_SOURCE_DIR}/configuration_adv.h\" | grep -q \"CHECKSUM_RESULTS\""
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -53,10 +50,10 @@ execute_process(
 if (CHECKSUM EQUAL "0")
     message(STATUS "OpenSSL required")
     set(HELSING_OPENSSL_CRYPTO "OpenSSL::Crypto")
-else()
+else ()
     message(STATUS "OpenSSL optional")
     set(HELSING_OPENSSL_CRYPTO "")
-endif()
+endif ()
 
 find_package(Threads)
 find_package(OpenSSL)
@@ -92,7 +89,11 @@ target_include_directories(helsing PRIVATE
     src/vampire
     )
 target_link_libraries(helsing
-    m
     Threads::Threads
     ${HELSING_OPENSSL_CRYPTO}
     )
+find_library(MATH_LIBRARY m)
+if(MATH_LIBRARY)
+    target_link_libraries(helsing ${MATH_LIBRARY})
+endif()
+

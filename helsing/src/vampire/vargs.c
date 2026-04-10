@@ -503,6 +503,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 						llvamp_add(&(ll_vampire), msentence.product);
 						break;
 					default:
+						break;
 				}
 			}
 			alg_cache_iterate_all(&ag_data);

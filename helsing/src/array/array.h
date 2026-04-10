@@ -21,6 +21,7 @@ void array_free(struct array *ptr);
 #else
 struct array
 {
+	int unused;
 };
 static inline void array_free(__attribute__((unused)) struct array *ptr)
 {

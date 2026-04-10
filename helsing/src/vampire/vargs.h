@@ -60,6 +60,7 @@ static inline void vargs_print_results(
 #if !(ALG_CACHE)
 struct alg_cache
 {
+	int unused;
 };
 static inline void alg_cache_init(
 	__attribute__((unused)) struct alg_cache *ptr,

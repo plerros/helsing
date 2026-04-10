@@ -24,6 +24,7 @@ bool cache_ovf_chk(vamp_t max);
 #else /* !ALG_CACHE */
 struct cache
 {
+	int unused;
 };
 static inline digits_t set_dig(__attribute__((unused)) fang_t number)
 {
@@ -129,6 +130,7 @@ struct partdata_local_t
 
 struct partdata_other_t
 {
+	int unused;
 };
 
 struct partdata_all_t
