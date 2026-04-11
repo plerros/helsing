@@ -73,7 +73,7 @@ static inline void llnode_add(struct llnode **ptr, void *value)
 		*ptr = new;
 	}
 	size_t offset = (*ptr)->logical_size * (*ptr)->element_size;
-	void *destination = (*ptr)->data + offset;
+	void *destination = ((char*)(*ptr)->data) + offset;
 
 	memcpy(destination, value, (*ptr)->element_size);
 	(*ptr)->logical_size += 1;

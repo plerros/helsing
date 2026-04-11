@@ -82,8 +82,8 @@ for base in $b_seq; do
 
 	# Generate an initial estimate of the upper bound by capturing the last
 	# checkpoint within the target runtime
-	u_min="$($selfdir/../timeout.sh $time_u_min -l 0 -u $upper_bound -s $task_size)"
-	u_max="$($selfdir/../timeout.sh $time_u_max -l 0 -u $upper_bound -s $task_size)"
+	u_min=$("$selfdir/../timeout.sh" $time_u_min -l 0 -u $upper_bound -s $task_size)
+	u_max=$("$selfdir/../timeout.sh" $time_u_max -l 0 -u $upper_bound -s $task_size)
 
 	# Loop 1: Generate the initial number range [a, b] for the upper bound.
 	below="$u_max"

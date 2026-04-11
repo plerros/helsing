@@ -21,6 +21,7 @@ void hash_print(struct hash *ptr);
 #else /* VAMPIRE_NUMBER_OUTPUTS && VAMPIRE_HASH */
 struct hash
 {
+	int unused;
 };
 static inline void hash_new(__attribute__((unused)) struct hash **ptr)
 {
