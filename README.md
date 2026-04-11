@@ -3,8 +3,8 @@ Helsing is a command-line program that scans intervals for vampire numbers.
 
 ![helsing_gif](https://user-images.githubusercontent.com/48536508/184532048-42dbfd27-78bd-439f-8700-00e460a3a93c.gif)
 
-The default algorithm has a time complexity of $O(n)$ and a space complexity of
-$O(\sqrt{n})$.
+The default algorithm has a time complexity of $O(u)$ and a space complexity of
+$O(\sqrt{u})$, where $u$ is the upper bound argument `-u`.
 
 In *helsing/configuration.h* you can toggle the algorithms and tune them,
 adjust verbosity, change the numeral base system, and set a fang pairs
@@ -23,7 +23,7 @@ Note that the guide above will install WSL with Ubuntu, so you'll have to follow
 
 On MacOS you'll have to [install homebrew](https://brew.sh/).
 
-## Installation
+## Building
 1. Install dependencies
 	<table>
 		<tr>
