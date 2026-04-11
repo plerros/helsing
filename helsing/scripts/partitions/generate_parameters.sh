@@ -70,6 +70,8 @@ b_seq=$(seq $base_min $base_max)        # numeral base
 echo -e "base\tu_min\tu_max\tpart_max"
 echo -e "base\tu_min\tu_max\tpart_max" > "$out_file"
 
+cmake .
+
 for base in $b_seq; do
 	cp "$configuration_h_backup2" configuration.h
 	"$selfdir/../configuration/set.sh" BASE "$base"

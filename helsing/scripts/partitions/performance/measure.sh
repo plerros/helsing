@@ -25,6 +25,8 @@ esac
 
 mkdir -p "$out_folder"
 
+cmake .
+
 function collect_data () {
 	base=$1
 	upper_bound=$2

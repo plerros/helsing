@@ -32,6 +32,8 @@ mkdir -p "$out_folder"
 cp configuration.h "$configuration_h_backup1"
 "$selfdir/../../configuration/set_cache.sh"
 
+cmake .
+
 function cleanup()
 {
 	make clean
