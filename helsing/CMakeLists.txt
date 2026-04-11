@@ -11,7 +11,10 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "Flags used by the compiler du
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
 
-project(helsing VERSION 1.2.0)
+project(helsing VERSION 1.2.0
+	LANGUAGES
+		C
+)
 
 option(ENABLE_LTO "enable link time optimization" OFF)
 
@@ -27,7 +30,7 @@ if (ENABLE_LTO)
 endif ()
 
 add_compile_options(-Wall -Wextra -std=c11)
-add_compile_options(-march=native)
+#add_compile_options(-march=native)
 
 # re-run cmake if the configurtation files change
 
@@ -96,3 +99,7 @@ target_link_libraries(helsing
     Threads::Threads
     ${HELSING_OPENSSL_CRYPTO}
     )
+find_library(STDTHREADS_LIBRARY stdthreads)
+if(STDTHREADS_LIBRARY)
+    target_link_libraries(helsing ${STDTHREADS_LIBRARY})
+endif()
