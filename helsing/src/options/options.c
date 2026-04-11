@@ -9,7 +9,6 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h> // isdigit
-#include <getopt.h>
 #include <unistd.h>
 
 #include "configuration.h"
@@ -152,80 +151,47 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 #endif
 
 	int rc = 0;
-	static int buildconf_flag = 0;
-	static int help_flag = 0;
 	static int display_progress = 0;
 	static int dry_run = 0;
 	bool min_is_set = false;
 	bool max_is_set = false;
 
-	int c;
-	while (1) {
-		static struct option long_options[] = {
-			{"buildconf", no_argument, &buildconf_flag, 1},
-			{"help", no_argument, &help_flag, 1},
-			{"progress", no_argument, &display_progress, 1},
-			{"checkpoint", required_argument, NULL, 'c'},
-			{"dry-run", no_argument, &dry_run, 1},
-			{"lower bound", required_argument, NULL, 'l'},
-			{"n digits", required_argument, NULL, 'n'},
-			{"manual task size", required_argument, NULL, 's'},
-			{"threads", required_argument, NULL, 't'},
-			{"upper bound", required_argument, NULL, 'u'},
-			{NULL, 0, NULL, 0}
-		};
-		int option_index = 0;
-
-		c = getopt_long(argc, argv, "c:l:n:s:t:u:", long_options, &option_index);
-
-		// Detect end of the options
-		if (c == -1)
-			break;
-
-		if (buildconf_flag) {
-			buildconf();
-			rc = 1;
-			goto out;
-		}
-		if (help_flag) {
-			help();
-			rc = 1;
-			goto out;
-		}
-
-		switch (c) {
-			case 0:
+	enum parametrized_flags {pf_none, pf_c, pf_l, pf_n, pf_s, pf_t, pf_u};
+	int read_parameter = pf_none;
+	for (int i = 1; i < argc; i++) {
+		switch (read_parameter) {
+			case pf_none:
 				break;
-
-			case 'c':
+			case pf_c:
 				if (new->checkpoint != NULL) {
 					help();
 					rc = 1;
 				} else {
-					size_t len = strlen(optarg) + 1;
+					size_t len = strlen(argv[i]) + 1;
 					new->checkpoint = malloc(len);
 					if (new->checkpoint == NULL)
 						abort();
-					strcpy(new->checkpoint, optarg);
+					strcpy(new->checkpoint, argv[i]);
 				}
 				break;
 
-			case 'l':
+			case pf_l:
 				if (min_is_set) {
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, VAMP_MAX, &(new->min));
+					rc = strtov(argv[i], 0, VAMP_MAX, &(new->min));
 					min_is_set = true;
 				}
 				break;
-			case 'n':
+
+			case pf_n:
 				if (min_is_set || max_is_set) {
 					help();
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(optarg, 1, length(VAMP_MAX), &tmp);
+					rc = strtov(argv[i], 1, length(VAMP_MAX), &tmp);
 					if (rc)
 						break;
 					new->min = pow_v(tmp - 1);
@@ -234,55 +200,79 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					max_is_set = true;
 				}
 				break;
-			case 's':
+
+			case pf_s:
 				if (new->manual_task_size != 0) {
 					help();
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(optarg, 1, VAMP_MAX, &tmp);
+					rc = strtov(argv[i], 1, VAMP_MAX, &tmp);
 					if (rc)
 						break;
 					new->manual_task_size = tmp;
 				}
 				break;
-			case 't':
+
+			case pf_t:
 				{
 					vamp_t tmp;
-					rc = strtov(optarg, 1, THREAD_T_MAX, &tmp);
+					rc = strtov(argv[i], 1, THREAD_T_MAX, &tmp);
 					if (rc)
 						break;
 					new->threads = tmp;
 				}
 				break;
-			case 'u':
+
+			case pf_u:
 				if (max_is_set) {
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(optarg, 0, VAMP_MAX, &(new->max));
+					rc = strtov(argv[i], 0, VAMP_MAX, &(new->max));
 					max_is_set = true;
 				}
-				break;
-			case '?':
-				rc = 1;
 				break;
 
 			default:
 				abort();
 		}
+		if (read_parameter == pf_none) {
+			if (strcmp(argv[i], "--buildconf") == 0) {
+				buildconf();
+				rc = 1;
+			}
+			else if (strcmp(argv[i], "--help") == 0) {
+				help();
+				rc = 1;
+			}
+			else if (strcmp(argv[i], "-c") == 0) {
+				read_parameter = pf_c;
+			}
+			else if (strcmp(argv[i], "-l") == 0) {
+				read_parameter = pf_l;
+			}
+			else if (strcmp(argv[i], "-n") == 0) {
+				read_parameter = pf_n;
+			}
+			else if (strcmp(argv[i], "-s") == 0) {
+				read_parameter = pf_s;
+			}
+			else if (strcmp(argv[i], "-t") == 0) {
+				read_parameter = pf_t;
+			}
+			else if (strcmp(argv[i], "-u") == 0) {
+				read_parameter = pf_u;
+			}
+			else {
+				printf ("non-option ARGV-elements: %s\n", argv[i]);
+			}
+		} else {
+			read_parameter = pf_none;
+		}
+
 		if (rc)
 			goto out;
-	}
-
-	if (optind < argc) {
-		printf ("non-option ARGV-elements: ");
-		while (optind < argc)
-			printf ("%s ", argv[optind++]);
-
-		putchar ('\n');
-		rc = 1;
-		goto out;
 	}
 
 	if (min_is_set ^ max_is_set) {
@@ -303,6 +293,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 		new->display_progress = true;
 	if (dry_run)
 		new->dry_run = true;
+
 out:
 	(*ptr) = new;
 	return rc;
