@@ -25,6 +25,12 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 			<td><b>Optional</b></td>
 		</tr>
 		<tr>
+			<td>Windows</td>
+			<td>-</td>
+			<td>MSVC</td>
+			<td>-</td>
+		</tr>
+		<tr>
 			<td>MacOS</td>
 			<td><code>brew install</code></td>
 			<td rowspan="5"><code>git gcc cmake</code></td>
@@ -70,6 +76,10 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 		<tr>
 			<td><b>Platform</b></td>
 			<td><b>Compile</b></td>
+		</tr>
+		<tr>
+			<td>Windows</td>
+			<td><code>mkdir build & cd build & cmake .. & cmake --build . --config Release</code></td>
 		</tr>
 		<tr>
 			<td>MacOS</td>

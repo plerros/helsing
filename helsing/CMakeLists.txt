@@ -4,7 +4,7 @@ if (MSVC)
     set(O_SPEED "/O2")
     set(O_SIZE "/Os")
     set(DEBUG "/Zi")
-    add_compile_options(/std:c11 /Wall /W4)
+    add_compile_options(/std:clatest /Wall /W4)
 else ()
     set(O_SPEED "-O2")
     set(O_SIZE "-Os")
@@ -12,16 +12,16 @@ else ()
 
     # If the code is underperforming, try recompiling it with some of these flags:
     # -falign-functions=32 -falign-functions=64 -falign-loops=32 -march=native -mtune=native
-    add_compile_options(-std=c11 -Wall -Wextra)
+    add_compile_options(-std=c23 -Wall -Wextra)
 endif ()
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 set(MESSAGE "Flags used by the compiler during release builds.")
-set(CMAKE_C_FLAGS_RELEASE          "-O2"    CACHE STRING ${MESSAGE} FORCE)
-set(CMAKE_C_FLAGS_MINSIZEREL       "-Os"    CACHE STRING ${MESSAGE} FORCE)
-set(CMAKE_C_FLAGS_RELWITHDEBINFO   "-O2 -g" CACHE STRING ${MESSAGE} FORCE)
+set(CMAKE_C_FLAGS_RELEASE          "${O_SPEED}"          CACHE STRING ${MESSAGE} FORCE)
+set(CMAKE_C_FLAGS_MINSIZEREL       "${O_SIZE}"           CACHE STRING ${MESSAGE} FORCE)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO   "${O_SPEED} ${DEBUG}" CACHE STRING ${MESSAGE} FORCE)
 
 project(helsing VERSION 1.2.0
 	LANGUAGES
