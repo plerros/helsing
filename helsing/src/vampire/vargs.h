@@ -44,9 +44,7 @@ static inline void vargs_print_results(
 	fang_t multiplier,
 	fang_t multiplicand)
 {
-	flockfile(stdout);
 	printf("%ju = %ju x %ju\n",(uintmax_t)product, (uintmax_t)multiplier, (uintmax_t)multiplicand);
-	funlockfile(stdout);
 }
 #else /* FANG_PRINT */
 static inline void vargs_print_results(

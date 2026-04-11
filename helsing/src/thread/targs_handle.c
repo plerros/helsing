@@ -4,7 +4,7 @@
  */
 
 #include <stdlib.h>
-#include <pthread.h>
+#include <threads.h>
 #include <stdio.h>
 
 #include "configuration.h"
@@ -33,17 +33,17 @@ void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_
 	if (new->targs == NULL)
 		abort();
 
-	new->read = malloc(sizeof(pthread_mutex_t));
+	new->read = malloc(sizeof(mtx_t));
 	if (new->read == NULL)
 		abort();
 
-	pthread_mutex_init(new->read, NULL);
+	mtx_init(new->read, mtx_plain);
 
-	new->write = malloc(sizeof(pthread_mutex_t));
+	new->write = malloc(sizeof(mtx_t));
 	if (new->write == NULL)
 		abort();
 
-	pthread_mutex_init(new->write, NULL);
+	mtx_init(new->write, mtx_plain);
 
 	for (thread_t thread = 0; thread < new->options.threads; thread++) {
 		new->targs[thread] = NULL;
@@ -57,9 +57,9 @@ void targs_handle_free(struct targs_handle *ptr)
 	if (ptr == NULL)
 		return;
 
-	pthread_mutex_destroy(ptr->read);
+	mtx_destroy(ptr->read);
 	free(ptr->read);
-	pthread_mutex_destroy(ptr->write);
+	mtx_destroy(ptr->write);
 	free(ptr->write);
 	cache_free(ptr->digptr);
 

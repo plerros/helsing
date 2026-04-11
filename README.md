@@ -28,38 +28,41 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 	<table>
 		<tr>
 			<td><b>Platform</b></td>
-			<td><b>Install</b></td>
-			<td><b>Install optional</b></td>
+			<td><b>Install Command</b></td>
+			<td><b>Packages</b></td>
+			<td><b>Optional</b></td>
 		</tr>
 		<tr>
 			<td>MacOS</td>
-			<td><code>brew install git gcc gmake findutils</code></td>
-			<td><code><strike>brew install openssl</strike></code> (broken)</td>
+			<td><code>brew install</code></td>
+			<td rowspan="5"><code>git gcc cmake</code></td>
+			<td><code><strike>openssl</strike></code> (broken)</td>
 		</tr>
 		<tr>
 			<td>Debian/Ubuntu</td>
-			<td><code>sudo apt install git gcc make findutils</code></td>
-			<td><code>sudo apt install libssl-dev</code></td>
+			<td><code>sudo apt install</code></td>
+			<td><code>libssl-dev</code></td>
 		</tr>
 		<tr>
 			<td>Fedora/RHEL</td>
-			<td><code>sudo dnf install git gcc make findutils</code></td>
-			<td><code>sudo dnf install openssl-devel</code></td>
+			<td><code>sudo dnf install</code></td>
+			<td><code>openssl-devel</code></td>
 		</tr>
 		<tr>
 			<td>FreeBSD:</td>
-			<td><code>pkg install git gcc gmake findutils</code></td>
-			<td><code>pkg install openssl-devel</code></td>
+			<td><code>pkg install</code></td>
+			<td><code>openssl-devel</code></td>
 		</tr>
 		<tr>
 			<td>HaikuOS</td>
-			<td><code>pkgman install git gcc make findutils</code></td>
+			<td><code>pkgman install</code></td>
 			<td>(pre-installed)</td>
 		</tr>
 		<tr>
 			<td>Openindiana</td>
-			<td><code>pkg install git gcc gmake findutils</code></td>
-			<td><code>pkg install library/security/openssl-11</code></td>
+			<td><code>pkg install</code></td>
+			<td><code>git gcc-14 cmake </code></td>
+			<td><code>library/security/openssl-3</code></td>
 		</tr>
 	</table>
 	You can also use clang instead of gcc
@@ -78,27 +81,22 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 		</tr>
 		<tr>
 			<td>MacOS</td>
-			<td><code>gmake</code></td>
+			<td rowspan="6"><code>mkdir build; cd build; cmake..; make</code></td>
 		</tr>
 		<tr>
 			<td>Debian/Ubuntu</td>
-			<td><code>make</code></td>
 		</tr>
 		<tr>
 			<td>Fedora/RHEL</td>
-			<td><code>make</code></td>
 		</tr>
 		<tr>
 			<td>FreeBSD:</td>
-			<td><code>gmake</code></td>
 		</tr>
 		<tr>
 			<td>HaikuOS</td>
-			<td><code>make</code></td>
 		</tr>
 		<tr>
 			<td>Openindiana</td>
-			<td><code>gmake</code></td>
 		</tr>
 	</table>
 

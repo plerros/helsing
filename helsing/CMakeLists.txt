@@ -11,7 +11,10 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "Flags used by the compiler du
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
 
-project(helsing VERSION 1.2.0)
+project(helsing VERSION 1.2.0
+	LANGUAGES
+		C
+)
 
 option(ENABLE_LTO "enable link time optimization" OFF)
 
@@ -26,7 +29,7 @@ if (ENABLE_LTO)
     endif ()
 endif ()
 
-add_compile_options(-Wall -Wextra)
+add_compile_options(-Wall -Wextra -std=c11)
 #add_compile_options(-march=native)
 
 # Re-run cmake if the configurtation files change
@@ -96,4 +99,7 @@ find_library(MATH_LIBRARY m)
 if(MATH_LIBRARY)
     target_link_libraries(helsing ${MATH_LIBRARY})
 endif()
-
+find_library(STDTHREADS_LIBRARY stdthreads)
+if(STDTHREADS_LIBRARY)
+    target_link_libraries(helsing ${STDTHREADS_LIBRARY})
+endif()

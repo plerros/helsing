@@ -6,7 +6,7 @@
 #ifndef HELSING_TARGS_H
 #define HELSING_TARGS_H
 
-#include <pthread.h>
+#include <threads.h>
 #include <stdbool.h>
 
 #include "configuration.h"
@@ -20,8 +20,8 @@
 
 struct targs
 {
-	pthread_mutex_t *read;
-	pthread_mutex_t *write;
+	mtx_t *read;
+	mtx_t *write;
 	struct taskboard *progress;
 	double	runtime;
 	struct cache *digptr;
@@ -35,14 +35,14 @@ struct targs
 
 void targs_new(
 	struct targs **ptr,
-	pthread_mutex_t *read,
-	pthread_mutex_t *write,
+	mtx_t *read,
+	mtx_t *write,
 	struct taskboard *progress,
 	struct cache *digptr,
 	bool dry_run);
 
 void targs_free(struct targs *ptr);
-void *thread_function(void *void_args);
+int thread_function(void *void_args);
 
 #if MEASURE_RUNTIME
 static inline void targs_new_total(struct targs *ptr, vamp_t total)
