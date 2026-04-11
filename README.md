@@ -81,7 +81,7 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 		</tr>
 		<tr>
 			<td>MacOS</td>
-			<td rowspan="6"><code>mkdir build; cd build; cmake..; make</code></td>
+			<td rowspan="6"><code>mkdir build; cd build; cmake ..; make</code></td>
 		</tr>
 		<tr>
 			<td>Debian/Ubuntu</td>
