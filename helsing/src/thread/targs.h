@@ -53,16 +53,16 @@ void thread_timer_start(struct targs *ptr);
 void thread_timer_stop(struct targs *ptr);
 #else /* MEASURE_RUNTIME */
 static inline void targs_new_total(
-	__attribute__((unused)) struct targs *ptr,
-	__attribute__((unused)) vamp_t total)
+	ATTR_UNUSED struct targs *ptr,
+	ATTR_UNUSED vamp_t total)
 {
 }
 static inline void thread_timer_start(
-	__attribute__((unused)) struct targs *ptr)
+	ATTR_UNUSED struct targs *ptr)
 {
 }
 static inline void thread_timer_stop(
-	__attribute__((unused)) struct targs *ptr)
+	ATTR_UNUSED struct targs *ptr)
 {
 }
 #endif /* MEASURE_RUNTIME */

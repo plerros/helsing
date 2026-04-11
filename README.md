@@ -11,14 +11,6 @@ adjust verbosity, change the numeral base system, and set a fang pairs
 filter.
 Be sure to read the documentation.
 
-## Windows Preparation
-
-Helsing uses posix threads, and since Windows isn't posix compatible, you'll
-need to [install WSL](https://docs.microsoft.com/en-us/windows/wsl/install).
-
-Note that the guide above will install WSL with Ubuntu, so you'll have to follow the Ubuntu instructions.
-
-
 ## MacOS Preparation
 
 On MacOS you'll have to [install homebrew](https://brew.sh/).

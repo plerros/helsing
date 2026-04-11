@@ -26,20 +26,20 @@ struct cache
 {
 	int unused;
 };
-static inline digits_t set_dig(__attribute__((unused)) fang_t number)
+static inline digits_t set_dig(ATTR_UNUSED fang_t number)
 {
 	return 0;
 }
 static inline void cache_new(
-	__attribute__((unused)) struct cache **ptr,
-	__attribute__((unused)) vamp_t min,
-	__attribute__((unused)) vamp_t max)
+	ATTR_UNUSED struct cache **ptr,
+	ATTR_UNUSED vamp_t min,
+	ATTR_UNUSED vamp_t max)
 {
 }
-static inline void cache_free(__attribute__((unused)) struct cache *ptr)
+static inline void cache_free(ATTR_UNUSED struct cache *ptr)
 {
 }
-static inline bool cache_ovf_chk(__attribute__((unused)) vamp_t max)
+static inline bool cache_ovf_chk(ATTR_UNUSED vamp_t max)
 {
 	return false;
 }
@@ -143,7 +143,7 @@ struct partdata_all_t
 };
 
 // Semi-Constant & Semi-Global
-__attribute__((const))
+ATTR_CONST
 length_t part_scsg_rl(
 	struct partdata_constant_t data_const,
 	struct partdata_global_t data_glob);
