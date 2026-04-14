@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.13)
 
+project(helsing VERSION 1.2.0
+	LANGUAGES
+		C
+)
+
 if (MSVC)
     set(O_SPEED "/O2")
     set(O_SIZE "/Os")
@@ -22,11 +27,6 @@ set(MESSAGE "Flags used by the compiler during release builds.")
 set(CMAKE_C_FLAGS_RELEASE          "${O_SPEED}"          CACHE STRING ${MESSAGE} FORCE)
 set(CMAKE_C_FLAGS_MINSIZEREL       "${O_SIZE}"           CACHE STRING ${MESSAGE} FORCE)
 set(CMAKE_C_FLAGS_RELWITHDEBINFO   "${O_SPEED} ${DEBUG}" CACHE STRING ${MESSAGE} FORCE)
-
-project(helsing VERSION 1.2.0
-	LANGUAGES
-		C
-)
 
 option(ENABLE_LTO "enable link time optimization" OFF)
 if (ENABLE_LTO)
