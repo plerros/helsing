@@ -9,7 +9,11 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h> // isdigit
-#include <unistd.h>
+#if (__has_include("unistd.h"))
+	#include <unistd.h>
+#elif (_WIN32)
+	#include <windows.h>
+#endif
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -148,8 +152,12 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 	new->max = 0;
 	new->checkpoint = NULL;
 
-#ifdef _SC_NPROCESSORS_ONLN
+#if defined(_SC_NPROCESSORS_ONLN)
 	new->threads = sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(_WIN32)
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	new->threads = sysinfo.dwNumberOfProcessors;
 #endif
 
 	int rc = 0;

@@ -25,7 +25,7 @@ struct array
 {
 	int unused;
 };
-static inline void array_free(__attribute__((unused)) struct array *ptr)
+static inline void array_free(ATTR_UNUSED struct array *ptr)
 {
 }
 #endif /* (VAMPIRE_NUMBER_OUTPUTS) && (defined STORE_RESULTS) */
@@ -34,9 +34,9 @@ static inline void array_free(__attribute__((unused)) struct array *ptr)
 void array_new(struct array **ptr, struct llvamp_t **ll, vamp_t (*count_ptr)[COUNT_ARRAY_SIZE]);
 #else
 static inline void array_new(
-	__attribute__((unused)) struct array **ptr,
-	__attribute__((unused)) struct llvamp_t **ll,
-	__attribute__((unused)) vamp_t (*count_ptr)[COUNT_ARRAY_SIZE])
+	ATTR_UNUSED struct array **ptr,
+	ATTR_UNUSED struct llvamp_t **ll,
+	ATTR_UNUSED vamp_t (*count_ptr)[COUNT_ARRAY_SIZE])
 {
 }
 #endif /* VAMPIRE_NUMBER_OUTPUTS */
@@ -45,8 +45,8 @@ static inline void array_new(
 void array_checksum(struct array *ptr, struct hash *checksum);
 #else
 static inline void array_checksum(
-	__attribute__((unused)) struct array *ptr,
-	__attribute__((unused)) struct hash *checksum)
+	ATTR_UNUSED struct array *ptr,
+	ATTR_UNUSED struct hash *checksum)
 {
 }
 #endif /* (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH) */
@@ -59,10 +59,10 @@ void array_print(
 	vamp_t (*prev)[COUNT_ARRAY_SIZE]);
 #else
 static inline void array_print(
-	__attribute__((unused)) struct array *ptr,
-	__attribute__((unused)) mtx_t *stdout_mtx,
-	__attribute__((unused)) vamp_t count[COUNT_ARRAY_SIZE],
-	__attribute__((unused)) vamp_t (*prev)[COUNT_ARRAY_SIZE])
+	ATTR_UNUSED struct array *ptr,
+	ATTR_UNUSED mtx_t *stdout_mtx,
+	ATTR_UNUSED vamp_t count[COUNT_ARRAY_SIZE],
+	ATTR_UNUSED vamp_t (*prev)[COUNT_ARRAY_SIZE])
 {
 }
 #endif /* (VAMPIRE_NUMBER_OUTPUTS) && (defined PRINT_RESULTS) */

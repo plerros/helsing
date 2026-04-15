@@ -5,6 +5,8 @@
 #ifndef HELSING_HASH_H
 #define HELSING_HASH_H
 
+#include "configuration_adv.h"
+
 #if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)
 #include <stdint.h>
 #include <openssl/evp.h>
@@ -23,13 +25,13 @@ struct hash
 {
 	int unused;
 };
-static inline void hash_new(__attribute__((unused)) struct hash **ptr)
+static inline void hash_new(ATTR_UNUSED struct hash **ptr)
 {
 }
-static inline void hash_free(__attribute__((unused)) struct hash *ptr)
+static inline void hash_free(ATTR_UNUSED struct hash *ptr)
 {
 }
-static inline void hash_print(__attribute__((unused)) struct hash *ptr)
+static inline void hash_print(ATTR_UNUSED struct hash *ptr)
 {
 }
 #endif /* VAMPIRE_NUMBER_OUTPUTS && VAMPIRE_HASH */

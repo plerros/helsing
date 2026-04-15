@@ -36,7 +36,7 @@ static inline void vargs_iterate_local_count(struct vargs *ptr)
 }
 #else /* FANG_PAIR_OUTPUTS */
 static inline void vargs_iterate_local_count(
-	__attribute__((unused)) struct vargs *ptr)
+	ATTR_UNUSED struct vargs *ptr)
 {
 }
 #endif /* FANG_PAIR_OUTPUTS */
@@ -54,10 +54,10 @@ static inline void vargs_print_results(
 }
 #else /* FANG_PRINT */
 static inline void vargs_print_results(
-	__attribute__((unused)) mtx_t *stdout_mtx,
-	__attribute__((unused)) vamp_t product,
-	__attribute__((unused)) fang_t multiplier,
-	__attribute__((unused)) fang_t multiplicand)
+	ATTR_UNUSED mtx_t *stdout_mtx,
+	ATTR_UNUSED vamp_t product,
+	ATTR_UNUSED fang_t multiplier,
+	ATTR_UNUSED fang_t multiplicand)
 {
 }
 #endif /* FANG_PRINT */
@@ -68,29 +68,29 @@ struct alg_cache
 	int unused;
 };
 static inline void alg_cache_init(
-	__attribute__((unused)) struct alg_cache *ptr,
-	__attribute__((unused)) fang_t mod,
-	__attribute__((unused)) struct cache *cache)
+	ATTR_UNUSED struct alg_cache *ptr,
+	ATTR_UNUSED fang_t mod,
+	ATTR_UNUSED struct cache *cache)
 {
 }
 static inline void alg_cache_set(
-	__attribute__((unused)) struct alg_cache *ptr,
-	__attribute__((unused)) fang_t multiplier,
-	__attribute__((unused)) fang_t multiplicand,
-	__attribute__((unused)) vamp_t product,
-	__attribute__((unused)) vamp_t product_iterator)
+	ATTR_UNUSED struct alg_cache *ptr,
+	ATTR_UNUSED fang_t multiplier,
+	ATTR_UNUSED fang_t multiplicand,
+	ATTR_UNUSED vamp_t product,
+	ATTR_UNUSED vamp_t product_iterator)
 {
 }
 static inline void alg_cache_check(
-	__attribute__((unused)) struct alg_cache *ptr,
-	__attribute__((unused)) int *result)
+	ATTR_UNUSED struct alg_cache *ptr,
+	ATTR_UNUSED int *result)
 {
 }
-static inline bool alg_cache_store_vamp(__attribute__((unused)) struct alg_cache *ptr)
+static inline bool alg_cache_store_vamp(ATTR_UNUSED struct alg_cache *ptr)
 {
 	return false;
 }
-static inline void alg_cache_iterate_all(__attribute__((unused)) struct alg_cache *ptr)
+static inline void alg_cache_iterate_all(ATTR_UNUSED struct alg_cache *ptr)
 {
 }
 #endif /* !ALG_CACHE */

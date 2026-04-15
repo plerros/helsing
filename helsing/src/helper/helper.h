@@ -13,12 +13,12 @@
 
 void no_args();
 bool willoverflow(bimax_t x, bimax_t limit, digit_t digit);
-__attribute__((const)) length_t length(bimax_t x);
+ATTR_CONST length_t length(bimax_t x);
 void printany(FILE *fp, bimax_t value);
-__attribute__((const)) bimax_t pow_any(length_t exponent);
-__attribute__((const)) vamp_t pow_v(length_t exponent);
+ATTR_CONST bimax_t pow_any(length_t exponent);
+ATTR_CONST vamp_t pow_v(length_t exponent);
 vamp_t get_min(vamp_t min, vamp_t max);
 vamp_t get_max(vamp_t min, vamp_t max);
-__attribute__((const)) vamp_t div_roof(vamp_t x, vamp_t y);
+ATTR_CONST vamp_t div_roof(vamp_t x, vamp_t y);
 
 #endif /* HELPER_HELSING */

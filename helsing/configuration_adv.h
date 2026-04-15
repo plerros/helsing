@@ -104,4 +104,14 @@
 		#define OPTIONAL_ASSERT(x) if(!(x)) {no_args();}
 	#endif
 
+	#if (__GNUC__ || __clang__)
+		#define ATTR_UNUSED      __attribute__((unused))
+		#define ATTR_FALLTHROUGH __attribute__((fallthrough))
+		#define ATTR_CONST       __attribute__((const))
+	#else
+		#define ATTR_UNUSED
+		#define ATTR_FALLTHROUGH
+		#define ATTR_CONST
+	#endif
+
 #endif /* HELSING_CONFIG_ADV_H */
