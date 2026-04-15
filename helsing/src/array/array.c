@@ -23,6 +23,7 @@
 
 #ifdef PRINT_RESULTS
 #include <stdio.h>
+#include <threads.h>
 #endif
 
 #ifdef STORE_RESULTS
@@ -167,7 +168,7 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 #endif /* VAMPIRE_HASH */
 
 #ifdef PRINT_RESULTS
-void array_print(struct array *ptr, vamp_t count[COUNT_ARRAY_SIZE], vamp_t (*prev)[COUNT_ARRAY_SIZE])
+void array_print(struct array *ptr, mtx_t *stdout_mtx, vamp_t count[COUNT_ARRAY_SIZE], vamp_t (*prev)[COUNT_ARRAY_SIZE])
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 
@@ -179,6 +180,7 @@ void array_print(struct array *ptr, vamp_t count[COUNT_ARRAY_SIZE], vamp_t (*pre
 			continue;
 
 		for (size_t j = MIN_FANG_PAIRS - 1; j < MAX_FANG_PAIRS && j < ptr->fangs[i]; j++) {
+			mtx_lock(stdout_mtx);
 			for (size_t k = MIN_FANG_PAIRS - 1; k < j; k++)
 				fprintf(stdout, "\t");
 
@@ -194,6 +196,7 @@ void array_print(struct array *ptr, vamp_t count[COUNT_ARRAY_SIZE], vamp_t (*pre
 				(*prev)[j] = ptr->number[i];
 			#endif
 			fprintf(stdout, "\n");
+			mtx_unlock(stdout_mtx);
 		}
 	}
 	fflush(stdout);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2026 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -21,6 +21,7 @@ void targs_new(
 	struct targs **ptr,
 	mtx_t *read,
 	mtx_t *write,
+	mtx_t *stdout_mtx,
 	struct taskboard *progress,
 	struct cache *digptr,
 	bool dry_run)
@@ -34,6 +35,7 @@ void targs_new(
 
 	new->read = read;
 	new->write = write;
+	new->stdout_mtx = stdout_mtx;
 	new->progress = progress;
 	new->runtime = 0.0;
 	new->digptr = digptr;
@@ -52,7 +54,7 @@ int thread_function(void *void_args)
 	struct targs *args = (struct targs *)void_args;
 	thread_timer_start(args);
 	struct vargs *vamp_args = NULL;
-	vargs_new(&(vamp_args), args->digptr);
+	vargs_new(&(vamp_args), args->digptr, args->stdout_mtx);
 	struct task *current = NULL;
 
 	do {
@@ -76,7 +78,7 @@ int thread_function(void *void_args)
 #if MEASURE_RUNTIME
 			args->total += current->count[0];
 #endif
-			taskboard_cleanup(args->progress);
+			taskboard_cleanup(args->progress, args->stdout_mtx);
 
 			mtx_unlock(args->write);
 

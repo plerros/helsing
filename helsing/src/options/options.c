@@ -250,6 +250,12 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 				buildconf();
 				rc = 1;
 			}
+			else if (strcmp(argv[i], "--progress") == 0) {
+				display_progress = 1;
+			}
+			else if (strcmp(argv[i], "--dry-run") == 0) {
+				dry_run = 1;
+			}
 			else if (strcmp(argv[i], "--help") == 0) {
 				help();
 				rc = 1;

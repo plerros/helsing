@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2026 Pierro Zachareas
  */
 
 #ifndef HELSING_TARGS_H
@@ -22,6 +22,7 @@ struct targs
 {
 	mtx_t *read;
 	mtx_t *write;
+	mtx_t *stdout_mtx;
 	struct taskboard *progress;
 	double	runtime;
 	struct cache *digptr;
@@ -37,6 +38,7 @@ void targs_new(
 	struct targs **ptr,
 	mtx_t *read,
 	mtx_t *write,
+	mtx_t *stdout_mtx,
 	struct taskboard *progress,
 	struct cache *digptr,
 	bool dry_run);

@@ -163,7 +163,7 @@ struct task *taskboard_get_task(struct taskboard *ptr)
 	return ret;
 }
 
-void taskboard_cleanup(struct taskboard *ptr)
+void taskboard_cleanup(struct taskboard *ptr, mtx_t *stdout_mtx)
 {
 	while (
 		ptr->done < ptr->size &&
@@ -171,12 +171,12 @@ void taskboard_cleanup(struct taskboard *ptr)
 		ptr->tasks[ptr->done]->complete != false)
 	{
 		if (ptr->tasks[ptr->done]->result != NULL) {
-			array_print(ptr->tasks[ptr->done]->result, ptr->common_count, &(ptr->common_prev));
+			array_print(ptr->tasks[ptr->done]->result, stdout_mtx, ptr->common_count, &(ptr->common_prev));
 			array_checksum(ptr->tasks[ptr->done]->result, ptr->checksum);
 		}
 		for (size_t i = 0; i < COUNT_ARRAY_SIZE; i++)
 			ptr->common_count[i] += ptr->tasks[ptr->done]->count[i];
-		taskboard_progress(ptr);
+		taskboard_progress(ptr, stdout_mtx);
 		if (!ptr->options.dry_run)
 			save_checkpoint(ptr->options, ptr->tasks[ptr->done]->lmax, ptr);
 
@@ -212,10 +212,12 @@ void taskboard_print_results(struct taskboard *ptr)
 }
 
 // taskboard_progress requires mutex lock
-void taskboard_progress(struct taskboard *ptr)
+void taskboard_progress(struct taskboard *ptr, mtx_t *stdout_mtx)
 {
 	if (ptr->options.display_progress) {
+		mtx_lock(stdout_mtx);
 		fprintf(stderr, "%ju, %ju", (uintmax_t)(ptr->tasks[ptr->done]->lmin), (uintmax_t)(ptr->tasks[ptr->done]->lmax));
 		fprintf(stderr, "  %ju/%ju\n", (uintmax_t)(ptr->done + 1), (uintmax_t)(ptr->size));
+		mtx_unlock(stdout_mtx);
 	}
 }

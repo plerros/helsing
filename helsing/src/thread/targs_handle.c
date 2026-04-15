@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2026 Pierro Zachareas
  */
 
 #include <stdlib.h>
@@ -45,9 +45,15 @@ void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_
 
 	mtx_init(new->write, mtx_plain);
 
+	new->stdout_mtx = malloc(sizeof(mtx_t));
+	if (new->stdout_mtx == NULL)
+		abort();
+
+	mtx_init(new->stdout_mtx, mtx_plain);
+
 	for (thread_t thread = 0; thread < new->options.threads; thread++) {
 		new->targs[thread] = NULL;
-		targs_new(&(new->targs[thread]), new->read, new->write, new->progress, new->digptr, new->options.dry_run);
+		targs_new(&(new->targs[thread]), new->read, new->write, new->stdout_mtx, new->progress, new->digptr, new->options.dry_run);
 	}
 	*ptr = new;
 }
@@ -61,6 +67,8 @@ void targs_handle_free(struct targs_handle *ptr)
 	free(ptr->read);
 	mtx_destroy(ptr->write);
 	free(ptr->write);
+	mtx_destroy(ptr->stdout_mtx);
+	free(ptr->stdout_mtx);
 	cache_free(ptr->digptr);
 
 	for (thread_t thread = 0; thread < ptr->options.threads; thread++)

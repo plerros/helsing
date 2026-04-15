@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -100,7 +101,7 @@ static bool congruence_check(vamp_t x, vamp_t y)
 	return ((x + y) % (BASE - 1) != (x * y) % (BASE - 1));
 }
 
-void vargs_new(struct vargs **ptr, struct cache *digptr)
+void vargs_new(struct vargs **ptr, struct cache *digptr, mtx_t *stdout_mtx)
 {
 	OPTIONAL_ASSERT(ptr != NULL);
 	OPTIONAL_ASSERT(*ptr == NULL);
@@ -110,6 +111,7 @@ void vargs_new(struct vargs **ptr, struct cache *digptr)
 		abort();
 
 	new->digptr = digptr;
+	new->stdout_mtx = stdout_mtx;
 	memset(new->local_count, 0, sizeof(new->local_count));
 	new->result = NULL;
 	*ptr = new;
@@ -411,7 +413,7 @@ static inline void msentence_to_vampire(struct vargs* args, struct llmsentence_t
 
 			if (result) {
 				vargs_iterate_local_count(args);
-				vargs_print_results(data[i].product, data[i].multiplier, data[i].multiplicand);
+				vargs_print_results(args->stdout_mtx, data[i].product, data[i].multiplier, data[i].multiplicand);
 				llvamp_add(ll_vampire, data[i].product);
 			}
 		}
@@ -499,7 +501,7 @@ void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax)
 						break;
 					case vampire_e:
 						vargs_iterate_local_count(args);
-						vargs_print_results(msentence.product, msentence.multiplier, msentence.multiplicand);
+						vargs_print_results(args->stdout_mtx, msentence.product, msentence.multiplier, msentence.multiplicand);
 						llvamp_add(&(ll_vampire), msentence.product);
 						break;
 					default:
