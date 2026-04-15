@@ -6,6 +6,8 @@
 #ifndef HELSING_TASKBOARD_H
 #define HELSING_TASKBOARD_H
 
+#include <threads.h>
+
 #include "configuration.h"
 #include "configuration_adv.h"
 #include "task.h"
@@ -32,7 +34,7 @@ void taskboard_new(struct taskboard **ptr, struct options_t options);
 void taskboard_free(struct taskboard *ptr);
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax);
 struct task *taskboard_get_task(struct taskboard *ptr);
-void taskboard_cleanup(struct taskboard *ptr);
+void taskboard_cleanup(struct taskboard *ptr, mtx_t *stdout_mtx);
 void taskboard_print_results(struct taskboard *ptr);
-void taskboard_progress(struct taskboard *ptr);
+void taskboard_progress(struct taskboard *ptr, mtx_t *stdout_mtx);
 #endif /* HELSING_TASKBOARD_H */

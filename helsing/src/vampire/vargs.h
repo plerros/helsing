@@ -6,6 +6,8 @@
 #ifndef HELSING_VARGS_H
 #define HELSING_VARGS_H
 
+#include <threads.h>
+
 #include "configuration_adv.h"
 #include "cache.h"
 #include "array.h"
@@ -19,9 +21,10 @@ struct vargs /* Vampire arguments */
 	struct cache *digptr;
 	struct array *result;
 	vamp_t local_count[COUNT_ARRAY_SIZE];
+	mtx_t *stdout_mtx;
 };
 
-void vargs_new(struct vargs **ptr, struct cache *digptr);
+void vargs_new(struct vargs **ptr, struct cache *digptr, mtx_t *stdout_mtx);
 void vargs_free(struct vargs *args);
 void vargs_reset(struct vargs *args);
 void vampire(vamp_t min, vamp_t max, struct vargs *args, fang_t fmax);
@@ -40,14 +43,18 @@ static inline void vargs_iterate_local_count(
 
 #if FANG_PRINT
 static inline void vargs_print_results(
+	mtx_t *stdout_mtx,
 	vamp_t product,
 	fang_t multiplier,
 	fang_t multiplicand)
 {
+	mtx_lock(stdout_mtx);
 	printf("%ju = %ju x %ju\n",(uintmax_t)product, (uintmax_t)multiplier, (uintmax_t)multiplicand);
+	mtx_unlock(stdout_mtx);
 }
 #else /* FANG_PRINT */
 static inline void vargs_print_results(
+	__attribute__((unused)) mtx_t *stdout_mtx,
 	__attribute__((unused)) vamp_t product,
 	__attribute__((unused)) fang_t multiplier,
 	__attribute__((unused)) fang_t multiplicand)

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright (c) 2021 Pierro Zachareas
+ * Copyright (c) 2021-2026 Pierro Zachareas
  */
 
 #ifndef HELSING_TARGS_HANDLE_H
@@ -22,6 +22,7 @@ struct targs_handle
 	struct cache *digptr;
 	mtx_t *read;
 	mtx_t *write;
+	mtx_t *stdout_mtx;
 };
 
 void targs_handle_new(struct targs_handle **ptr, struct options_t options, vamp_t min, vamp_t max, struct taskboard *progress);

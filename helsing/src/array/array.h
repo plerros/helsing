@@ -6,6 +6,8 @@
 #ifndef HELSING_ARRAY_H
 #define HELSING_ARRAY_H
 
+#include <threads.h>
+
 #include "configuration_adv.h"
 #include "llnode.h"
 #include "hash.h"
@@ -52,11 +54,13 @@ static inline void array_checksum(
 #if (VAMPIRE_NUMBER_OUTPUTS) && (defined PRINT_RESULTS)
 void array_print(
 	struct array *ptr,
+	mtx_t *stdout_mtx,
 	vamp_t count[COUNT_ARRAY_SIZE],
 	vamp_t (*prev)[COUNT_ARRAY_SIZE]);
 #else
 static inline void array_print(
 	__attribute__((unused)) struct array *ptr,
+	__attribute__((unused)) mtx_t *stdout_mtx,
 	__attribute__((unused)) vamp_t count[COUNT_ARRAY_SIZE],
 	__attribute__((unused)) vamp_t (*prev)[COUNT_ARRAY_SIZE])
 {
