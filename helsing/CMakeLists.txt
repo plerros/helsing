@@ -1,23 +1,34 @@
 cmake_minimum_required(VERSION 3.13)
 
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif ()
-
-set(CMAKE_C_FLAGS_RELEASE "-O2" CACHE STRING "Flags used by the compiler during release builds." FORCE)
-set(CMAKE_CXX_FLAGS_RELEASE "-O2" CACHE STRING "Flags used by the compiler during release builds." FORCE)
-set(CMAKE_C_FLAGS_MINSIZEREL "-Os" CACHE STRING "Flags used by the compiler during release builds." FORCE)
-set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os" CACHE STRING "Flags used by the compiler during release builds." FORCE)
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "Flags used by the compiler during release builds." FORCE)
-
 project(helsing VERSION 1.2.0
 	LANGUAGES
 		C
 )
 
-option(ENABLE_LTO "enable link time optimization" OFF)
+if (MSVC)
+    set(O_SPEED "/O2")
+    set(O_SIZE "/Os")
+    set(DEBUG "/Zi")
+    add_compile_options(/std:clatest /Wall /W4)
+else ()
+    set(O_SPEED "-O2")
+    set(O_SIZE "-Os")
+    set(DEBUG "-g")
 
+    # If the code is underperforming, try recompiling it with some of these flags:
+    # -falign-functions=32 -falign-functions=64 -falign-loops=32 -march=native -mtune=native
+    add_compile_options(-std=c23 -Wall -Wextra)
+endif ()
+
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif ()
+set(MESSAGE "Flags used by the compiler during release builds.")
+set(CMAKE_C_FLAGS_RELEASE          "${O_SPEED}"          CACHE STRING ${MESSAGE} FORCE)
+set(CMAKE_C_FLAGS_MINSIZEREL       "${O_SIZE}"           CACHE STRING ${MESSAGE} FORCE)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO   "${O_SPEED} ${DEBUG}" CACHE STRING ${MESSAGE} FORCE)
+
+option(ENABLE_LTO "enable link time optimization" OFF)
 if (ENABLE_LTO)
     include(CheckIPOSupported)
     cmake_policy(SET CMP0069 NEW)
@@ -28,9 +39,6 @@ if (ENABLE_LTO)
         message(WARNING "LTO is not supported: ${IPO_SUPPORT_OUTPUT}")
     endif ()
 endif ()
-
-add_compile_options(-Wall -Wextra -std=c11)
-#add_compile_options(-march=native)
 
 # Re-run cmake if the configurtation files change
 function(watch)
@@ -49,7 +57,6 @@ execute_process(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE CHECKSUM
     )
-
 if (CHECKSUM EQUAL "0")
     message(STATUS "OpenSSL required")
     set(HELSING_OPENSSL_CRYPTO "OpenSSL::Crypto")

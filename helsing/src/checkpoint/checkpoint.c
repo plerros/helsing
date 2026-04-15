@@ -137,12 +137,12 @@ static char count_end()
 }
 #else /* (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH) */
 static int hash_set(
-	__attribute__((unused)) char *filename,
-	__attribute__((unused)) struct hash *ptr,
-	__attribute__((unused)) int ch,
-	__attribute__((unused)) int hash_index,
-	__attribute__((unused)) vamp_t line,
-	__attribute__((unused)) vamp_t item)
+	ATTR_UNUSED char *filename,
+	ATTR_UNUSED struct hash *ptr,
+	ATTR_UNUSED int ch,
+	ATTR_UNUSED int hash_index,
+	ATTR_UNUSED vamp_t line,
+	ATTR_UNUSED vamp_t item)
 {
 	return 0;
 }
@@ -254,7 +254,7 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 					if (name < count || name > checksum)
 						break;
 					// Allow count+1, count+2, ... count+n to fall through
-					__attribute__((fallthrough));
+					ATTR_FALLTHROUGH;
 				case count: {
 					bool not_first_column = (name > count);
 

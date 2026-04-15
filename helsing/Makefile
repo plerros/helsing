@@ -18,7 +18,7 @@ CC := $(shell \
 WARNINGS := -Wall -Wextra
 DEBUG := # -fsanitize=thread
 
-OPTIMIZE := -O2 -std=c11
+OPTIMIZE := -O2 -std=c23
 # If the code is underperforming, try recompiling it with some of these flags:
 # -falign-functions=32 -falign-functions=64 -falign-loops=32 -march=native -mtune=native
 

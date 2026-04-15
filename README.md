@@ -6,18 +6,9 @@ Helsing is a command-line program that scans intervals for vampire numbers.
 The default algorithm has a time complexity of $O(u)$ and a space complexity of
 $O(\sqrt{u})$, where $u$ is the upper bound argument `-u`.
 
-In *helsing/configuration.h* you can toggle the algorithms and tune them,
-adjust verbosity, change the numeral base system, and set a fang pairs
-filter.
+In *helsing/configuration.h* you can toggle the algorithms and tune them, adjust verbosity, change the numeral base system, and set a fang pairs filter.
+Some of the features aren't compatible with Windows.
 Be sure to read the documentation.
-
-## Windows Preparation
-
-Helsing uses posix threads, and since Windows isn't posix compatible, you'll
-need to [install WSL](https://docs.microsoft.com/en-us/windows/wsl/install).
-
-Note that the guide above will install WSL with Ubuntu, so you'll have to follow the Ubuntu instructions.
-
 
 ## MacOS Preparation
 
@@ -31,6 +22,12 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 			<td><b>Install Command</b></td>
 			<td><b>Packages</b></td>
 			<td><b>Optional</b></td>
+		</tr>
+		<tr>
+			<td>Windows (*)</td>
+			<td>-</td>
+			<td>MSVC</td>
+			<td>-</td>
 		</tr>
 		<tr>
 			<td>MacOS</td>
@@ -80,6 +77,10 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 			<td><b>Compile</b></td>
 		</tr>
 		<tr>
+			<td>Windows (*)</td>
+			<td><code>mkdir build & cd build & cmake .. & cmake --build . --config Release</code></td>
+		</tr>
+		<tr>
 			<td>MacOS</td>
 			<td rowspan="6"><code>mkdir build; cd build; cmake ..; make</code></td>
 		</tr>
@@ -99,6 +100,8 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 			<td>Openindiana</td>
 		</tr>
 	</table>
+
+(*): Some `configuration.h` features are linux-only and lead to build failure on Windows.
 
 ## Run
 ```

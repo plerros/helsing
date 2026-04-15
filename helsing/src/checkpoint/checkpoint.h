@@ -18,22 +18,22 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 void save_checkpoint(struct options_t options, vamp_t complete, struct taskboard *progress);
 #else /* USE_CHECKPOINT */
 static inline int touch_checkpoint(
-	__attribute__((unused)) struct options_t options,
-	__attribute__((unused)) struct interval_t interval)
+	ATTR_UNUSED struct options_t options,
+	ATTR_UNUSED struct interval_t interval)
 {
 	return 0;
 }
 static inline int load_checkpoint(
-	__attribute__((unused)) struct options_t options,
-	__attribute__((unused)) struct interval_t *interval,
-	__attribute__((unused)) struct taskboard *progress)
+	ATTR_UNUSED struct options_t options,
+	ATTR_UNUSED struct interval_t *interval,
+	ATTR_UNUSED struct taskboard *progress)
 {
 	return 0;
 }
 static inline void save_checkpoint(
-	__attribute__((unused)) struct options_t options,
-	__attribute__((unused)) vamp_t complete,
-	__attribute__((unused)) struct taskboard *progress)
+	ATTR_UNUSED struct options_t options,
+	ATTR_UNUSED vamp_t complete,
+	ATTR_UNUSED struct taskboard *progress)
 {
 }
 #endif /* USE_CHECKPOINT */
