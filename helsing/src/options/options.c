@@ -190,7 +190,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(argv[i], 0, VAMP_MAX, &(new->min));
+					rc = strtov(argv[i], 0, VAMP_MAX(), &(new->min));
 					min_is_set = true;
 				}
 				break;
@@ -201,7 +201,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(argv[i], 1, length(VAMP_MAX), &tmp);
+					rc = strtov(argv[i], 1, length(VAMP_MAX()), &tmp);
 					if (rc)
 						break;
 					new->min = pow_v(tmp - 1);
@@ -217,7 +217,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(argv[i], 1, VAMP_MAX, &tmp);
+					rc = strtov(argv[i], 1, VAMP_MAX(), &tmp);
 					if (rc)
 						break;
 					new->manual_task_size = tmp;
@@ -239,7 +239,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(argv[i], 0, VAMP_MAX, &(new->max));
+					rc = strtov(argv[i], 0, VAMP_MAX(), &(new->max));
 					max_is_set = true;
 				}
 				break;

@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <threads.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -217,7 +218,7 @@ void taskboard_print_results(struct taskboard *ptr)
 }
 
 // taskboard_progress requires mutex lock
-void taskboard_progress(struct taskboard *ptr)
+void taskboard_progress(struct taskboard *ptr, mtx_t *stdout_mtx)
 {
 	if (ptr->options.display_progress) {
 		mtx_lock(stdout_mtx);
