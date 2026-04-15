@@ -40,8 +40,8 @@ digits_t set_dig(fang_t number)
 
 static inline fang_t square(fang_t value)
 {
-	if (value > FANG_MAX / value)
-		return FANG_MAX;
+	if (value > FANG_MAX() / value)
+		return FANG_MAX();
 
 	return (value * value);
 }

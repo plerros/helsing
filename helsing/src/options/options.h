@@ -15,7 +15,7 @@ struct options_t
 	vamp_t min;
 	vamp_t max;
 	thread_t threads;
-	vamp_t manual_task_size;
+	size_t manual_task_size;
 	bool display_progress;
 	bool load_checkpoint;
 	char *checkpoint;

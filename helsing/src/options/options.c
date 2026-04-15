@@ -45,7 +45,9 @@ static void buildconf()
 		printf("        PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
 	}
 	printf("    BASE=%d\n", BASE);
-	printf("    MAX_TASK_SIZE=%ju\n", (uintmax_t)MAX_TASK_SIZE);
+	printf("    MAX_TASK_SIZE=");
+	printany(stdout, (bimax_t)MAX_TASK_SIZE);
+	printf("\n");
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
 	printf("    LINK_SIZE=%d\n", LINK_SIZE);
 	printf("    LLMSENTENCE_LIMIT=%d\n", LLMSENTENCE_LIMIT);

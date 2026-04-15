@@ -16,18 +16,32 @@ int interval_set(struct interval_t *ptr, struct options_t options)
 	int rc = 0;
 	if (options.min > options.max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
-		fprintf(stderr, "Invalid arguments, %ju <= %ju\n", (uintmax_t)(options.min), (uintmax_t)(options.max));
+		fprintf(stderr, "Invalid arguments, ");
+		printany(stderr, options.min);
+		fprintf(stderr, " <= ");
+		printany(stderr, options.max);
+		fprintf(stderr, "\n");
 		rc = 1;
 		goto out;
 	}
 
 	ptr->min = get_min(options.min, options.max);
-	if (options.min != ptr->min)
-		fprintf(stderr, "Adjusted min from %ju to %ju\n", (uintmax_t)(options.min), (uintmax_t)(ptr->min));
+	if (options.min != ptr->min) {
+		fprintf(stderr, "Adjusted min from ");
+		printany(stderr, options.min);
+		fprintf(stderr, " to ");
+		printany(stderr, ptr->min);
+		fprintf(stderr, "\n");
+	}
 
 	ptr->max = get_max(ptr->min, options.max);
-	if (options.max != ptr->max)
-		fprintf(stderr, "Adjusted max from %ju to %ju\n", (uintmax_t)(options.max), (uintmax_t)(ptr->max));
+	if (options.max != ptr->max){
+		fprintf(stderr, "Adjusted max from ");
+		printany(stderr, options.max);
+		fprintf(stderr, " to ");
+		printany(stderr, ptr->max);
+		fprintf(stderr, "\n");
+	}
 
 	ptr->complete = 0;
 	if (ptr->complete < ptr->min)

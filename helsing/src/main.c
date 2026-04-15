@@ -19,7 +19,7 @@
 
 static vamp_t get_lmax(vamp_t lmin, vamp_t max)
 {
-	if (length(lmin) < length(VAMP_MAX)) {
+	if (length(lmin) < length(VAMP_MAX())) {
 		vamp_t lmax = pow_v(length(lmin)) - 1;
 		if (lmax < max)
 			return lmax;
@@ -64,7 +64,11 @@ int main(int argc, char *argv[])
 		if (progress->size == 0)
 			continue;
 
-		fprintf(stderr, "Checking interval: [%ju, %ju]\n", (uintmax_t)lmin, (uintmax_t)lmax);
+		fprintf(stderr, "Checking interval: [");
+		printany(stderr, lmin);
+		fprintf(stderr, ", ");
+		printany(stderr, lmax);
+		fprintf(stderr, "]\n");
 		for (thread_t thread = 0; thread < options->threads; thread++)
 			assert(thrd_create(&threads[thread], thread_function, (void *)(thhandle->targs[thread])) == thrd_success);
 		for (thread_t thread = 0; thread < options->threads; thread++)
