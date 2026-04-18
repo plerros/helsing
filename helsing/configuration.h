@@ -6,6 +6,7 @@
 #ifndef HELSING_CONFIG_H
 #define HELSING_CONFIG_H // safety precaution for the c preprocessor
 
+#include <limits.h>
 #include <stdbool.h> // preprocessor true/false
 
 /*
@@ -225,7 +226,17 @@
 		#error BASE must be larger than 1
 	#endif
 
+/*
+ * VAMPIRE_BITS:
+ * 
+ * Allows for the vampire number hunt to continue in 128-bit numbers and beyond.
+ * Depends on C23's _BitInt(). Older systems will fallback to 64-bit numbers.
+ */
+
 #define VAMPIRE_BITS 64
+	#ifndef BITINT_MAXWIDTH
+		#undef VAMPIRE_BITS
+	#endif
 
 /*
  * MAX_TASK_SIZE:

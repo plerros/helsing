@@ -18,14 +18,27 @@
  * value where necessary.
  */
 
-	typedef unsigned _BitInt(BITINT_MAXWIDTH) bimax_t;
-	#define BIMAX_MAX() ((unsigned _BitInt(BITINT_MAXWIDTH)) -1)
+	#if defined(BITINT_MAXWIDTH)
+		// If the compiler supports it, use bitint.
+		typedef unsigned _BitInt(BITINT_MAXWIDTH) bimax_t;
+		#define BIMAX_MAX() ((unsigned _BitInt(BITINT_MAXWIDTH)) -1)
 
-	typedef unsigned _BitInt(VAMPIRE_BITS) vamp_t; // vampire type
-	#define VAMP_MAX() ((unsigned _BitInt(VAMPIRE_BITS)) -1)
+		typedef unsigned _BitInt(VAMPIRE_BITS) vamp_t; // vampire type
+		#define VAMP_MAX() ((unsigned _BitInt(VAMPIRE_BITS)) -1)
 
-	typedef unsigned _BitInt((VAMPIRE_BITS) / 2) fang_t; // fang type
-	#define FANG_MAX() ((unsigned _BitInt(VAMPIRE_BITS/2)) -1)
+		typedef unsigned _BitInt((VAMPIRE_BITS) / 2) fang_t; // fang type
+		#define FANG_MAX() ((unsigned _BitInt(VAMPIRE_BITS/2)) -1)
+	#else
+		// Fallback values
+		typedef uintmax_t bimax_t;
+		#define BIMAX_MAX() UINTMAX_MAX
+
+		typedef uint64_t vamp_t; // vampire type
+		#define VAMP_MAX() UINT64_MAX
+
+		typedef uint32_t fang_t; // fang type
+		#define FANG_MAX() UINT32_MAX
+	#endif
 
 	typedef uint16_t thread_t;
 	#define THREAD_T_MAX UINT16_MAX
@@ -58,8 +71,8 @@
 	 * on the args and the configuration.
 	 */
 
-	typedef unsigned _BitInt((VAMPIRE_BITS) / 2) digits_t;
-	#define DIGITS_T_MAX ((unsigned _BitInt(VAMPIRE_BITS/2)) -1)
+	typedef fang_t digits_t;
+	#define DIGITS_T_MAX FANG_MAX()
 
 /*
  * Helper Preprocessor Macros
