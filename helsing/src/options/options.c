@@ -140,6 +140,14 @@ out:
 	return err;
 }
 
+static length_t max_n_digits()
+{
+	length_t ret = 0;
+	for (vamp_t i = VAMP_MAX; i >= BASE - 1; i /= BASE)
+		ret ++;
+	return ret;
+}
+
 int options_new(struct options_t **ptr, int argc, char *argv[])
 {
 	struct options_t *new = malloc(sizeof(struct options_t));
@@ -203,7 +211,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(argv[i], 1, length(VAMP_MAX()), &tmp);
+					rc = strtov(argv[i], 1, max_n_digits(), &tmp);
 					if (rc)
 						break;
 					new->min = pow_v(tmp - 1);
