@@ -3,9 +3,11 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include <stdbool.h>
-#include <limits.h>
 #include <assert.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -17,7 +19,7 @@ void no_args() {};
  * Checks if (10 * x + digit) will overflow, without causing and overflow.
  * Should only be used for input checking, where the numeral base is 10.
  */
-bool willoverflow(vamp_t x, vamp_t limit, digit_t digit)
+bool willoverflow(bimax_t x, bimax_t limit, digit_t digit)
 {
 	assert(digit < 10);
 	if (x > limit / 10)
@@ -27,7 +29,7 @@ bool willoverflow(vamp_t x, vamp_t limit, digit_t digit)
 	return false;
 }
 
-length_t length(vamp_t x)
+length_t length(bimax_t x)
 {
 	length_t length = 1;
 	for (; x >= BASE; x /= BASE)
@@ -35,9 +37,26 @@ length_t length(vamp_t x)
 	return length;
 }
 
+void printany(FILE *fp, bimax_t value)
+{
+	if (value > 9)
+		printany(fp, value / 10);
+
+	fprintf(fp, "%d", (int)(value % 10));
+}
+
+bimax_t pow_any(length_t exponent) // pow for vamp_t.
+{
+	OPTIONAL_ASSERT(exponent <= length(BIMAX_MAX()) - 1);
+	bimax_t power = 1;
+	for (; exponent > 0; exponent--)
+		power *= BASE;
+	return power;
+}
+
 vamp_t pow_v(length_t exponent) // pow for vamp_t.
 {
-	OPTIONAL_ASSERT(exponent <= length(VAMP_MAX) - 1);
+	OPTIONAL_ASSERT(exponent <= length(VAMP_MAX()) - 1);
 	vamp_t power = 1;
 	for (; exponent > 0; exponent--)
 		power *= BASE;
@@ -71,4 +90,42 @@ vamp_t get_max(vamp_t min, vamp_t max)
 vamp_t div_roof(vamp_t x, vamp_t y)
 {
 	return (x/y + !!(x%y));
+}
+
+/*
+ * helsing_fprint:
+ * 	'a':	bimax_t
+ * 	'f':	fang_t
+ * 	's':	string
+ * 	'v':	vamp_t
+ * 	'z':	size_t
+ */
+
+void helsing_fprint(FILE *fp, char *formats, ...)
+{
+	va_list args;
+	
+
+	for (va_start(args, formats); *formats != '\0'; formats++) {
+		switch (*formats) {
+			case 'a':
+				printany(fp, va_arg(args, bimax_t));
+				break;
+			case 'f':
+				printany(fp, va_arg(args, fang_t));
+				break;
+			case 's':
+				fprintf(fp, "%s", va_arg(args, char *));
+				break;
+			case 'v':
+				printany(fp, va_arg(args, vamp_t));
+				break;
+			case 'z':
+				fprintf(fp, "%zu", va_arg(args, size_t));
+				break;
+			default:
+				assert(1);
+		}
+	}
+	va_end(args);
 }

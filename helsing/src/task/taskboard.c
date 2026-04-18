@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <threads.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -47,7 +48,7 @@ void taskboard_free(struct taskboard *ptr)
 		return;
 
 	if (ptr->tasks != NULL) {
-		for (vamp_t i = 0; i < ptr->size; i++)
+		for (size_t i = 0; i < ptr->size; i++)
 			task_free(ptr->tasks[i]);
 		free(ptr->tasks);
 	}
@@ -57,16 +58,16 @@ void taskboard_free(struct taskboard *ptr)
 
 static vamp_t get_interval_size(struct options_t options, vamp_t lmin, vamp_t lmax)
 {
-	vamp_t interval_size = VAMP_MAX;
+	if (options.manual_task_size != 0)
+		return options.manual_task_size;
 
-	if (options.manual_task_size != 0) {
-		interval_size = options.manual_task_size;
-	} else {
-		interval_size = (lmax - lmin) / (4 * options.threads + 2);
+	bimax_t interval_size = SIZE_MAX;
+	vamp_t tmp = (lmax - lmin) / (4 * options.threads + 2);
+	if (tmp < interval_size)
+		interval_size = tmp;
 
-		if (interval_size > MAX_TASK_SIZE)
-			interval_size = MAX_TASK_SIZE;
-	}
+	if (interval_size > (bimax_t)MAX_TASK_SIZE)
+		interval_size = MAX_TASK_SIZE;
 
 	return interval_size;
 }
@@ -78,7 +79,7 @@ static inline void taskboard_set_task(struct taskboard *ptr, size_t index)
 
 	vamp_t l_bound = ptr->lmin + (ptr->interval_size + 1) * index;
 	vamp_t u_bound = l_bound;
-	if (VAMP_MAX - ptr->interval_size > u_bound)
+	if (VAMP_MAX() - ptr->interval_size > u_bound)
 		u_bound += ptr->interval_size ;
 	if (u_bound > ptr->lmax)
 		u_bound = ptr->lmax;
@@ -89,7 +90,7 @@ static inline void taskboard_set_task(struct taskboard *ptr, size_t index)
 void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 {
 	assert(ptr->done == ptr->size);
-	for (vamp_t i = 0; i < ptr->size; i++)
+	for (size_t i = 0; i < ptr->size; i++)
 		task_free(ptr->tasks[i]);
 	free(ptr->tasks);
 	ptr->tasks = NULL;
@@ -101,8 +102,8 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	assert(lmin <= lmax);
 
 	length_t fang_length = length(lmin) / 2;
-	if (fang_length == length(FANG_MAX))
-		ptr->fmax = FANG_MAX;
+	if (fang_length == length(FANG_MAX()))
+		ptr->fmax = FANG_MAX();
 	else if (fang_length == 0)
 		ptr->fmax = 0;
 	else
@@ -114,7 +115,7 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	 */
 	if (
 		(ptr->fmax > 0) // Div zero guard
-		&& (ptr->fmax < VAMP_MAX / ptr->fmax) // Overflow guard
+		&& (ptr->fmax < VAMP_MAX() / ptr->fmax) // Overflow guard
 	) {
 		vamp_t fmaxsquare = ptr->fmax;
 		fmaxsquare *= ptr->fmax;
@@ -128,16 +129,21 @@ void taskboard_set(struct taskboard *ptr, vamp_t lmin, vamp_t lmax)
 	ptr->lmax = lmax;
 	ptr->interval_size = get_interval_size(ptr->options, lmin, lmax);
 
-	ptr->size = div_roof((lmax - lmin + 1), ptr->interval_size + (ptr->interval_size < VAMP_MAX));
+	{
+		ptr->size = SIZE_MAX;
+		vamp_t tmp = div_roof((lmax - lmin + 1), ptr->interval_size + (ptr->interval_size < SIZE_MAX));
+		if (tmp < ptr->size)
+			ptr->size = tmp;
+	}
 
 	ptr->tasks = malloc(sizeof(struct task *) * ptr->size);
 	if (ptr->tasks == NULL)
 		abort();
 
-	for (vamp_t i = 0; i < ptr->size; i++)
+	for (size_t i = 0; i < ptr->size; i++)
 		ptr->tasks[i] = NULL;
 
-	for (vamp_t i = 0; i < ptr->size && i < TASKBOARD_LIMIT; i++)
+	for (size_t i = 0; i < ptr->size && i < TASKBOARD_LIMIT; i++)
 		taskboard_set_task(ptr, i);	
 }
 
@@ -192,11 +198,11 @@ void taskboard_print_results(struct taskboard *ptr)
 		vamp_t sum = 0;
 		for (size_t i = 0; i < COUNT_ARRAY_SIZE; i++)
 			sum += ptr->common_count[i];
-		fprintf(stderr, "Found: %ju fang pair(s).\n", (uintmax_t)sum);
+		helsing_fprint(stderr, "svs", "Found: ", sum, " fang pair(s).\n")
 	#endif
 
 	#if VAMPIRE_NUMBER_OUTPUTS
-		fprintf(stderr, "Found: %ju vampire number(s).\n", (uintmax_t)(ptr->common_count[MIN_FANG_PAIRS - 1]));
+		helsing_fprint(stderr, "svs", "Found: ", ptr->common_count[MIN_FANG_PAIRS - 1], " vampire numbers(s).\n");
 	#endif
 	for (size_t i = MIN_FANG_PAIRS; i < MAX_FANG_PAIRS; i++) {
 		if (ptr->common_count[i] == 0)
@@ -205,8 +211,7 @@ void taskboard_print_results(struct taskboard *ptr)
 		if (i == MIN_FANG_PAIRS)
 			fprintf(stderr, "Out of which:\n");
 
-
-		fprintf(stderr, "\t%ju\thave at least %zu fang pair(s)\n", (uintmax_t)(ptr->common_count[i]), i+1);
+		helsing_fprint(stderr, "svszs", "\t", ptr->common_count[i],"\thave at least ", i+1, " fang pair(s)\n");
 	}
 	hash_print(ptr->checksum);
 }
@@ -216,8 +221,9 @@ void taskboard_progress(struct taskboard *ptr, mtx_t *stdout_mtx)
 {
 	if (ptr->options.display_progress) {
 		mtx_lock(stdout_mtx);
-		fprintf(stderr, "%ju, %ju", (uintmax_t)(ptr->tasks[ptr->done]->lmin), (uintmax_t)(ptr->tasks[ptr->done]->lmax));
-		fprintf(stderr, "  %ju/%ju\n", (uintmax_t)(ptr->done + 1), (uintmax_t)(ptr->size));
+		helsing_fprint(stderr, "vsv", ptr->tasks[ptr->done]->lmin, ", ", ptr->tasks[ptr->done]->lmax);
+
+		fprintf(stderr, "  %zu/%zu\n", ptr->done + 1, ptr->size);
 		mtx_unlock(stdout_mtx);
 	}
 }

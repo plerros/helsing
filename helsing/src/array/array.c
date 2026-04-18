@@ -154,7 +154,14 @@ void array_checksum(struct array *ptr, struct hash *checksum)
 		vamp_t tmp = ptr->number[i];
 
 		#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-		tmp = __builtin_bswap64(tmp);
+		{
+			unsigned char *bytearray = (unsigned char *)&tmp;
+			for (size_t a = 0, b = sizeof(tmp) -1; a < b; a++, b--) {
+				bytearray[a] ^= bytearray[b];
+				bytearray[b] ^= bytearray[a];
+				bytearray[a] ^= bytearray[b];
+			}
+		}
 		#endif
 
 		EVP_DigestInit_ex(checksum->mdctx, checksum->md, NULL);
@@ -186,13 +193,13 @@ void array_print(struct array *ptr, mtx_t *stdout_mtx, vamp_t count[COUNT_ARRAY_
 
 			++local_count[j];
 			#if VAMPIRE_INDEX
-				fprintf(stdout, "%ju ", (uintmax_t)(local_count[j]));
+				helsing_fprint(stdout, "vs", local_count[j], " ");
 			#endif
 			#if VAMPIRE_PRINT
-				fprintf(stdout, "%ju ", (uintmax_t)(ptr->number[i]));
+				helsing_fprint(stdout, "vs", ptr->number[i], " ");
 			#endif
 			#if VAMPIRE_INTEGRAL
-				fprintf(stdout, "%ju ", (uintmax_t)(ptr->number[i] - (*prev)[j]));
+				helsing_fprint(stdout, "vs", ptr->number[i] - (*prev)[j], " ");
 				(*prev)[j] = ptr->number[i];
 			#endif
 			fprintf(stdout, "\n");

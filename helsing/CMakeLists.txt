@@ -9,7 +9,7 @@ if (MSVC)
     set(O_SPEED "/O2")
     set(O_SIZE "/Os")
     set(DEBUG "/Zi")
-    add_compile_options(/std:clatest /Wall /W4)
+    add_compile_options(/Wall /W4)
 else ()
     set(O_SPEED "-O2")
     set(O_SIZE "-Os")
@@ -17,8 +17,10 @@ else ()
 
     # If the code is underperforming, try recompiling it with some of these flags:
     # -falign-functions=32 -falign-functions=64 -falign-loops=32 -march=native -mtune=native
-    add_compile_options(-std=c23 -Wall -Wextra)
+    add_compile_options(-Wall -Wextra)
 endif ()
+
+set(CMAKE_C_STANDARD 23)
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)

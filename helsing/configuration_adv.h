@@ -13,34 +13,42 @@
 
 /*
  * Platform types configuration:
- * 
- * These are good defaults for 64-bit systems.
  *
- * You may be able to improve performance in 32-bit systems by adjusting some
- * of these down to 32-bit types, or increase the solvable space by adjusting
- * them up (128-bit, ...)
- * 
  * If you modify any of the typedefs, make sure to update the corresponding max
- * value. The code assumes you've done that correctly.
+ * value where necessary.
  */
 
-	typedef unsigned long long vamp_t; // vampire type
-	#define VAMP_MAX ULLONG_MAX
-	//typedef __uint128_t vamp_t;      // vampire type
-	//static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
-	//#define VAMP_MAX UINT128_MAX
+	#if defined(BITINT_MAXWIDTH)
+		// If the compiler supports it, use bitint.
+		typedef unsigned _BitInt(BITINT_MAXWIDTH) bimax_t;
+		#define BIMAX_MAX() ((unsigned _BitInt(BITINT_MAXWIDTH)) -1)
 
-	typedef unsigned long fang_t; // fang type
-	#define FANG_MAX ULONG_MAX
-		#if (FANG_MAX > VAMP_MAX)
-			#error "VAMP_MAX should be >= than FANG_MAX"
-		#endif
+		typedef unsigned _BitInt(VAMPIRE_BITS) vamp_t; // vampire type
+		#define VAMP_MAX() ((unsigned _BitInt(VAMPIRE_BITS)) -1)
+
+		typedef unsigned _BitInt((VAMPIRE_BITS) / 2) fang_t; // fang type
+		#define FANG_MAX() ((unsigned _BitInt(VAMPIRE_BITS/2)) -1)
+	#else
+		// Fallback values
+		typedef uintmax_t bimax_t;
+		#define BIMAX_MAX() UINTMAX_MAX
+
+		typedef uint64_t vamp_t; // vampire type
+		#define VAMP_MAX() UINT64_MAX
+
+		typedef uint32_t fang_t; // fang type
+		#define FANG_MAX() UINT32_MAX
+	#endif
 
 	typedef uint16_t thread_t;
 	#define THREAD_T_MAX UINT16_MAX
 
 	typedef uint8_t digit_t;
-	#define DIGIT_T_MAX BASE
+	#define DIGIT_T_MAX UINT8_MAX
+
+	#if ((BASE) >= (DIGIT_T_MAX))
+		#error BASE should be less than DIGIT_T_MAX
+	#endif
 
 	/*
 	 * length_t:
@@ -63,8 +71,8 @@
 	 * on the args and the configuration.
 	 */
 
-	typedef uint32_t digits_t;
-	#define DIGITS_T_MAX UINT32_MAX
+	typedef fang_t digits_t;
+	#define DIGITS_T_MAX FANG_MAX()
 
 /*
  * Helper Preprocessor Macros
@@ -117,14 +125,6 @@
 		#define ATTR_UNUSED
 		#define ATTR_FALLTHROUGH
 		#define ATTR_CONST
-	#endif
-
-/*
- * Additional safety checks
- */
-
-	#if ((MAX_FANG_PAIRS) >= (VAMP_MAX))
-		#error MAX_FANG_PAIRS should be less than VAMP_MAX
 	#endif
 
 #endif /* HELSING_CONFIG_ADV_H */

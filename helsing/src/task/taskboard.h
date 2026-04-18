@@ -18,9 +18,9 @@ struct taskboard
 {
 	struct options_t options;
 	struct task **tasks;
-	vamp_t size; // The size of the tasks array
-	vamp_t todo; // First task that hasn't been accepted.
-	vamp_t done; // Last task that's completed, but isn't yet processed. (print, hash, checksum...)
+	size_t size; // The size of the tasks array
+	size_t todo; // First task that hasn't been accepted.
+	size_t done; // Last task that's completed, but isn't yet processed. (print, hash, checksum...)
 	vamp_t lmin; // Copy of the lmin value
 	vamp_t lmax; // Copy of the lmax value
 	fang_t fmax;

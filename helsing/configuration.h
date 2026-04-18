@@ -6,9 +6,8 @@
 #ifndef HELSING_CONFIG_H
 #define HELSING_CONFIG_H // safety precaution for the c preprocessor
 
+#include <limits.h>
 #include <stdbool.h> // preprocessor true/false
-
-// Check memory with valgrind --tool=massif
 
 /*
  * FANG_PAIR_OUTPUTS:
@@ -40,7 +39,7 @@
 
 #define DIGEST_NAME "sha512" // requires VERBOSE_LEVEL 3
 
-	#if (FANG_PAIR_OUTPUTS) && (VAMPIRE_NUMBER_OUTPUTS)
+	#if (FANG_PRINT) && ((VAMPIRE_INDEX) || (VAMPIRE_PRINT) || (VAMPIRE_INTEGRAL) || (VAMPIRE_HASH))
 		#warning Both FANG_PAIR_OUTPUTS and VAMPIRE_NUMBER_OUTPUTS are true. Result streams will be interleaved.
 	#endif
 
@@ -228,9 +227,21 @@
 	#endif
 
 /*
+ * VAMPIRE_BITS:
+ * 
+ * Allows for the vampire number hunt to continue in 128-bit numbers and beyond.
+ * Depends on C23's _BitInt(). Older systems will fallback to 64-bit numbers.
+ */
+
+#define VAMPIRE_BITS 64
+	#ifndef BITINT_MAXWIDTH
+		#undef VAMPIRE_BITS
+	#endif
+
+/*
  * MAX_TASK_SIZE:
  *
- * Maximum value: 18446744073709551615ULL (2^64 -1)
+ * Maximum value: 2^VAMPIRE_BITS -1
  *
  * 	Because there is no simple way to predict the amount of vampire numbers
  * for a given interval, MAX_TASK_SIZE can be used to limit the memory usage of

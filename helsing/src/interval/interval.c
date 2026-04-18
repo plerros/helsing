@@ -16,18 +16,18 @@ int interval_set(struct interval_t *ptr, struct options_t options)
 	int rc = 0;
 	if (options.min > options.max) {
 		fprintf(stderr, "Invalid arguments, min <= max\n");
-		fprintf(stderr, "Invalid arguments, %ju <= %ju\n", (uintmax_t)(options.min), (uintmax_t)(options.max));
+		helsing_fprint(stderr, "svsvs", "Invalid arguments, ", options.min, " <= ", options.max, "\n");
 		rc = 1;
 		goto out;
 	}
 
 	ptr->min = get_min(options.min, options.max);
 	if (options.min != ptr->min)
-		fprintf(stderr, "Adjusted min from %ju to %ju\n", (uintmax_t)(options.min), (uintmax_t)(ptr->min));
+		helsing_fprint(stderr, "svsvs", "Adjusted min from ", options.min, " to ", ptr->min, "\n");
 
 	ptr->max = get_max(ptr->min, options.max);
 	if (options.max != ptr->max)
-		fprintf(stderr, "Adjusted max from %ju to %ju\n", (uintmax_t)(options.max), (uintmax_t)(ptr->max));
+		helsing_fprint(stderr, "svsvs", "Adjusted min from ", options.max, " to ", ptr->max, "\n");
 
 	ptr->complete = 0;
 	if (ptr->complete < ptr->min)

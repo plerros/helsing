@@ -49,7 +49,7 @@ static inline void vargs_print_results(
 	fang_t multiplicand)
 {
 	mtx_lock(stdout_mtx);
-	printf("%ju = %ju x %ju\n",(uintmax_t)product, (uintmax_t)multiplier, (uintmax_t)multiplicand);
+	helsing_fprint(stdout, "vsfsfs", product, " = ", multiplier, " x ", multiplicand, "\n");
 	mtx_unlock(stdout_mtx);
 }
 #else /* FANG_PRINT */

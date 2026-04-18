@@ -48,8 +48,12 @@ static void buildconf()
 		printf("        MULTIPLICAND_PARTITIONS=%d\n", MULTIPLICAND_PARTITIONS);
 		printf("        PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
 	}
+	#ifdef VAMPIRE_BITS
+		printf("    VAMPIRE_BITS=%d", VAMPIRE_BITS);
+	#endif
 	printf("    BASE=%d\n", BASE);
-	printf("    MAX_TASK_SIZE=%ju\n", (uintmax_t)MAX_TASK_SIZE);
+	helsing_fprint(stdout, "sas"
+	       "    MAX_TASK_SIZE=", (bimax_t)(MAX_TASK_SIZE), "\n");
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
 	printf("    LINK_SIZE=%d\n", LINK_SIZE);
 	printf("    LLMSENTENCE_LIMIT=%d\n", LLMSENTENCE_LIMIT);
@@ -132,7 +136,7 @@ static int strtov(const char *str, vamp_t min, vamp_t max, vamp_t *number) // st
 	*number = tmp;
 out:
 	if (err)
-		fprintf(stderr, "Input out of range: [%ju, %ju]\n", (uintmax_t)min, (uintmax_t)max);
+		helsing_fprint(stderr, "svsvs", "Input out of range: [", min, ", ", max, "]\n");
 	return err;
 }
 
@@ -196,7 +200,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(argv[i], 0, VAMP_MAX, &(new->min));
+					rc = strtov(argv[i], 0, VAMP_MAX(), &(new->min));
 					min_is_set = true;
 				}
 				break;
@@ -223,7 +227,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					rc = 1;
 				} else {
 					vamp_t tmp;
-					rc = strtov(argv[i], 1, VAMP_MAX, &tmp);
+					rc = strtov(argv[i], 1, VAMP_MAX(), &tmp);
 					if (rc)
 						break;
 					new->manual_task_size = tmp;
@@ -245,7 +249,7 @@ int options_new(struct options_t **ptr, int argc, char *argv[])
 					help();
 					rc = 1;
 				} else {
-					rc = strtov(argv[i], 0, VAMP_MAX, &(new->max));
+					rc = strtov(argv[i], 0, VAMP_MAX(), &(new->max));
 					max_is_set = true;
 				}
 				break;

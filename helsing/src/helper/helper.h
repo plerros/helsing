@@ -7,15 +7,19 @@
 #define HELSING_HELPER_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "configuration_adv.h"
 
 void no_args();
-bool willoverflow(vamp_t x, vamp_t limit, digit_t digit);
-ATTR_CONST length_t length(vamp_t x);
+bool willoverflow(bimax_t x, bimax_t limit, digit_t digit);
+ATTR_CONST length_t length(bimax_t x);
+void printany(FILE *fp, bimax_t value);
+ATTR_CONST bimax_t pow_any(length_t exponent);
 ATTR_CONST vamp_t pow_v(length_t exponent);
 vamp_t get_min(vamp_t min, vamp_t max);
 vamp_t get_max(vamp_t min, vamp_t max);
 ATTR_CONST vamp_t div_roof(vamp_t x, vamp_t y);
+void helsing_fprint(FILE *fp, char *formats, ...);
 
 #endif /* HELPER_HELSING */
