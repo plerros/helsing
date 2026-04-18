@@ -198,11 +198,11 @@ void taskboard_print_results(struct taskboard *ptr)
 		vamp_t sum = 0;
 		for (size_t i = 0; i < COUNT_ARRAY_SIZE; i++)
 			sum += ptr->common_count[i];
-		fprintf(stderr, "Found: %ju fang pair(s).\n", (uintmax_t)sum);
+		helsing_fprint(stderr, "svs", "Found: ", sum, " fang pair(s).\n")
 	#endif
 
 	#if VAMPIRE_NUMBER_OUTPUTS
-		fprintf(stderr, "Found: %ju vampire number(s).\n", (uintmax_t)(ptr->common_count[MIN_FANG_PAIRS - 1]));
+		helsing_fprint(stderr, "svs", "Found: ", ptr->common_count[MIN_FANG_PAIRS - 1], " vampire numbers(s).\n");
 	#endif
 	for (size_t i = MIN_FANG_PAIRS; i < MAX_FANG_PAIRS; i++) {
 		if (ptr->common_count[i] == 0)
@@ -211,8 +211,7 @@ void taskboard_print_results(struct taskboard *ptr)
 		if (i == MIN_FANG_PAIRS)
 			fprintf(stderr, "Out of which:\n");
 
-
-		fprintf(stderr, "\t%ju\thave at least %zu fang pair(s)\n", (uintmax_t)(ptr->common_count[i]), i+1);
+		helsing_fprint(stderr, "svszs", "\t", ptr->common_count[i],"\thave at least ", i+1, " fang pair(s)\n");
 	}
 	hash_print(ptr->checksum);
 }
@@ -222,11 +221,9 @@ void taskboard_progress(struct taskboard *ptr, mtx_t *stdout_mtx)
 {
 	if (ptr->options.display_progress) {
 		mtx_lock(stdout_mtx);
-		printany(stderr, ptr->tasks[ptr->done]->lmin);
-		fprintf(stderr, ", ");
-		printany(stderr, ptr->tasks[ptr->done]->lmax);
+		helsing_fprint(stderr, "vsv", ptr->tasks[ptr->done]->lmin, ", ", ptr->tasks[ptr->done]->lmax);
 
-		fprintf(stderr, "  %ju/%ju\n", (uintmax_t)(ptr->done + 1), (uintmax_t)(ptr->size));
+		fprintf(stderr, "  %zu/%zu\n", ptr->done + 1, ptr->size);
 		mtx_unlock(stdout_mtx);
 	}
 }

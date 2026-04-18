@@ -193,16 +193,13 @@ void array_print(struct array *ptr, mtx_t *stdout_mtx, vamp_t count[COUNT_ARRAY_
 
 			++local_count[j];
 			#if VAMPIRE_INDEX
-				printany(stdout, local_count[j]);
-				fprintf(stdout, " ");
+				helsing_fprint(stdout, "vs", local_count[j], " ");
 			#endif
 			#if VAMPIRE_PRINT
-				printany(stdout, ptr->number[i]);
-				fprintf(stdout, " ");
+				helsing_fprint(stdout, "vs", ptr->number[i], " ");
 			#endif
 			#if VAMPIRE_INTEGRAL
-				printany(stdout, ptr->number[i] - (*prev)[j]);
-				fprintf(stdout, " ");
+				helsing_fprint(stdout, "vs", ptr->number[i] - (*prev)[j], " ");
 				(*prev)[j] = ptr->number[i];
 			#endif
 			fprintf(stdout, "\n");

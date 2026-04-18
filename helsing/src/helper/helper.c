@@ -3,10 +3,11 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include <stdbool.h>
-#include <limits.h>
-#include <stdio.h>
 #include <assert.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #include "configuration.h"
 #include "configuration_adv.h"
@@ -89,4 +90,42 @@ vamp_t get_max(vamp_t min, vamp_t max)
 vamp_t div_roof(vamp_t x, vamp_t y)
 {
 	return (x/y + !!(x%y));
+}
+
+/*
+ * helsing_fprint:
+ * 	'a':	bimax_t
+ * 	'f':	fang_t
+ * 	's':	string
+ * 	'v':	vamp_t
+ * 	'z':	size_t
+ */
+
+void helsing_fprint(FILE *fp, char *formats, ...)
+{
+	va_list args;
+	
+
+	for (va_start(args, formats); *formats != '\0'; formats++) {
+		switch (*formats) {
+			case 'a':
+				printany(fp, va_arg(args, bimax_t));
+				break;
+			case 'f':
+				printany(fp, va_arg(args, fang_t));
+				break;
+			case 's':
+				fprintf(fp, "%s", va_arg(args, char *));
+				break;
+			case 'v':
+				printany(fp, va_arg(args, vamp_t));
+				break;
+			case 'z':
+				fprintf(fp, "%zu", va_arg(args, size_t));
+				break;
+			default:
+				assert(1);
+		}
+	}
+	va_end(args);
 }

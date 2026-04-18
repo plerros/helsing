@@ -20,5 +20,6 @@ ATTR_CONST vamp_t pow_v(length_t exponent);
 vamp_t get_min(vamp_t min, vamp_t max);
 vamp_t get_max(vamp_t min, vamp_t max);
 ATTR_CONST vamp_t div_roof(vamp_t x, vamp_t y);
+void helsing_fprint(FILE *fp, char *formats, ...);
 
 #endif /* HELPER_HELSING */

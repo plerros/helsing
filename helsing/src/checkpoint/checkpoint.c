@@ -31,19 +31,19 @@ int touch_checkpoint(struct options_t options, struct interval_t interval)
 		return 1;
 	}
 	fp = fopen(options.checkpoint, "w+");
-	fprintf(fp, "%ju %ju\n", (uintmax_t)(interval.min), (uintmax_t)(interval.max));
+	helsing_fprint(fp, "vsvs", interval.min, " ", interval.max, "\n");
 	fclose(fp);
 	return 0;
 }
 
 static void err_baditem(char* filename, vamp_t line, vamp_t item)
 {
-	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has bad data:\n", filename, (uintmax_t)line, (uintmax_t)item);
+	helsing_fprint(stderr, "sssvsvs", "\n[ERROR] ", filename, " line ", line, " item #", item, " has bad data:\n");
 }
 
 static void err_conflict(char* filename, vamp_t line, vamp_t item)
 {
-	fprintf(stderr, "\n[ERROR] %s line %ju item #%ju has conflicting data:\n", filename, (uintmax_t)line, (uintmax_t)item);
+	helsing_fprint(stderr, "sssvsvs", "\n[ERROR] ", filename, " line ", line, " item #", item, " has conflicting data:\n");
 }
 
 static void err_unexpected_char(char* filename, int ch, vamp_t line, vamp_t item)
@@ -83,9 +83,7 @@ static int concat_digit(char *filename, vamp_t *number, int ch, vamp_t line, vam
 
 	if (willoverflow(*number, VAMP_MAX(), digit)) {
 		err_baditem(filename, line, item);
-		fprintf(stderr, "Out of interval: [0, ");
-		printany(stderr, VAMP_MAX());
-		fprintf(stderr, "]\n");
+		helsing_fprint(stderr, "svs", "Out of interval: [0, ", VAMP_MAX(), "]\n");
 		rc = 1;
 		goto out;
 	}
@@ -235,17 +233,17 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 				case complete:
 					if (num < interval->min) {
 						err_conflict(options.checkpoint, line, item);
-						fprintf(stderr, "%ju < %ju (below min)\n", (uintmax_t)num, (uintmax_t)(interval->min));
+						helsing_fprint(stderr, "vsvs", num, " < ", interval->min, " (below min)\n");
 						rc = 1;
 					}
 					else if (num > interval->max) {
 						err_conflict(options.checkpoint, line, item);
-						fprintf(stderr, "%ju > %ju (above max)\n", (uintmax_t)num, (uintmax_t)(interval->max));
+						helsing_fprint(stderr, "vsvs", num, " > ", interval->max, " (above max)\n");
 						rc = 1;
 					}
 					else if (num <= interval->complete && line != 2) {
 						err_conflict(options.checkpoint, line, item);
-						fprintf(stderr, "%ju <= %ju (below previous)\n", (uintmax_t)num, (uintmax_t)(interval->complete));
+						helsing_fprint(stderr, "vsvs", num, " <= ", interval->complete, " (below previous)\n");
 						rc = 1;
 					} else {
 						rc = interval_set_complete(interval, num);
@@ -276,14 +274,14 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 
 					if ((num < *element_prev) && (line != 2)) {
 						err_conflict(options.checkpoint, line, item);
-						fprintf(stderr, "%ju < %ju (below previous)\n", (uintmax_t)num, (uintmax_t)(*element_prev));
+						helsing_fprint(stderr, "vsvs", num, " < ", *element_prev, " (below previous)\n");
 						rc = 1;
 					}
 					else if (not_first_column && (num > *element_left)) {
 						err_conflict(options.checkpoint, line, item);
 						size_t left_pairs = left + MIN_FANG_PAIRS;
 						size_t pairs      = left_pairs + 1;
-						fprintf(stderr, "%ju > %ju (More vampire numbers with %zu pairs than %zu pairs)\n", (uintmax_t)num, (uintmax_t)(*element_left), pairs, left_pairs);
+						helsing_fprint(stderr, "vsvszszs", num, " > ", *element_left, " (More vampire numbers with ", pairs, " pairs than ", left_pairs, " pairs)\n");
 						rc = 1;
 					}
 #if VAMPIRE_NUMBER_OUTPUTS
@@ -312,7 +310,7 @@ int load_checkpoint(struct options_t options, struct interval_t *interval, struc
 			name++;
 			item++;
 		} else {
-			switch(type[name]) {
+			switch (type[name]) {
 				case integer:
 					rc = concat_digit(options.checkpoint, &num, ch, line, item);
 					is_empty = false;
@@ -342,9 +340,9 @@ void save_checkpoint(struct options_t options, vamp_t complete, struct taskboard
 	FILE *fp = fopen(options.checkpoint, "a");
 	assert(fp != NULL);
 
-	fprintf(fp, "%ju", (uintmax_t)complete);
+	helsing_fprint(fp, "v", complete);
 	for (size_t i = 0; i < FANG_PAIRS_SIZE; i++)
-		fprintf(fp, " %ju", (uintmax_t)(progress->common_count[i]));
+		helsing_fprint(fp, "sv", " ", progress->common_count[i]);
 
 
 #if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)

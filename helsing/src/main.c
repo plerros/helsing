@@ -64,11 +64,7 @@ int main(int argc, char *argv[])
 		if (progress->size == 0)
 			continue;
 
-		fprintf(stderr, "Checking interval: [");
-		printany(stderr, lmin);
-		fprintf(stderr, ", ");
-		printany(stderr, lmax);
-		fprintf(stderr, "]\n");
+		helsing_fprint(stderr, "svsvs",  "Checking interval: [", lmin, ", ", lmax, "]\n");
 		for (thread_t thread = 0; thread < options->threads; thread++)
 			assert(thrd_create(&threads[thread], thread_function, (void *)(thhandle->targs[thread])) == thrd_success);
 		for (thread_t thread = 0; thread < options->threads; thread++)

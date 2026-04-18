@@ -349,7 +349,7 @@ PART_VL_BLUEPRINT(part_vl_r1l, part_vl_r1l_internal)
 
 length_t partition_loose(struct partdata_all_t data, int method)
 {
-	switch(method) {
+	switch (method) {
 		case 0:
 			return part_scsg_rl(data.constant, data.global);
 		case 1:

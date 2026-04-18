@@ -48,10 +48,12 @@ static void buildconf()
 		printf("        MULTIPLICAND_PARTITIONS=%d\n", MULTIPLICAND_PARTITIONS);
 		printf("        PRODUCT_PARTITIONS=%d\n", PRODUCT_PARTITIONS);
 	}
+	#ifdef VAMPIRE_BITS
+		printf("    VAMPIRE_BITS=%d", VAMPIRE_BITS);
+	#endif
 	printf("    BASE=%d\n", BASE);
-	printf("    MAX_TASK_SIZE=");
-	printany(stdout, (bimax_t)MAX_TASK_SIZE);
-	printf("\n");
+	helsing_fprint(stdout, "sas"
+	       "    MAX_TASK_SIZE=", (bimax_t)(MAX_TASK_SIZE), "\n");
 	printf("    USE_CHECKPOINT=%s\n", (USE_CHECKPOINT ? "true" : "false"));
 	printf("    LINK_SIZE=%d\n", LINK_SIZE);
 	printf("    LLMSENTENCE_LIMIT=%d\n", LLMSENTENCE_LIMIT);
@@ -134,7 +136,7 @@ static int strtov(const char *str, vamp_t min, vamp_t max, vamp_t *number) // st
 	*number = tmp;
 out:
 	if (err)
-		fprintf(stderr, "Input out of range: [%ju, %ju]\n", (uintmax_t)min, (uintmax_t)max);
+		helsing_fprint(stderr, "svsvs", "Input out of range: [", min, ", ", max, "]\n");
 	return err;
 }
 
