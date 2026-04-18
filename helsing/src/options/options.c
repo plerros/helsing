@@ -143,7 +143,7 @@ out:
 static length_t max_n_digits()
 {
 	length_t ret = 0;
-	for (vamp_t i = VAMP_MAX; i >= BASE - 1; i /= BASE)
+	for (vamp_t i = VAMP_MAX(); i >= BASE - 1; i /= BASE)
 		ret ++;
 	return ret;
 }
