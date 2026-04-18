@@ -6,7 +6,7 @@ Helsing is a command-line program that scans intervals for vampire numbers.
 The default algorithm has a time complexity of $O(u)$ and a space complexity of
 $O(\sqrt{u})$, where $u$ is the upper bound argument `-u`.
 
-In *helsing/configuration.h* you can toggle the algorithms and tune them, adjust verbosity, change the numeral base system, enable to 128-bit (or bigger) maths, and set a fang pairs filter.
+In *helsing/configuration.h* you can toggle the algorithms and tune them, adjust verbosity, change the numeral base system, enable 128-bit (or bigger) maths, and set a fang pairs filter.
 Some of the features aren't compatible with Windows.
 Be sure to read the documentation.
 
