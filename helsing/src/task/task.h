@@ -7,7 +7,9 @@
 #define HELSING_TASK_H
 
 #include <stdbool.h>
-#include "configuration_adv.h"
+
+#include "datatypes.h"
+
 #include "vargs.h"
 #include "array.h"
 

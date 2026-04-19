@@ -83,14 +83,15 @@ function collect_data () {
 
 }
 
-cp configuration.h configuration.backup1
+rsync -a configuration/ configuration_backup1/
 "$selfdir/../../configuration/set_cache.sh"
 
 function handle_sigint()
 {
 	rm -f tmp.csv
 	make clean
-	mv configuration.backup1 configuration.h
+	rsync -a configuration_backup1/ configuration/
+	rm -rf configuration_backup1
 	exit
 }
 
@@ -107,4 +108,5 @@ while IFS=$'\t' read -r base u_min u_max part_max; do
 	collect_data $base $u_max $part_max $out_file
 done < "$parameters_file"
 
-mv configuration.backup1 configuration.h
+rsync -a configuration_backup1/ configuration/
+rm -rf configuration_backup1

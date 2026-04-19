@@ -6,7 +6,7 @@ Helsing is a command-line program that scans intervals for vampire numbers.
 The default algorithm has a time complexity of $O(u)$ and a space complexity of
 $O(\sqrt{u})$, where $u$ is the upper bound argument `-u`.
 
-In *helsing/configuration.h* you can toggle the algorithms and tune them, adjust verbosity, change the numeral base system, enable 128-bit (or bigger) maths, and set a fang pairs filter.
+In *helsing/configuration* you can toggle the algorithms and tune them, adjust verbosity, change the numeral base system, enable 128-bit (or bigger) maths, and set a fang pairs filter.
 Some of the features aren't compatible with Windows.
 Be sure to read the documentation.
 
@@ -101,7 +101,7 @@ On MacOS you'll have to [install homebrew](https://brew.sh/).
 		</tr>
 	</table>
 
-(*): Some `configuration.h` features are linux-only and lead to build failure on Windows.
+(*): Some configuration features are linux-only and lead to build failure on Windows.
 
 ## Run
 ```
@@ -170,8 +170,7 @@ Checking interval: [1000, 9999]
 Found: 7 vampire number(s).
 
 $ ls
-build           configuration_adv.h  helsing   my.checkpoint  src
-CMakeLists.txt  configuration.h      Makefile  scripts        test
+build  CMakeLists.txt  configuration  Makefile  my.checkpoint  scripts  src  test
 ```
 To resume from it:
 

@@ -8,7 +8,10 @@
 
 #include <threads.h>
 
-#include "configuration_adv.h"
+#include "algorithms.h"
+#include "datatypes.h"
+#include "output.h"
+
 #include "cache.h"
 #include "array.h"
 

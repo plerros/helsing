@@ -7,8 +7,9 @@
 #include <threads.h>
 #include <stdio.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "datatypes.h"
+#include "output.h"
+
 #include "helper.h"
 #include "taskboard.h"
 #include "cache.h"

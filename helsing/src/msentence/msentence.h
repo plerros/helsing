@@ -6,6 +6,8 @@
 #ifndef HELSING_MSENTENCE_H
 #define HELSING_MSENTENCE_H
 
+#include "datatypes.h"
+
 /*
  * msentence_t
  *

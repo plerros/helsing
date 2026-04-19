@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(helsing VERSION 1.2.0
+project(helsing VERSION 1.2.1
 	LANGUAGES
 		C
 )
@@ -50,12 +50,11 @@ function(watch)
             PROPERTY CMAKE_CONFIGURE_DEPENDS ${ARGV}
     )
 endfunction()
-watch("${CMAKE_CURRENT_SOURCE_DIR}/configuration.h")
-watch("${CMAKE_CURRENT_SOURCE_DIR}/configuration_adv.h")
+watch("${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 
 # Detect if OpenSSL is required
 execute_process(
-    COMMAND sh -c "${CMAKE_C_COMPILER} -dM -E -I \"${CMAKE_CURRENT_SOURCE_DIR}configuration.h\" \"${CMAKE_CURRENT_SOURCE_DIR}/configuration_adv.h\" | grep -q \"CHECKSUM_RESULTS\""
+    COMMAND sh -c "${CMAKE_C_COMPILER} \"${CMAKE_CURRENT_SOURCE_DIR}/configuration/output.h\" -dM -E | grep -q \"CHECKSUM_RESULTS\""
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     RESULT_VARIABLE CHECKSUM
     )
@@ -88,6 +87,7 @@ add_executable(helsing
     )
 target_include_directories(helsing PRIVATE
     .
+    configuration
     src/array
     src/checkpoint
     src/hash

@@ -6,7 +6,7 @@
 #ifndef HELSING_INTERVAL_H
 #define HELSING_INTERVAL_H
 
-#include "configuration_adv.h"
+#include "datatypes.h"
 
 #include "options.h"
 

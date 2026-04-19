@@ -8,7 +8,8 @@
 
 #include <threads.h>
 
-#include "configuration_adv.h"
+#include "output.h"
+
 #include "llnode.h"
 #include "hash.h"
 

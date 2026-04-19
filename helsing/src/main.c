@@ -8,8 +8,8 @@
 #include <assert.h>
 #include <threads.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "datatypes.h"
+
 #include "helper.h"
 #include "taskboard.h"
 #include "targs_handle.h"

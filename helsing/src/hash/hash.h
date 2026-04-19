@@ -5,7 +5,7 @@
 #ifndef HELSING_HASH_H
 #define HELSING_HASH_H
 
-#include "configuration_adv.h"
+#include "output.h"
 
 #if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)
 #include <stdint.h>

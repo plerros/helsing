@@ -25,11 +25,11 @@ esac
 tempdir=$(mktemp -d) && trap 'rm -rf "$tempdir"' EXIT || exit
 
 # Temporary files
-configuration_h_backup1="$tempdir/configuration.backup1"
+configuration_backup1="$tempdir/configuration_backup1"
 hyperfine_csv="$tempdir/hyperfine.csv"
 
 mkdir -p "$out_folder"
-cp configuration.h "$configuration_h_backup1"
+rsync -a configuration/ "$configuration_backup1/"
 "$selfdir/../../configuration/set_cache.sh"
 
 cmake .
@@ -37,8 +37,8 @@ cmake .
 function cleanup()
 {
 	make clean
-	mv $configuration_h_backup1 configuration.h
-	rm -f "$hyperfine_csv"
+	rsync -a "$configuration_backup1/" configuration/
+	rm -rf "$configuration_backup1" "$hyperfine_csv"
 	exit
 }
 

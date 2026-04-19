@@ -6,8 +6,8 @@
 #ifndef HELSING_CHECKPOINT_H
 #define HELSING_CHECKPOINT_H // safety precaution for the c preprocessor
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "other.h"
+
 #include "taskboard.h"
 #include "options.h"
 #include "interval.h"

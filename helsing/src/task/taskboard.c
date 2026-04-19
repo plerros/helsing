@@ -11,8 +11,9 @@
 #include <string.h>
 #include <threads.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "datatypes.h"
+#include "other.h"
+
 #include "helper.h"
 #include "array.h"
 #include "task.h"

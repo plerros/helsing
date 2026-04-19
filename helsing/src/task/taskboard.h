@@ -8,8 +8,8 @@
 
 #include <threads.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "datatypes.h"
+
 #include "task.h"
 #include "options.h"
 #include "hash.h"

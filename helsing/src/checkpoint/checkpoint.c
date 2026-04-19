@@ -3,8 +3,7 @@
  * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "other.h"
 
 #if USE_CHECKPOINT
 #include <stdio.h>

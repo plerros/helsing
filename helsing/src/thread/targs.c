@@ -7,7 +7,10 @@
 #include <threads.h>
 #include <stdbool.h>
 
-#include "configuration.h"
+#include "datatypes.h"
+#include "output.h"
+#include "other.h"
+
 #include "helper.h"
 #include "cache.h"
 #include "targs.h"

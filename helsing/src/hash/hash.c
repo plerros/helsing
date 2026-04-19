@@ -2,8 +2,9 @@
  * Copyright (c) 2021 Pierro Zachareas
  */
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "other.h"
+#include "output.h"
+
 #include "helper.h"
 
 #if (VAMPIRE_NUMBER_OUTPUTS) && (VAMPIRE_HASH)

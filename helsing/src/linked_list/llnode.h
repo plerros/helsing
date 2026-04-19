@@ -6,7 +6,7 @@
 #ifndef HELSING_LLNODE_H
 #define HELSING_LLNODE_H
 
-#include "configuration_adv.h"
+#include "datatypes.h"
 
 #include "msentence.h"
 

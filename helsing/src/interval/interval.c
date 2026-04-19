@@ -5,7 +5,8 @@
 
 #include <stdio.h>
 
-#include "configuration_adv.h"
+#include "datatypes.h"
+
 #include "helper.h"
 #include "interval.h"
 #include "options.h"

@@ -9,7 +9,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "configuration_adv.h"
+#include "datatypes.h"
+#include "other.h"
 
 void no_args();
 bool willoverflow(bimax_t x, bimax_t limit, digit_t digit);

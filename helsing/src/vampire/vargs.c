@@ -10,8 +10,11 @@
 #include <string.h>
 #include <threads.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "algorithms.h"
+#include "datatypes.h"
+#include "numeral_base.h"
+#include "other.h"
+
 #include "helper.h"
 #include "msentence.h"
 #include "llnode.h"

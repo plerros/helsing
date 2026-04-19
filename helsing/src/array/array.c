@@ -3,8 +3,8 @@
  * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "other.h"
+#include "output.h"
 
 #include "helper.h"
 

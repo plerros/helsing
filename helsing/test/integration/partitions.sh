@@ -42,13 +42,14 @@ let "len--"
 echo "base, method, multiplicand, product, [n]"
 echo
 
-cp configuration.h configuration.backup
+rsync -a configuration/ configuration_backup/
 "$selfdir/../../scripts/configuration/set_cache.sh"
 
 function handle_sigint()
 {
 	make clean
-	mv configuration.backup configuration.h
+	rsync -a configuration_backup/ configuration/
+	rm -rf configuration_backup
 	exit
 }
 
@@ -69,4 +70,5 @@ for i in $(seq 0 $len); do
 	done
 done
 
-mv configuration.backup configuration.h
+rsync -a configuration_backup/ configuration/
+rm -rf configuration_backup

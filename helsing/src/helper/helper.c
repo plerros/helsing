@@ -9,8 +9,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "datatypes.h"
+#include "numeral_base.h"
+#include "other.h"
 
 void no_args() {};
 
@@ -104,8 +105,6 @@ vamp_t div_roof(vamp_t x, vamp_t y)
 void helsing_fprint(FILE *fp, char *formats, ...)
 {
 	va_list args;
-	
-
 	for (va_start(args, formats); *formats != '\0'; formats++) {
 		switch (*formats) {
 			case 'a':

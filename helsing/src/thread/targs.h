@@ -9,8 +9,9 @@
 #include <threads.h>
 #include <stdbool.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "datatypes.h"
+#include "output.h"
+
 #include "taskboard.h"
 #include "cache.h"
 

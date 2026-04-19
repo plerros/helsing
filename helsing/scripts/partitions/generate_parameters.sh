@@ -48,18 +48,18 @@ tempdir=$(mktemp -d) && trap 'rm -rf "$tempdir"' EXIT || exit
 
 # Temporary files
 checkpoint="a.checkpoint"
-configuration_h_backup1="$tempdir/configuration.backup1"
-configuration_h_backup2="$tempdir/configuration.backup2"
+configuration_backup1="$tempdir/configuration_backup1"
+configuration_backup2="$tempdir/configuration_backup2"
 
-cp configuration.h $configuration_h_backup1
+rsync -a configuration/ "$configuration_backup1/"
 "$selfdir/../configuration/set_cache.sh"
-cp configuration.h $configuration_h_backup2
+rsync -a configuration/ "$configuration_backup2/"
 
 function cleanup()
 {
 	make clean
-	mv $configuration_h_backup1 configuration.h
-	rm -f "a.checkpoint $configuration_h_backup2 $checkpoint"
+	rsync -a "$configuration_backup1/" configuration/
+	rm -rf a.checkpoint "$configuration_backup1" "$configuration_backup2" "$checkpoint"
 	exit
 }
 
@@ -73,7 +73,7 @@ echo -e "base\tu_min\tu_max\tpart_max" > "$out_file"
 cmake .
 
 for base in $b_seq; do
-	cp "$configuration_h_backup2" configuration.h
+	rsync -a "$configuration_backup2/" configuration/
 	"$selfdir/../configuration/set.sh" BASE "$base"
 	make -j4 > /dev/null 2>&1
 

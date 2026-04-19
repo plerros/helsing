@@ -15,8 +15,12 @@
 	#include <windows.h>
 #endif
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "algorithms.h"
+#include "datatypes.h"
+#include "numeral_base.h"
+#include "other.h"
+#include "output.h"
+
 #include "options.h"
 #include "helper.h"
 

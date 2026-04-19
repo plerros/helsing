@@ -4,8 +4,10 @@
  * Copyright (c) 2021-2025 Pierro Zachareas
  */
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "algorithms.h"
+#include "datatypes.h"
+#include "numeral_base.h"
+#include "other.h"
 
 #if ALG_CACHE
 #include <stdlib.h>

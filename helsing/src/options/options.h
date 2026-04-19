@@ -8,7 +8,7 @@
 
 #include <stdbool.h>
 
-#include "configuration_adv.h"
+#include "datatypes.h"
 
 struct options_t
 {

@@ -7,8 +7,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "datatypes.h"
+#include "other.h"
+
 #include "helper.h"
 #include "task.h"
 #include "array.h"

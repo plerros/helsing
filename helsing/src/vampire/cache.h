@@ -6,8 +6,9 @@
 #ifndef HELSING_CACHE_H
 #define HELSING_CACHE_H
 
-#include "configuration.h"
-#include "configuration_adv.h"
+#include "algorithms.h"
+#include "datatypes.h"
+
 #include <stdbool.h>
 
 #if ALG_CACHE
