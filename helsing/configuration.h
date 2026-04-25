@@ -104,7 +104,7 @@
 		#error MAX_FANG_PAIRS should be bigger than MIN_FANG_PAIRS
 	#endif
 
-#define MEASURE_RUNTIME false
+#define MEASURE_RUNTIME true
 
 /*
  * ALGORITHMS:

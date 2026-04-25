@@ -77,14 +77,6 @@
 /*
  * Helper Preprocessor Macros
  */
-	#if MEASURE_RUNTIME
-		#if defined(CLOCK_MONOTONIC)
-			#define SPDT_CLK_MODE CLOCK_MONOTONIC
-		#elif defined(CLOCK_REALTIME)
-			#define SPDT_CLK_MODE CLOCK_REALTIME
-		#endif
-	#endif
-
 	#if (VAMPIRE_INDEX || VAMPIRE_PRINT || VAMPIRE_INTEGRAL)
 		#define PRINT_RESULTS
 	#endif

@@ -95,13 +95,13 @@ int thread_function(void *void_args)
 
 void thread_timer_start(struct targs *ptr)
 {
-	clock_gettime(SPDT_CLK_MODE, &(ptr->start));
+	timespec_get(&(ptr->start), TIME_UTC);
 }
 
 void thread_timer_stop(struct targs *ptr)
 {
 	struct timespec finish;
-	clock_gettime(SPDT_CLK_MODE, &(finish));
+	timespec_get(&(finish), TIME_UTC);
 	double elapsed = (finish.tv_sec - ptr->start.tv_sec);
 	elapsed += (finish.tv_nsec - ptr->start.tv_nsec) / 1000000000.0;
 	ptr->runtime = elapsed;
